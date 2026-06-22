@@ -1,0 +1,87 @@
+name: coliseu_sales
+description: "Força de Vendas Mobile Offline-First — Coliseu"
+version: 1.14.14+99
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # Banco local offline-first
+  sqflite: ^2.3.3+1
+  sqflite_common_ffi: ^2.3.3   # necessário para Windows/Linux desktop
+  path: ^1.9.0
+
+  # Conectividade e status de rede
+  connectivity_plus: ^6.0.5
+
+  # HTTP client assíncrono com interceptors
+  dio: ^5.4.3+1
+
+  # Injeção de dependência
+  get_it: ^8.0.0
+
+  # Geração de UUIDs v4
+  uuid: ^4.4.0
+
+  # Formatação de moeda e datas
+  intl: ^0.20.2
+
+  # Utilitários de imutabilidade (modelos de dados)
+  freezed_annotation: ^2.4.1
+  json_annotation: ^4.9.0
+
+  # Ícones Material extendidos
+  material_symbols_icons: ^4.2783.0
+
+  # Criptografia: SHA-256 para hash de PIN (Rule-07 Higiene de Credenciais)
+  crypto: ^3.0.3
+
+  # Leitura de código de barras (EAN-13, QR Code) na tela de catálogo
+  mobile_scanner: ^7.2.0
+
+  # Compartilhamento de pedidos via WhatsApp, email, etc.
+  share_plus: 10.1.0
+
+  # Tipografia moderna (Inter) com cache offline
+  google_fonts: ^8.1.0
+
+  # Persistência de preferências do usuário (URL do servidor, etc.)
+  shared_preferences: ^2.3.3
+
+  # UUID real do hardware (Android ID / iOS identifierForVendor) para device binding
+  device_info_plus: ^10.1.0
+
+  # Gráficos avançados (line chart, bar chart, pie chart) para dashboard de desempenho
+  fl_chart: ^0.69.2
+
+  # Notificações locais — avisa o vendedor quando o pedido é integrado no ERP
+  flutter_local_notifications: ^18.0.1
+  pdf: ^3.11.3
+  path_provider: ^2.1.5
+
+  # Reprodução de som de bip (PDV scanner)
+  audioplayers: ^6.1.0
+  package_info_plus: 4.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+  # Geração de código para Freezed
+  build_runner: ^2.4.9
+  freezed: ^2.5.2
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/fonts/
+    - assets/audio/
+

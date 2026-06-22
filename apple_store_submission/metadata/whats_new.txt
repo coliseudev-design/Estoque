@@ -1,0 +1,11 @@
+# ==============================================================================
+# NOVIDADES DESTA VERSÃO (whats_new.txt)
+# Limite máximo de caracteres: 4.000 caracteres.
+# ==============================================================================
+Novidades na versão 1.14.14:
+- Novo Dashboard de Desempenho: Monitore suas vendas, metas e KPIs diários com gráficos interativos e dinâmicos.
+- Leitor de Código de Barras via Câmera: Pesquisa e inserção rápida de produtos no carrinho direto do catálogo.
+- Otimização do Banco de Dados Local (Offline-First): Carregamento mais rápido do catálogo e listagem de clientes.
+- Notificações de ERP: Notificações locais em tempo real informando quando um pedido foi integrado e faturado com sucesso no ERP.
+- Melhoria no compartilhamento de PDFs de pedidos via WhatsApp.
+- Correções de estabilidade e melhorias gerais no layout.

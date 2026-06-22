@@ -1,0 +1,20 @@
+# ==============================================================================
+# FASTLANE APPFILE TEMPLATE
+# Local original: mobile/ios/fastlane/Appfile
+# ==============================================================================
+
+# O identificador único do seu aplicativo iOS (Bundle ID)
+app_identifier("com.kleber.coliseusalesdev")
+
+# O seu Apple ID (e-mail da conta de desenvolvedor Apple)
+apple_id("<SEU_EMAIL_APPLE_ID>") # Ex: dev@coliseu.com.br
+
+# A equipe da Apple Store Connect (Team ID da organização ou individual)
+# Você pode encontrar isso em developer.apple.com -> Account -> Membership
+team_id("<SEU_APPLE_TEAM_ID>") # Ex: A1B2C3D4E5
+
+# O ID da equipe na App Store Connect (caso seja diferente do Team ID acima)
+itc_team_id("<SEU_ITC_TEAM_ID>") # Geralmente opcional, mas útil para contas com múltiplos times
+
+# Caminho para o arquivo JSON da API Key da App Store Connect (Recomendado para CI/CD e evitar 2FA)
+# api_key_path("fastlane/app_store_connect_api_key.json")

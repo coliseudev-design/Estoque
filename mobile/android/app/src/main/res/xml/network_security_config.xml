@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    network_security_config.xml — Configuração de segurança de rede (Android 7.0+).
+
+    Substitui android:usesCleartextTraffic="true" no Manifest.
+    Regra: HTTPS obrigatório para todos os hosts de produção.
+           HTTP permitido APENAS para redes locais (LAN do cliente — IP privado).
+
+    Contexto: O Coliseu Sales conecta ao middleware VPS (HTTPS) e
+    opcionalmente ao middleware local na rede da empresa (HTTP para testes).
+    Em produção o servidor VPS sempre usa HTTPS.
+-->
+<network-security-config>
+
+    <!-- Domínio de produção — HTTPS obrigatório, sem exceção -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">coliseusales.com.br</domain>
+        <domain includeSubdomains="true">api.coliseusales.com.br</domain>
+    </domain-config>
+
+    <!-- IPs privados — HTTP permitido para middleware local (rede da empresa) -->
+    <!-- Faixas RFC 1918: 10.x.x.x / 172.16-31.x.x / 192.168.x.x          -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">10.0.0.0</domain>
+        <domain includeSubdomains="false">192.168.0.0</domain>
+        <domain includeSubdomains="false">172.16.0.0</domain>
+        <!-- localhost para testes locais no emulador -->
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain><!-- Android emulator host -->
+    </domain-config>
+
+    <!-- Configuração base: bloqueia cleartext para qualquer outro host -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Confia nas CAs do sistema (Let's Encrypt, etc.) -->
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+
+</network-security-config>

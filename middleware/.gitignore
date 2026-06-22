@@ -1,0 +1,19 @@
+# Coliseu Sales — Middleware .gitignore
+
+# Dependências
+node_modules/
+
+# Variáveis de ambiente com credenciais reais
+.env
+
+# Build / dist
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db

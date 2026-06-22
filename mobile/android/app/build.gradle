@@ -1,0 +1,118 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
+if (flutterVersionCode == null) {
+    flutterVersionCode = "1"
+}
+
+def flutterVersionName = localProperties.getProperty("flutter.versionName")
+if (flutterVersionName == null) {
+    flutterVersionName = "1.0"
+}
+
+// ── Keystore de produção ───────────────────────────────────────────────────
+// Lê as credenciais do arquivo android/key.properties (NÃO commitado no git).
+//
+// Crie o arquivo android/key.properties com:
+//   storePassword=<senha-do-keystore>
+//   keyPassword=<senha-da-chave>
+//   keyAlias=coliseu
+//   storeFile=<caminho-absoluto-para>/coliseu-release.jks
+//
+// Gere o keystore com:
+//   keytool -genkey -v -keystore coliseu-release.jks \
+//     -alias coliseu -keyalg RSA -keysize 2048 -validity 36500 \
+//     -dname "CN=Coliseu Sistemas, OU=Mobile, O=Coliseu, L=BR, ST=BR, C=BR"
+//
+// IMPORTANTE: Faça backup do .jks e das senhas. Perdê-las impede atualizações do app.
+def keystorePropertiesFile = rootProject.file("key.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withReader("UTF-8") { reader ->
+        keystoreProperties.load(reader)
+    }
+}
+
+android {
+    namespace = "br.com.coliseu.speed"
+    compileSdk = 36
+
+    compileOptions {
+        coreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
+    defaultConfig {
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "br.com.coliseu.speed"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
+        minSdk = 23
+        targetSdk = 35   // Play Store exige ≥ 35 para novos apps/atualizações (desde ago/2025)
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
+    }
+
+    // signingConfigs DEVE vir antes de buildTypes para Gradle resolver as referências
+    signingConfigs {
+        debug {
+            // keystore padrão do SDK — apenas para debug local
+        }
+        release {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias     keystoreProperties["keyAlias"]
+                keyPassword  keystoreProperties["keyPassword"]
+                storeFile    file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+            } else {
+                // Sem keystore: usa debug signing para builds de desenvolvimento local
+                // Para produção/Play Store, configure o key.properties
+                keyAlias     System.getenv("KEY_ALIAS")     ?: "androiddebugkey"
+                keyPassword  System.getenv("KEY_PASSWORD")  ?: "android"
+                storeFile    System.getenv("STORE_FILE") ? file(System.getenv("STORE_FILE")) : null
+                storePassword System.getenv("STORE_PASSWORD") ?: "android"
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            // Se não há keystore configurado, assina com debug key (só para distribuição interna)
+            signingConfig keystorePropertiesFile.exists()
+                ? signingConfigs.release
+                : signingConfigs.debug
+            // Ofuscação Proguard — mantém desabilitado para evitar crash por reflexão do Flutter
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+}

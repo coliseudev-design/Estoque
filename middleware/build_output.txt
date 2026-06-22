@@ -1,0 +1,12 @@
+﻿  Determinando os projetos a serem restaurados...
+  Todos os projetos est├úo atualizados para restaura├º├úo.
+  ColiseuSales.Shared -> C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\shared\bin\Release\net8.0\ColiseuSales.Shared.dll
+C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\Jobs\SyncAtendenteOrdersJob.cs(103,32): error CS1061: ÔÇÿFirebirdServiceÔÇÖ n├úo cont├®m uma defini├º├úo para "ExecuteInTransactionAsync" e n├úo foi poss├¡vel encontrar nenhum m├®todo de extens├úo "ExecuteInTransactionAsync" que aceite um primeiro argumento do tipo ÔÇÿFirebirdServiceÔÇÖ (voc├¬ est├í se esquecendo de usar uma diretiva ou uma refer├¬ncia de assembly?) [C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\ColiseuSales.Worker.csproj]
+
+FALHA da compila├º├úo.
+
+C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\Jobs\SyncAtendenteOrdersJob.cs(103,32): error CS1061: ÔÇÿFirebirdServiceÔÇÖ n├úo cont├®m uma defini├º├úo para "ExecuteInTransactionAsync" e n├úo foi poss├¡vel encontrar nenhum m├®todo de extens├úo "ExecuteInTransactionAsync" que aceite um primeiro argumento do tipo ÔÇÿFirebirdServiceÔÇÖ (voc├¬ est├í se esquecendo de usar uma diretiva ou uma refer├¬ncia de assembly?) [C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\ColiseuSales.Worker.csproj]
+    0 Aviso(s)
+    1 Erro(s)
+
+Tempo Decorrido 00:00:00.87

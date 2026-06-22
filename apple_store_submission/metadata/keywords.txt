@@ -1,0 +1,5 @@
+# ==============================================================================
+# PALAVRAS-CHAVE (keywords.txt)
+# Limite máximo de caracteres: 100 caracteres (incluindo as vírgulas).
+# ==============================================================================
+vendas,força de vendas,vendedor,pedido,catalogo,offline,ERP,faturamento,representante,venda externa,coliseu

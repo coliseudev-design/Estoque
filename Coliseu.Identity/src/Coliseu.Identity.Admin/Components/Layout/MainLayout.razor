@@ -1,0 +1,45 @@
+﻿@inherits LayoutComponentBase
+@inject ILocalStorageService LocalStorage
+@inject AuthenticationStateProvider AuthProvider
+@inject NavigationManager Nav
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4 justify-content-between">
+            <AuthorizeView>
+                <Authorized>
+                    <span>Olá, <strong>@context.User.FindFirst("email")?.Value</strong></span>
+                    <button class="btn btn-link text-danger text-decoration-none" @onclick="HandleLogout">
+                        <i class="bi bi-box-arrow-right me-1"></i> Sair
+                    </button>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="/login">Login</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<div id="blazor-error-ui">
+    An unhandled error has occurred.
+    <a href="" class="reload">Reload</a>
+    <a class="dismiss">🗙</a>
+</div>
+
+@code {
+    private async Task HandleLogout()
+    {
+        await LocalStorage.RemoveItemAsync("authToken");
+        ((JwtAuthenticationStateProvider)AuthProvider).NotifyUserLogout();
+        Nav.NavigateTo("login");
+    }
+}

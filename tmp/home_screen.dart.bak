@@ -1,0 +1,606 @@
+/// HomeScreen — Dashboard comercial do vendedor.
+///
+/// Layout premium inspirado em Salesforce/Stripe:
+/// - Header gradiente com saudação e status de sync
+/// - Grid 2×3 de KPIs (ColiseuStatsCard)
+/// - Quick actions: Novo Pedido, Sincronizar
+/// - Últimos 5 pedidos com status visual
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:get_it/get_it.dart';
+import 'package:coliseu_sales/core/config/app_config_service.dart';
+import 'package:intl/intl.dart';
+import '../../core/design/app_colors.dart';
+import '../../core/design/app_typography.dart';
+import '../../core/design/app_components.dart';
+import '../../core/network/connectivity_service.dart';
+import '../../core/network/auto_sync_service.dart';
+import '../../core/session/session_service.dart';
+import '../../core/repositories/order_repository.dart';
+import '../../core/repositories/models/models.dart';
+import '../../core/repositories/performance_repository.dart';
+import '../../core/services/dashboard_service.dart';
+import '../../shared/coliseu_stats_card.dart';
+import '../../shared/coliseu_button.dart';
+
+class HomeScreen extends StatefulWidget {
+  final VoidCallback? onNewOrder;
+  final VoidCallback? onViewOrders;
+
+  const HomeScreen({super.key, this.onNewOrder, this.onViewOrders});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _session       = GetIt.I<SessionService>();
+  final _orderRepo     = GetIt.I<OrderRepository>();
+  final _autoSync      = GetIt.I<AutoSyncService>();
+  final _connectivity  = GetIt.I<ConnectivityService>();
+  final _dashboard     = GetIt.I<DashboardService>();
+  final _perfRepo      = GetIt.I<PerformanceRepository>();
+  final _currencyFmt   = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
+  DashboardKpis _kpis = const DashboardKpis();
+  SellerKpis? _erpKpis;
+  List<Order> _recentOrders = [];
+  bool _isSyncing = false;
+  bool _isLoading = true;
+  bool _showErpView = true;  // Toggle: true=ERP, false=APP (local)
+  String _branchName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+    _autoSync.stateNotifier.addListener(_onSyncChanged);
+  }
+
+  @override
+  void dispose() {
+    _autoSync.stateNotifier.removeListener(_onSyncChanged);
+    super.dispose();
+  }
+
+  void _onSyncChanged() => _loadData();
+
+  String _formatSyncDate(String isoDate) {
+    if (isoDate.isEmpty) return '--';
+    try {
+      final dt = DateTime.parse(isoDate).toLocal();
+      return DateFormat('dd/MM HH:mm').format(dt);
+    } catch (_) {
+      return '--';
+    }
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final sellerId = _session.activeSession?.sellerId;
+      final config = GetIt.I<AppConfigService>();
+      final companyId = await config.getBranchId() ?? _session.activeSession?.companyId ?? '1';
+      final branchName = await config.getBranchName() ?? _session.activeSession?.companyName ?? '';
+
+      final results = await Future.wait([
+        _dashboard.loadKpis(companyId: companyId),
+        _orderRepo.getAll(companyId: companyId),
+        if (sellerId != null) _perfRepo.get(companyId, sellerId),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _kpis = results[0] as DashboardKpis;
+          final allOrders = results[1] as List<Order>;
+          _recentOrders = allOrders.take(5).toList();
+          if (sellerId != null && results.length > 2) {
+            _erpKpis = results[2] as SellerKpis?;
+          }
+          _isSyncing = _autoSync.stateNotifier.value == AutoSyncState.syncing;
+          _branchName = branchName;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] Erro ao carregar dados do dashboard: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _triggerSync() async {
+    HapticFeedback.mediumImpact();
+    setState(() => _isSyncing = true);
+    try {
+      // Sync completo unificado: push pedidos pendentes + clientes locais,
+      // depois pull de tudo (catálogo, formas de pgto, etc.)
+      await _autoSync.triggerManual();
+    } finally {
+      if (mounted) {
+        await _loadData();
+        setState(() => _isSyncing = false);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Sincronização concluída.'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sellerName = _session.activeSession?.sellerName ?? 'Vendedor';
+    final firstName = sellerName.split(' ').first;
+
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+
+    return RefreshIndicator(
+      onRefresh: _triggerSync,
+      color: AppColors.primary,
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // ── Gradient Hero Header ───────────────────────────────────────
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: isDark
+                      ? [const Color(0xFF0A1F4A), const Color(0xFF0F2B66)]
+                      : AppColors.heroGradient,
+                ),
+              ),
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('$greeting,',
+                                style: AppTypography.body.copyWith(color: Colors.white.withOpacity(0.7))),
+                              Text(firstName,
+                                style: AppTypography.displayMedium.copyWith(color: Colors.white)),
+                              if (_branchName.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.storefront_rounded, size: 12, color: Colors.white.withOpacity(0.9)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        _branchName.toUpperCase(),
+                                        style: AppTypography.badge.copyWith(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 10,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        // Logo da empresa — em evidência no topo
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Image.asset(
+                            'assets/images/coliseu_logo.png',
+                            height: 40,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Valor destaque do dia — USA ERP quando disponível
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.15)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _showErpView
+                                          ? (_erpKpis != null && _erpKpis!.hasData
+                                              ? 'Vendas Faturadas no ERP - Coliseu'
+                                              : 'Aguardando ERP...')
+                                          : 'Vendas do App (Hoje)',
+                                      style: AppTypography.caption.copyWith(
+                                          color: Colors.white.withOpacity(0.7)),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _showErpView
+                                          ? (_erpKpis != null && _erpKpis!.hasData
+                                              ? _currencyFmt.format(_erpKpis!.vendaDiaria)
+                                              : '--')
+                                          : _currencyFmt.format(_kpis.totalSoldToday),
+                                      style: AppTypography.displayLarge.copyWith(
+                                          color: Colors.white, fontSize: 28)),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _showErpView
+                                          ? 'App (Enviado Hoje): ${_currencyFmt.format(_kpis.totalSoldToday)}'
+                                          : '${_kpis.ordersToday} pedidos \u2022 ${_kpis.customersServedToday} clientes',
+                                      style: AppTypography.caption.copyWith(
+                                          color: Colors.white.withOpacity(0.7)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // ── Toggle ERP / APP ────────────────────────
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _SourceChip(
+                                      label: 'ERP',
+                                      active: _showErpView,
+                                      onTap: () => setState(() => _showErpView = true),
+                                    ),
+                                    _SourceChip(
+                                      label: 'APP',
+                                      active: !_showErpView,
+                                      onTap: () => setState(() => _showErpView = false),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // ── Conteúdo ────────────────────────────────────────────────────
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                const SizedBox(height: 4),
+                _buildKpiGrid(),
+                const SizedBox(height: 24),
+
+                // Quick Actions
+                Row(
+                  children: [
+                    Expanded(
+                      child: ColiseuButton.primary(
+                        label: 'Novo Pedido',
+                        icon: Icons.add_shopping_cart_rounded,
+                        onPressed: widget.onNewOrder,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ColiseuButton.secondary(
+                        label: 'Sincronizar',
+                        icon: Icons.sync_rounded,
+                        loading: _isSyncing,
+                        onPressed: _isSyncing ? null : _triggerSync,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Últimos Pedidos
+                SectionHeader(
+                  title: 'ÚLTIMOS PEDIDOS',
+                  actionLabel: _recentOrders.isNotEmpty ? 'Ver todos →' : null,
+                  onAction: widget.onViewOrders,
+                ),
+                const SizedBox(height: 8),
+
+                if (_isLoading)
+                  const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(strokeWidth: 2)))
+                else if (_recentOrders.isEmpty)
+                  AppCard(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(Icons.receipt_long_outlined, size: 40,
+                            color: isDark ? AppColors.textTertiaryDM : AppColors.textTertiary),
+                          const SizedBox(height: 12),
+                          Text('Nenhum pedido ainda',
+                            style: AppTypography.body.copyWith(
+                              color: isDark ? AppColors.textSecondaryDM : AppColors.textSecondary)),
+                          const SizedBox(height: 12),
+                          ColiseuButton.outline(label: 'Criar primeiro pedido', icon: Icons.add_rounded, onPressed: widget.onNewOrder),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...List.generate(_recentOrders.length, (i) {
+                    final order = _recentOrders[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: _RecentOrderCard(order: order, currency: _currencyFmt),
+                    );
+                  }),
+
+                const SizedBox(height: 24),
+              ]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKpiGrid() {
+    final hasErp = _erpKpis != null && _erpKpis!.hasData;
+
+    return Column(
+      children: [
+        // Linha 1: Venda Mensal + Comissão Mensal (ERP) ou Pedidos+Ticket (APP)
+        if (_showErpView) ...[
+          Row(children: [
+            Expanded(child: ColiseuStatsCard(
+              icon: Icons.trending_up_rounded,
+              label: hasErp ? 'Venda Mensal' : 'Aguardando ERP',
+              value: hasErp ? _currencyFmt.format(_erpKpis!.vendaMensal) : '--',
+              subtitle: hasErp ? 'App (Enviado): ${_currencyFmt.format(_kpis.totalSoldMonth)}' : null,
+              iconColor: AppColors.primary,
+              iconBackground: AppColors.primary.withOpacity(0.1),
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: ColiseuStatsCard(
+              icon: Icons.percent_rounded,
+              label: hasErp ? 'Comissão Mensal' : 'Aguardando ERP',
+              value: hasErp ? _currencyFmt.format(_erpKpis!.comissaoMensal) : '--',
+              subtitle: hasErp ? 'Do faturamento ERP' : null,
+              iconColor: AppColors.success,
+              iconBackground: AppColors.successLight,
+            )),
+          ]),
+        ] else ...[
+          Row(children: [
+            Expanded(child: ColiseuStatsCard(
+              icon: Icons.receipt_long_rounded,
+              label: 'Pedidos Hoje',
+              value: '${_kpis.ordersToday}',
+              iconColor: AppColors.primary,
+              iconBackground: AppColors.primary.withOpacity(0.1),
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: ColiseuStatsCard(
+              icon: Icons.payments_outlined,
+              label: 'Ticket Médio',
+              value: _currencyFmt.format(_kpis.averageTicket),
+              iconColor: AppColors.success,
+              iconBackground: AppColors.successLight,
+            )),
+          ]),
+        ],
+        const SizedBox(height: 12),
+        // Linha 2: Meta + Produtos (operacional local)
+        Row(children: [
+          Expanded(child: ColiseuStatsCard(
+            icon: Icons.flag_rounded,
+            label: hasErp ? 'Meta Mensal' : 'Meta',
+            value: hasErp ? _currencyFmt.format(_erpKpis!.metaMensal) : '--',
+            subtitle: hasErp ? '${_erpKpis!.metaPercent.toStringAsFixed(1)}% atingido' : null,
+            iconColor: hasErp && _erpKpis!.metaPercent >= 100
+                ? AppColors.success
+                : AppColors.warning,
+            iconBackground: hasErp && _erpKpis!.metaPercent >= 100
+                ? AppColors.successLight
+                : AppColors.warningLight,
+          )),
+          const SizedBox(width: 12),
+          Expanded(child: ColiseuStatsCard(
+            icon: Icons.inventory_2_outlined,
+            label: 'Produtos',
+            value: '${_kpis.totalProducts}',
+            subtitle: '${_kpis.totalCustomers} clientes',
+            iconColor: AppColors.info,
+            iconBackground: AppColors.infoLight,
+          )),
+        ]),
+        const SizedBox(height: 12),
+        // Linha 3: Pendentes + Erros (operacional local)
+        Row(children: [
+          Expanded(child: ColiseuStatsCard(icon: Icons.cloud_upload_outlined, label: 'Pendentes Sync', value: '${_kpis.pendingSync}',
+            iconColor: _kpis.pendingSync > 0 ? AppColors.warning : AppColors.success,
+            iconBackground: _kpis.pendingSync > 0 ? AppColors.warningLight : AppColors.successLight)),
+          const SizedBox(width: 12),
+          Expanded(child: ColiseuStatsCard(icon: Icons.error_outline_rounded, label: 'Erros Sync', value: '${_kpis.errorSync}',
+            iconColor: _kpis.errorSync > 0 ? AppColors.error : AppColors.success,
+            iconBackground: _kpis.errorSync > 0 ? AppColors.errorLight : AppColors.successLight)),
+        ]),
+      ],
+    );
+  }
+
+  Widget _buildSyncChip() {
+    final isOnline = _connectivity.currentStatus == ConnectivityStatus.online;
+    Color bg; Color fg; IconData icon; String label;
+
+    if (_isSyncing) {
+      bg = Colors.white.withOpacity(0.15); fg = Colors.white; icon = Icons.sync_rounded; label = 'Sincronizando...';
+    } else if (_kpis.errorSync > 0) {
+      bg = AppColors.error.withOpacity(0.3); fg = Colors.white; icon = Icons.error_outline_rounded; label = '${_kpis.errorSync} erros';
+    } else if (!isOnline) {
+      bg = AppColors.warning.withOpacity(0.3); fg = Colors.white; icon = Icons.cloud_off_rounded; label = 'Offline';
+    } else {
+      bg = Colors.white.withOpacity(0.15); fg = Colors.white; icon = Icons.cloud_done_outlined;
+      label = _kpis.pendingSync > 0 
+          ? '${_kpis.pendingSync} pendentes' 
+          : _kpis.lastSyncDate.isNotEmpty 
+              ? 'Último Sync: ${_formatSyncDate(_kpis.lastSyncDate)}' 
+              : 'Sync OK';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_isSyncing) SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: fg))
+          else Icon(icon, size: 14, color: fg),
+          const SizedBox(width: 6),
+          Text(label, style: AppTypography.badge.copyWith(color: fg)),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentOrderCard extends StatelessWidget {
+  final Order order;
+  final NumberFormat currency;
+  const _RecentOrderCard({required this.order, required this.currency});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final (statusColor, statusLabel, statusIcon) = switch (order.syncStatus) {
+      OrderSyncStatus.synced  => (AppColors.success,  'Sincronizado', Icons.check_circle_outline),
+      OrderSyncStatus.pending => (AppColors.warning,   'Pendente',     Icons.schedule_rounded),
+      OrderSyncStatus.syncing => (AppColors.info,      'Enviando',     Icons.sync_rounded),
+      OrderSyncStatus.error   => (AppColors.error,     'Erro',         Icons.error_outline),
+      OrderSyncStatus.draft   => (const Color(0xFF7C4DFF), 'Orçamento',    Icons.edit_note_rounded),
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceElevatedDM : AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.border, width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            child: Icon(statusIcon, size: 18, color: statusColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  if (order.erpOrderId != null)
+                    Text('#${order.erpOrderId}', style: AppTypography.bodyBold.copyWith(
+                      color: isDark ? AppColors.textPrimaryDM : AppColors.textPrimary, fontSize: 13)),
+                  if (order.erpOrderId != null) const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                    child: Text(statusLabel, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: statusColor)),
+                  ),
+                ]),
+                const SizedBox(height: 2),
+                Text(order.customerName,
+                  style: AppTypography.caption.copyWith(color: isDark ? AppColors.textSecondaryDM : AppColors.textSecondary),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (order.syncStatus == OrderSyncStatus.error && order.errorMessage != null && order.errorMessage!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(order.errorMessage!,
+                    style: TextStyle(fontSize: 10, color: AppColors.error, fontWeight: FontWeight.w500),
+                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                ],
+              ],
+            ),
+          ),
+          Text(currency.format(order.totalAmount),
+            style: AppTypography.priceNormal.copyWith(color: isDark ? AppColors.textPrimaryDM : AppColors.textPrimary, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// _SourceChip — Toggle chip para alternância ERP / APP
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SourceChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _SourceChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: active ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: active ? AppColors.primary : Colors.white.withOpacity(0.8),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+

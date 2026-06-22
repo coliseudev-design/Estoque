@@ -1,0 +1,15 @@
+Coliseu App é a solução definitiva de Força de Vendas e catálogo de produtos desenvolvida especialmente para representantes comerciais e equipes de vendas externas que necessitam de alta produtividade e independência.
+
+Com funcionamento offline-first, o aplicativo permite que o vendedor realize todo o processo de atendimento e digitação de pedidos mesmo sem conexão com a internet, sincronizando todos os dados de forma segura assim que uma conexão for estabelecida.
+
+Principais Recursos:
+- Vendas Offline-First: Cadastre pedidos de qualquer lugar, sem depender de internet.
+- Catálogo Digital Avançado: Navegue por produtos com imagens em alta qualidade, preços atualizados e busca instantânea.
+- Leitor de Código de Barras / QR Code: Utilize a câmera do celular para buscar produtos e incluir itens ao carrinho em segundos.
+- Sincronização Inteligente com o ERP: Envio automático de pedidos e atualização de estoque, produtos e carteira de clientes.
+- Gestão Completa de Clientes: Cadastro de novos clientes, histórico de compras e financeiro integrado.
+- Dashboard de Desempenho: Gráficos de vendas, faturamento e KPIs integrados para acompanhar suas metas diárias.
+- Compartilhamento Ágil: Gere PDFs de pedidos e envie para seus clientes via WhatsApp, e-mail ou outras plataformas de forma direta.
+- Notificações de Integração: Seja avisado em tempo real assim que o seu pedido for faturado e integrado no ERP da empresa.
+
+Otimize sua rotina de vendas externas, elimine erros de digitação de papel e aumente o faturamento da sua equipe com o Coliseu App!

@@ -1,0 +1,425 @@
+@page "/companies/{Id:guid}"
+@attribute [Authorize]
+@inject IdentityApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Detalhes da Empresa | Coliseu Identity</PageTitle>
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 300px;">
+        <div class="spinner-border text-primary"></div>
+    </div>
+}
+else if (_company is null)
+{
+    <div class="container py-5 text-center text-secondary">
+        <i class="bi bi-exclamation-triangle fs-1"></i>
+        <p class="mt-3">Empresa não encontrada.</p>
+        <button class="btn btn-outline-secondary" @onclick='() => Nav.NavigateTo("/companies")'>Voltar</button>
+    </div>
+}
+else
+{
+    <div class="container-fluid py-4">
+
+        <!-- Cabeçalho -->
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <button class="btn btn-sm btn-outline-secondary" @onclick='() => Nav.NavigateTo("/companies")'>
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <div>
+                <h1 class="mb-0">@_company.Name</h1>
+                <small class="text-secondary">Gerencie as configurações e dispositivos desta instância.</small>
+            </div>
+            <div class="ms-auto d-flex gap-2">
+                <button class="btn btn-outline-danger d-flex align-items-center gap-1" @onclick="ConfirmDelete">
+                    <i class="bi bi-trash"></i> Excluir Empresa
+                </button>
+                <button class="btn btn-primary d-flex align-items-center gap-1" @onclick="HandleSave" disabled="@_saving">
+                    @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    <i class="bi bi-floppy"></i> Salvar Alterações
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_successMsg))
+        {
+            <div class="alert alert-success alert-dismissible">
+                @_successMsg
+                <button type="button" class="btn-close" @onclick='() => _successMsg = null'></button>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(_errorMsg))
+        {
+            <div class="alert alert-danger alert-dismissible">
+                @_errorMsg
+                <button type="button" class="btn-close" @onclick='() => _errorMsg = null'></button>
+            </div>
+        }
+
+        <div class="row g-4">
+
+            <!-- Dados da Empresa -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nome da Empresa</label>
+                                <input class="form-control" @bind="_editName" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">E-mail de Contato</label>
+                                <input class="form-control" @bind="_editEmail" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">CompanyKey (Identity Vault Hash/Id)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="bi bi-shield-lock text-secondary"></i>
+                                    </span>
+                                    <input class="form-control font-monospace text-secondary" value="@Id" readonly />
+                                    <button class="btn btn-outline-secondary" title="Copiar" @onclick='() => CopyToClipboard(Id.ToString())'>
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                                <small class="text-secondary">Use este ID no Worker Configurator.</small>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Limite de Dispositivos</label>
+                                <input type="number" class="form-control" @bind="_editDeviceLimit" min="1" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Status da Empresa</label>
+                                <select class="form-select" @bind="_editStatus">
+                                    <option value="Active">Ativa</option>
+                                    <option value="Suspended">Suspensa</option>
+                                    <option value="Blocked">Bloqueada</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logo da Empresa -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm border-start border-4 border-info">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="mb-1">
+                                    <i class="bi bi-image-fill text-info me-2"></i>
+                                    Logo da Empresa
+                                </h5>
+                                <p class="text-secondary mb-0 small">
+                                    A logo aparece no cabeçalho dos PDFs de pedido gerados pelo app mobile.
+                                    Formatos aceitos: <strong>PNG</strong> ou <strong>JPG</strong> (máx. 500KB).
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="row align-items-center g-3">
+                            @if (!string.IsNullOrEmpty(_logoPreview))
+                            {
+                                <div class="col-auto">
+                                    <div class="border rounded p-2 bg-light" style="max-width:160px;">
+                                        <img src="@_logoPreview" alt="Logo" class="img-fluid" style="max-height:80px;" />
+                                    </div>
+                                </div>
+                            }
+                            <div class="col">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <label class="btn btn-outline-info d-flex align-items-center gap-1 mb-0">
+                                        <i class="bi bi-upload"></i>
+                                        @(_uploadingLogo ? "Enviando..." : (_company!.HasLogo ? "Trocar Logo" : "Enviar Logo"))
+                                        <InputFile OnChange="HandleLogoUpload" accept=".png,.jpg,.jpeg" style="display:none" disabled="@_uploadingLogo" />
+                                    </label>
+                                    @if (_company!.HasLogo)
+                                    {
+                                        <button class="btn btn-outline-danger d-flex align-items-center gap-1" @onclick="HandleDeleteLogo" disabled="@_uploadingLogo">
+                                            <i class="bi bi-trash"></i> Remover
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Key do App Mobile -->
+            <div class="col-12">
+                <div class="card border-0 shadow-sm border-start border-4 border-warning">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="mb-1">
+                                    <i class="bi bi-key-fill text-warning me-2"></i>
+                                    API Key do App Mobile
+                                </h5>
+                                <p class="text-secondary mb-0 small">
+                                    Esta chave é usada no campo <strong>API Key</strong> do app mobile em
+                                    <em>Configuração do Servidor</em>.
+                                    Por segurança, a chave não é armazenada em texto — use <strong>Gerar Nova Chave</strong>
+                                    para obter uma nova chave.
+                                </p>
+                            </div>
+                            @if (IsSuperAdmin)
+                            {
+                                <button class="btn btn-warning d-flex align-items-center gap-2 ms-3"
+                                        @onclick="HandleRotateKey" disabled="@_rotating">
+                                    @if (_rotating)
+                                    {
+                                        <span class="spinner-border spinner-border-sm"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-arrow-repeat"></i>
+                                    }
+                                    Gerar Nova Chave
+                                </button>
+                            }
+                        </div>
+
+                        <div class="alert alert-warning d-flex align-items-start gap-2 mb-0">
+                            <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+                            <div>
+                                <strong>Atenção:</strong> Gerar uma nova chave invalida imediatamente a anterior.
+                                Você precisará atualizar a API Key em <strong>todos</strong> os dispositivos e no Worker.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+}
+
+<!-- Modal: Nova API Key gerada -->
+@if (_rotateResult != null)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.6);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow border-top border-5 border-warning">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-key-fill text-warning me-2"></i>
+                        Nova API Key Gerada!
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>Anote agora!</strong> Esta chave será exibida <strong>apenas uma vez</strong>.
+                        A chave anterior foi imediatamente invalidada.
+                    </div>
+
+                    <p class="fw-bold mb-1">Cole esta chave no campo <em>API Key</em> do app mobile:</p>
+                    <div class="input-group mb-3">
+                        <input class="form-control font-monospace fw-bold fs-6"
+                               value="@_rotateResult.NewCompanyKey" readonly />
+                        <button class="btn btn-outline-secondary"
+                                @onclick='() => CopyToClipboard(_rotateResult.NewCompanyKey)'
+                                title="Copiar">
+                            <i class="bi bi-clipboard-check"></i>
+                        </button>
+                    </div>
+
+                    <p class="fw-bold mb-1">CompanyKey (Worker Configurator — não muda):</p>
+                    <div class="input-group">
+                        <input class="form-control font-monospace text-secondary"
+                               value="@Id" readonly />
+                        <button class="btn btn-outline-secondary"
+                                @onclick='() => CopyToClipboard(Id.ToString())'
+                                title="Copiar">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-warning w-100 fw-bold"
+                            @onclick='() => _rotateResult = null'>
+                        Confirmo que copiei a chave
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = null!;
+    private bool IsSuperAdmin;
+
+    private CompanyDto? _company;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _rotating;
+    private string? _successMsg;
+    private string? _errorMsg;
+    private RotateKeyResponse? _rotateResult;
+
+    // Campos editáveis
+    private string _editName    = string.Empty;
+    private string? _editEmail;
+    private int    _editDeviceLimit = 1;
+    private string _editStatus  = "Active";
+    private bool   _uploadingLogo;
+    private string? _logoPreview;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateTask;
+        IsSuperAdmin = authState.User.IsInRole("SuperAdmin");
+        await LoadCompany();
+    }
+
+    private async Task LoadCompany()
+    {
+        _loading = true;
+        var result = await Api.GetCompanyAsync(Id);
+        if (result.IsSuccess)
+        {
+            _company        = result.Value;
+            _editName       = _company!.Name;
+            _editEmail      = _company.ContactEmail;
+            _editDeviceLimit = _company.DeviceLimit;
+            _editStatus     = _company.Status;
+            _logoPreview    = _company.HasLogo
+                ? $"{Api.BaseUrl}admin/companies/{Id}/logo?t={DateTime.UtcNow.Ticks}"
+                : null;
+        }
+        _loading = false;
+    }
+
+    private async Task HandleSave()
+    {
+        _saving = true;
+        _errorMsg = null;
+        var request = new UpdateCompanyRequest
+        {
+            Name        = _editName,
+            ContactEmail = _editEmail,
+            DeviceLimit = _editDeviceLimit,
+            Status      = _editStatus,
+        };
+        var result = await Api.UpdateCompanyAsync(Id, request);
+        if (result.IsSuccess)
+        {
+            _company    = result.Value;
+            _successMsg = "Alterações salvas com sucesso!";
+        }
+        else
+        {
+            _errorMsg = result.Error;
+        }
+        _saving = false;
+    }
+
+    /// <summary>
+    /// Gera nova API Key para o app mobile.
+    /// A chave antiga é imediatamente invalidada — o modal exibe a nova chave uma única vez.
+    /// </summary>
+    private async Task HandleRotateKey()
+    {
+        _rotating = true;
+        _errorMsg = null;
+        var result = await Api.RotateCompanyKeyAsync(Id);
+        if (result.IsSuccess)
+        {
+            _rotateResult = result.Value;
+        }
+        else
+        {
+            _errorMsg = result.Error;
+        }
+        _rotating = false;
+    }
+
+    private void ConfirmDelete()
+    {
+        // TODO: implementar exclusão com confirmação modal
+        _errorMsg = "Exclusão não implementada nesta versão. Contate o SuperAdmin.";
+    }
+
+    [Inject] private IJSRuntime JS { get; set; } = null!;
+
+    private async Task CopyToClipboard(string text)
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
+
+    /// <summary>
+    /// Lê o arquivo de imagem selecionado, converte para Base64,
+    /// e envia ao Identity API.
+    /// </summary>
+    private async Task HandleLogoUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file.Size > 512_000)
+        {
+            _errorMsg = "A logo deve ter no máximo 500KB.";
+            return;
+        }
+
+        _uploadingLogo = true;
+        _errorMsg = null;
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 512_000);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var bytes = ms.ToArray();
+
+            var mime = file.ContentType ?? "image/png";
+            var base64 = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
+
+            var result = await Api.UploadCompanyLogoAsync(Id, base64);
+            if (result.IsSuccess)
+            {
+                _logoPreview = base64;
+                _successMsg  = "Logo atualizada com sucesso!";
+                if (_company != null)
+                    _company = _company with { HasLogo = true };
+            }
+            else
+            {
+                _errorMsg = result.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMsg = $"Erro ao enviar logo: {ex.Message}";
+        }
+        finally
+        {
+            _uploadingLogo = false;
+        }
+    }
+
+    /// <summary>Remove a logo no servidor e limpa o preview.</summary>
+    private async Task HandleDeleteLogo()
+    {
+        _uploadingLogo = true;
+        _errorMsg = null;
+
+        var result = await Api.DeleteCompanyLogoAsync(Id);
+        if (result.IsSuccess)
+        {
+            _logoPreview = null;
+            _successMsg  = "Logo removida com sucesso!";
+            if (_company != null)
+                _company = _company with { HasLogo = false };
+        }
+        else
+        {
+            _errorMsg = result.Error;
+        }
+
+        _uploadingLogo = false;
+    }
+}

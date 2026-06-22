@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- ============================================================================== -->
+    <!-- TEMPLATES DE PRIVACIDADE PARA O Info.plist                                     -->
+    <!-- Instruções: Copie as chaves desejadas e cole dentro da tag <dict> principal    -->
+    <!-- do seu arquivo /mobile/ios/Runner/Info.plist e ajuste a mensagem se necessário. -->
+    <!-- As mensagens abaixo são profissionais e seguem as diretrizes da Apple.         -->
+    <!-- ============================================================================== -->
+
+    <!-- CÂMERA -->
+    <key>NSCameraUsageDescription</key>
+    <string>Precisamos de acesso à câmera para permitir que você tire fotos de recibos, comprovantes e escaneie códigos de barras de produtos diretamente no aplicativo.</string>
+
+    <!-- GALERIA DE FOTOS (LEITURA) -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Precisamos de acesso à sua galeria de fotos para que você possa selecionar imagens de comprovantes e documentos e anexá-los aos seus pedidos.</string>
+
+    <!-- GALERIA DE FOTOS (ESCRITA - SALVAR FOTOS) -->
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Precisamos de permissão para salvar comprovantes de vendas e relatórios gerados diretamente na sua galeria de fotos.</string>
+
+    <!-- LOCALIZAÇÃO EM PRIMEIRO PLANO (Obrigatória se usar localização ativa) -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Precisamos acessar sua localização enquanto você usa o app para registrar o local de início do atendimento e calcular rotas até os clientes.</string>
+
+    <!-- LOCALIZAÇÃO EM SEGUNDO PLANO (Apenas se o app rastrear rota em background) -->
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Precisamos de acesso contínuo à sua localização para acompanhar a sua rota de vendas e registrar visitas aos clientes em segundo plano.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>Precisamos de acesso contínuo à sua localização para acompanhar a sua rota de vendas e registrar visitas aos clientes em segundo plano.</string>
+
+    <!-- NOTAS SOBRE NOTIFICAÇÕES (PUSH NOTIFICATIONS):
+         O iOS não possui uma string de descrição no Info.plist para Notificações.
+         A permissão é solicitada programaticamente no código do App.
+         No entanto, para ativar as Notificações em Segundo Plano (Silent Push), 
+         copie o snippet abaixo se estiver usando Notificações Push:
+    -->
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+    </array>
+</dict>
+</plist>

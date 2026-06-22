@@ -1,0 +1,241 @@
+@page "/companies"
+@attribute [Authorize]
+@inject IdentityApiService Api
+
+<PageTitle>Empresas | Coliseu Identity</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Gerenciamento de Empresas</h1>
+        <button class="btn btn-primary d-flex align-items-center gap-2" @onclick="() => _showCreateModal = true">
+            <i class="bi bi-plus-lg"></i> Nova Empresa
+        </button>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">Nome</th>
+                            <th>Status</th>
+                            <th>Limites</th>
+                            <th>Criado em</th>
+                            <th class="text-end pe-4">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (_loading)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5">
+                                    <div class="spinner-border text-primary"></div>
+                                </td>
+                            </tr>
+                        }
+                        else if (!_companies.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-secondary">Nenhuma empresa encontrada.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var company in _companies)
+                            {
+                                <tr>
+                                    <td class="ps-4">
+                                        <div class="fw-bold">@company.Name</div>
+                                        <small class="text-secondary text-truncate d-block" style="max-width: 200px;">@company.Id</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetStatusClass(company.Status)">
+                                            @company.Status
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small>Dispositivos: </small>
+                                        <strong>@company.ActiveDevices / @company.DeviceLimit</strong>
+                                    </td>
+                                    <td>@company.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td class="text-end pe-4">
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => NavToDetails(company.Id)">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        @if (IsSuperAdmin)
+                                        {
+                                            <div class="btn-group ms-1">
+                                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown"></button>
+                                                <ul class="dropdown-menu">
+                                                    <li><button class="dropdown-item" @onclick='() => ChangeStatus(company.Id, "Active")'>Ativar</button></li>
+                                                    <li><button class="dropdown-item" @onclick='() => ChangeStatus(company.Id, "Suspended")'>Suspender</button></li>
+                                                    <li><button class="dropdown-item text-danger" @onclick='() => ChangeStatus(company.Id, "Blocked")'>Bloquear</button></li>
+                                                </ul>
+                                            </div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_showCreateModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nova Empresa</h5>
+                    <button type="button" class="btn-close" @onclick="() => _showCreateModal = false"></button>
+                </div>
+                <EditForm Model="@_createModel" OnValidSubmit="HandleCreate">
+                    <div class="modal-body">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Nome da Empresa</label>
+                            <InputText @bind-Value="_createModel.Name" class="form-control" placeholder="Ex: Farmácia Central" />
+                            <ValidationMessage For="@(() => _createModel.Name)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Limite de Dispositivos</label>
+                            <InputNumber @bind-Value="_createModel.DeviceLimit" class="form-control" />
+                        </div>
+                        
+                        <hr />
+                        <h6 class="mb-3 text-secondary">Configuração ERP (Firebird)</h6>
+                        <div class="mb-3">
+                            <label class="form-label">Host/IP</label>
+                            <InputText @bind-Value="_createModel.FirebirdHost" class="form-control" placeholder="localhost" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Caminho do Banco</label>
+                            <InputText @bind-Value="_createModel.FirebirdDatabasePath" class="form-control" placeholder="C:\ERP\DADOS.FDB" />
+                        </div>
+                        <div class="row g-2">
+                            <div class="col">
+                                <label class="form-label">Usuário</label>
+                                <InputText @bind-Value="_createModel.FirebirdUser" class="form-control" placeholder="SYSDBA" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">Senha</label>
+                                <InputText @bind-Value="_createModel.FirebirdPassword" type="password" class="form-control" />
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(_modalError))
+                        {
+                            <div class="alert alert-danger mt-3">@_modalError</div>
+                        }
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-secondary" @onclick="() => _showCreateModal = false">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_modalLoading">
+                            @if (_modalLoading) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            Salvar Empresa
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_newCompanyResult != null)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow border-top border-5 border-success">
+                <div class="modal-header">
+                    <h5 class="modal-title">Empresa Criada! ✅</h5>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <p>Anote esta chave. Ela será exibida **apenas uma vez**:</p>
+                    <div class="alert alert-success fs-4 fw-mono">
+                        @_newCompanyResult.CompanyKey
+                    </div>
+                    <p class="small text-danger">Se perder esta chave, será necessário gerar uma nova.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-success w-100" @onclick='() => _newCompanyResult = null'>Entendido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthStateTask { get; set; } = null!;
+    private bool IsSuperAdmin;
+    
+    private List<CompanyDto> _companies = new();
+    private bool _loading = true;
+    private bool _showCreateModal;
+    private bool _modalLoading;
+    private string? _modalError;
+    private CreateCompanyRequest _createModel = new("", 5, "localhost", "", "SYSDBA", "masterkey");
+    private CreateCompanyResponse? _newCompanyResult;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateTask;
+        IsSuperAdmin = authState.User.IsInRole("SuperAdmin");
+        await LoadCompanies();
+    }
+
+    private async Task LoadCompanies()
+    {
+        _loading = true;
+        var result = await Api.GetCompaniesAsync();
+        if (result.IsSuccess)
+        {
+            _companies = result.Value!.Items.ToList();
+        }
+        _loading = false;
+    }
+
+    private string GetStatusClass(string status) => status.ToLower() switch
+    {
+        "active" => "bg-success",
+        "suspended" => "bg-warning text-dark",
+        "blocked" => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private async Task HandleCreate()
+    {
+        _modalLoading = true;
+        _modalError = null;
+
+        var result = await Api.CreateCompanyAsync(_createModel);
+        if (result.IsSuccess)
+        {
+            _newCompanyResult = result.Value;
+            _showCreateModal = false;
+            await LoadCompanies();
+        }
+        else
+        {
+            _modalError = result.Error;
+        }
+
+        _modalLoading = false;
+    }
+
+    private async Task ChangeStatus(Guid id, string status)
+    {
+        var result = await Api.UpdateCompanyStatusAsync(id, status);
+        if (result.IsSuccess)
+        {
+            await LoadCompanies();
+        }
+    }
+
+    private void NavToDetails(Guid id) => Nav.NavigateTo($"/companies/{id}");
+    @inject NavigationManager Nav
+}

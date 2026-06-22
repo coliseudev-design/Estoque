@@ -1,0 +1,1 @@
+vendas,força de vendas,vendedor,pedido,catalogo,offline,ERP,faturamento,representante,venda externa,coliseu

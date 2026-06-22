@@ -1,0 +1,24 @@
+# ── Arquivos que NUNCA devem entrar na imagem Docker ──
+# O .env local contém senhas de dev que sobrescrevem as variáveis do Coolify
+.env
+.env.*
+!.env.example
+
+# Dependências (reinstaladas via npm ci no Dockerfile)
+node_modules/
+
+# Logs e temporários
+logs/
+*.log
+.DS_Store
+Thumbs.db
+
+# Git e IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Documentação (não necessária no runtime)
+README.md
+docs/

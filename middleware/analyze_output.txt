@@ -1,0 +1,60 @@
+﻿Analyzing mobile...                                             
+
+   info - The import of 'package:sqflite/sqflite.dart' is unnecessary because all of the used elements are also provided by the import of 'package:sqflite_common_ffi/sqflite_ffi.dart' - lib\core\database\sqlite_ffi_desktop.dart:1:8 - unnecessary_import
+   info - The imported package 'sqflite_common' isn't a dependency of the importing package - lib\core\database\sqlite_ffi_init.dart:1:8 - depend_on_referenced_packages
+   info - Use 'const' with the constructor to improve performance - lib\core\design\app_spacing.dart:38:45 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\core\design\app_spacing.dart:38:72 - prefer_const_constructors
+  error - The getter 'current' isn't defined for the type 'SessionService' - lib\core\network\auto_sync_service.dart:134:36 - undefined_getter
+   info - Use 'const' with the constructor to improve performance - lib\core\repositories\models\payment_condition.dart:65:28 - prefer_const_constructors
+   info - Unnecessary cast - lib\core\services\dashboard_service.dart:56:24 - unnecessary_cast
+warning - Unused import: 'package:flutter/foundation.dart' - lib\core\services\order_service.dart:9:8 - unused_import
+warning - The value of the field '_deviceIdService' isn't used - lib\core\session\session_service.dart:31:25 - unused_field
+  error - The getter 'isConnected' isn't defined for the type 'ConnectivityService' - lib\core\sync\sync_service.dart:911:24 - undefined_getter
+warning - The value of the local variable 'db' isn't used - lib\core\sync\sync_service.dart:930:13 - unused_local_variable
+warning - The operand can't be null, so the condition is always 'true' - lib\features\activation\activation_screen.dart:107:25 - unnecessary_null_comparison
+warning - The value of the field '_syncing' isn't used - lib\features\catalog\catalog_screen.dart:43:8 - unused_field
+   info - The declaration '_syncNow' isn't referenced - lib\features\catalog\catalog_screen.dart:296:16 - unused_element
+   info - Use 'const' with the constructor to improve performance - lib\features\customers\customers_screen.dart:770:23 - prefer_const_constructors
+warning - Unused import: '../../core/design/app_spacing.dart' - lib\features\home\home_screen.dart:16:8 - unused_import
+   info - The declaration '_buildSyncChip' isn't referenced - lib\features\home\home_screen.dart:316:10 - unused_element
+warning - Unused import: '../../core/design/app_spacing.dart' - lib\features\new_order\new_order_screen.dart:16:8 - unused_import
+warning - The value of the local variable 'itemsTotal' isn't used - lib\features\new_order\new_order_screen.dart:585:27 - unused_local_variable
+warning - The value of the field '_loadingSuggestions' isn't used - lib\features\new_order\product_picker_screen.dart:59:8 - unused_field
+   info - Don't use 'BuildContext's across async gaps - lib\features\new_order\product_picker_screen.dart:154:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\new_order\product_picker_screen.dart:155:28 - use_build_context_synchronously
+   info - Use 'const' with the constructor to improve performance - lib\features\new_order\product_picker_screen.dart:688:20 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\new_order\product_picker_screen.dart:689:50 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\new_order\product_picker_screen.dart:768:19 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\new_order\product_picker_screen.dart:771:13 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\new_order\product_picker_screen.dart:771:43 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\features\order_confirm\order_confirm_screen.dart:414:33 - prefer_const_constructors
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\order_history\order_detail_screen.dart:197:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\order_history\order_detail_screen.dart:210:30 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\order_history\order_detail_screen.dart:244:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\order_history\order_detail_screen.dart:250:20 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\order_history\order_detail_screen.dart:253:30 - use_build_context_synchronously
+warning - The value of the field '_ordersByDay' isn't used - lib\features\performance\seller_performance_screen.dart:109:23 - unused_field
+warning - The value of the local variable 'currentPeriodClients' isn't used - lib\features\performance\seller_performance_screen.dart:323:13 - unused_local_variable
+   info - The private field _keyVisible could be 'final' - lib\features\setup\setup_screen.dart:30:11 - prefer_final_fields
+   info - Use 'const' with the constructor to improve performance - lib\features\splash\splash_screen.dart:236:29 - prefer_const_constructors
+  error - The getter 'backgroundDM' isn't defined for the type 'AppColors' - lib\features\sync_queue\sync_queue_screen.dart:129:43 - undefined_getter
+  error - The type 'OrderSyncStatus' is not exhaustively matched by the switch cases since it doesn't match 'OrderSyncStatus.draft' - lib\features\sync_queue\sync_queue_screen.dart:509:29 - non_exhaustive_switch_expression
+  error - The type 'OrderSyncStatus' is not exhaustively matched by the switch cases since it doesn't match 'OrderSyncStatus.draft' - lib\features\sync_queue\sync_queue_screen.dart:516:31 - non_exhaustive_switch_expression
+   info - Use 'const' with the constructor to improve performance - lib\main.dart:82:13 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\shared\coliseu_card.dart:38:15 - prefer_const_constructors
+   info - Use 'const' with the constructor to improve performance - lib\shared\coliseu_product_card.dart:128:36 - prefer_const_constructors
+   info - Use 'const' literals as arguments to constructors of '@immutable' classes - lib\shared\coliseu_stats_card.dart:51:20 - prefer_const_literals_to_create_immutables
+   info - Use 'const' with the constructor to improve performance - lib\shared\coliseu_stats_card.dart:52:11 - prefer_const_constructors
+
+flutter : 45 issues found. (ran in 6.0s)
+No linha:1 caractere:1
++ flutter analyze --no-fatal-infos 
+--no-fatal-warnings 2>&1 | Out-File  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified:  
+   (45 issues found. (ran in 6.0s):String)   
+  [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandE 
+   rror
+ 

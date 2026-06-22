@@ -1,0 +1,37 @@
+# Dockerfile.admin — Coliseu Identity Admin (Blazor Server SSR)
+#
+# Build multi-stage:
+#   1. Build stage: compila e publica o Blazor Server
+#   2. Runtime stage: imagem mínima ASP.NET para produção
+#
+# Este Dockerfile é separado do Dockerfile principal (Identity API)
+# porque o Admin é uma aplicação Blazor SSR independente.
+
+# ── Build stage ──────────────────────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+WORKDIR /src
+
+# Copiar arquivos de projeto para cache de restore eficiente
+COPY src/Coliseu.Identity.Domain/Coliseu.Identity.Domain.csproj          src/Coliseu.Identity.Domain/
+COPY src/Coliseu.Identity.Application/Coliseu.Identity.Application.csproj src/Coliseu.Identity.Application/
+COPY src/Coliseu.Identity.Admin/Coliseu.Identity.Admin.csproj             src/Coliseu.Identity.Admin/
+
+RUN dotnet restore src/Coliseu.Identity.Admin/Coliseu.Identity.Admin.csproj
+
+# Copiar código-fonte e publicar
+COPY src/ src/
+RUN dotnet publish src/Coliseu.Identity.Admin/Coliseu.Identity.Admin.csproj \
+    -c Release -o /app/publish --no-restore
+
+# ── Runtime stage ────────────────────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS runtime
+WORKDIR /app
+
+# Non-root user (segurança)
+RUN addgroup -S coliseu && adduser -S coliseu -G coliseu
+USER coliseu
+
+COPY --from=build /app/publish .
+
+EXPOSE 8081
+ENTRYPOINT ["dotnet", "Coliseu.Identity.Admin.dll"]

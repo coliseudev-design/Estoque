@@ -1,0 +1,6 @@
+# ==============================================================================
+# URL DA POLÍTICA DE PRIVACIDADE (privacy_url.txt)
+# Limite máximo: Link válido (URL).
+# Obrigatório: Sim.
+# ==============================================================================
+https://coliseusistemas.com.br/politica-privacidade

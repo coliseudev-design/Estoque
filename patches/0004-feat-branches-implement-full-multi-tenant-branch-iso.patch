@@ -1,0 +1,3635 @@
+From c61452be285c5514cc722e92d0899deb22ef9815 Mon Sep 17 00:00:00 2001
+From: Coliseu Sistemas <coliseu.dev@gmail.com>
+Date: Mon, 20 Apr 2026 14:36:23 -0400
+Subject: [PATCH 4/5] feat(branches): implement full multi-tenant branch
+ isolation architecture
+
+- Identity: add Branch entity, migration, BranchesController (GET/POST/PUT/DELETE)
+  and IBranchRepository; expose internal endpoint GET /branches for Worker
+- Middleware: add branches router (GET /api/branches), SQL migration 011,
+  inject X-Branch-Id validation in auth middleware
+- Worker: SyncOrdersJob writes ID_DEPTO/ID_PORTADOR per branch on Firebird;
+  SyncCatalogJob enriches each product with erpDeptoPadrao from default branch;
+  SyncSalesRankingsJob/SyncCatalogJob filter sellers by ID_EMPRESA per branch;
+  IdentityApiClient adds GetBranchesAsync; SyncSalesRankingsJob gains IOptions using
+- Mobile v1.9.0+41: AppConfigService stores branchId/branchName; JwtInterceptor
+  sends X-Branch-Id header; BranchSelectionScreen added with auto-select logic;
+  login_screen redirects to branch selection if not configured; database_helper
+  v33 migration adds erp_depto_padrao column to products; SyncService maps field
+- Configurator: bump version 1.7.9 -> 1.8.0
+---
+ .../Controllers/AuthController.cs             |  36 +-
+ .../Controllers/BranchesController.cs         | 179 +++++++
+ .../Controllers/InternalController.cs         |  20 +
+ .../src/Coliseu.Identity.Api/Program.cs       |  28 +-
+ .../Auth/Handlers/SelectBranchHandler.cs      | 133 +++++
+ .../Services/IJwtService.cs                   |   5 +
+ .../Entities/Branch.cs                        | 106 ++++
+ .../Entities/Company.cs                       |   3 +
+ .../Interfaces/IBranchRepository.cs           |  14 +
+ .../DependencyInjection.cs                    |   1 +
+ .../Configurations/EntityConfigurations.cs    |  39 ++
+ .../Persistence/IdentityDbContext.cs          |   1 +
+ ...0260420174048_AddBranchesTable.Designer.cs | 497 ++++++++++++++++++
+ .../20260420174048_AddBranchesTable.cs        | 255 +++++++++
+ .../IdentityDbContextModelSnapshot.cs         | 213 +++++++-
+ .../Persistence/Repositories/Repositories.cs  |  31 ++
+ .../Security/JwtService.cs                    |  24 +
+ .../ColiseuSales.Configurator.csproj          |   6 +-
+ ColiseuSales.Configurator/MainForm.cs         |  54 +-
+ middleware/sql/011_branches.sql               |  34 ++
+ middleware/src/app.js                         |   2 +
+ middleware/src/db/redis.js                    |  26 +-
+ middleware/src/middleware/auth.js             |  10 +
+ middleware/src/routes/branches.js             |  89 ++++
+ middleware/src/routes/orders.js               |  51 +-
+ middleware/src/routes/sync/orders.js          |   8 +-
+ middleware/src/services/dataStore.js          |  23 +-
+ .../lib/core/config/app_config_service.dart   |  36 ++
+ mobile/lib/core/database/database_helper.dart |  42 +-
+ mobile/lib/core/network/jwt_interceptor.dart  |  16 +-
+ mobile/lib/core/sync/sync_service.dart        |  30 +-
+ .../auth/branch_selection_screen.dart         | 390 ++++++++++++++
+ mobile/lib/features/auth/login_screen.dart    |  23 +-
+ mobile/pubspec.yaml                           |   2 +-
+ shared/Dtos/SyncDtos.cs                       |   1 +
+ worker/Jobs/SyncCatalogJob.cs                 |  57 +-
+ worker/Jobs/SyncOrdersJob.cs                  |  41 +-
+ worker/Jobs/SyncSalesRankingsJob.cs           |  34 +-
+ worker/Program.cs                             |  33 +-
+ worker/Services/IdentityApiClient.cs          |  33 ++
+ worker/WorkerService.cs                       |  18 +-
+ 41 files changed, 2542 insertions(+), 102 deletions(-)
+ create mode 100644 Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/BranchesController.cs
+ create mode 100644 Coliseu.Identity/src/Coliseu.Identity.Application/Auth/Handlers/SelectBranchHandler.cs
+ create mode 100644 Coliseu.Identity/src/Coliseu.Identity.Domain/Entities/Branch.cs
+ create mode 100644 Coliseu.Identity/src/Coliseu.Identity.Domain/Interfaces/IBranchRepository.cs
+ create mode 100644 Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/20260420174048_AddBranchesTable.Designer.cs
+ create mode 100644 Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/20260420174048_AddBranchesTable.cs
+ create mode 100644 middleware/sql/011_branches.sql
+ create mode 100644 middleware/src/routes/branches.js
+ create mode 100644 mobile/lib/features/auth/branch_selection_screen.dart
+
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/AuthController.cs b/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/AuthController.cs
+index 5431a02..44e26b1 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/AuthController.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/AuthController.cs
+@@ -1,5 +1,7 @@
+ using Coliseu.Identity.Application.Auth.DTOs;
+ using Coliseu.Identity.Application.Auth.Handlers;
++using Coliseu.Identity.Application.Auth.Handlers;
++using Microsoft.AspNetCore.Authorization;
+ using Microsoft.AspNetCore.Mvc;
+ using Microsoft.AspNetCore.RateLimiting;
+ 
+@@ -16,11 +18,13 @@ public sealed class AuthController : ControllerBase
+ {
+     private readonly DeviceLoginHandler _loginHandler;
+     private readonly RefreshTokenHandler _refreshHandler;
++    private readonly SelectBranchHandler _selectBranchHandler;
+ 
+-    public AuthController(DeviceLoginHandler loginHandler, RefreshTokenHandler refreshHandler)
++    public AuthController(DeviceLoginHandler loginHandler, RefreshTokenHandler refreshHandler, SelectBranchHandler selectBranchHandler)
+     {
+         _loginHandler = loginHandler;
+         _refreshHandler = refreshHandler;
++        _selectBranchHandler = selectBranchHandler;
+     }
+ 
+     /// <summary>
+@@ -63,4 +67,34 @@ public sealed class AuthController : ControllerBase
+ 
+         return Ok(result.Value);
+     }
++
++    /// <summary>
++    /// Seleciona uma filial e gera um novo JWT restrito para ela.
++    /// Requer que o dispositivo já esteja autenticado genéricamente com a empresa (DeviceJwt).
++    /// </summary>
++    [HttpPost("select-branch")]
++    [Authorize(AuthenticationSchemes = "DeviceJwt")]
++    [EnableRateLimiting("DeviceLogin")]
++    public async Task<IActionResult> SelectBranch(
++        [FromBody] SelectBranchRequest request,
++        CancellationToken ct)
++    {
++        var tenantIdClaim = User.FindFirst("tenantId")?.Value;
++        var deviceIdClaim = User.FindFirst("deviceId")?.Value;
++        var moduleSlug = User.FindFirst("module")?.Value ?? "coliseu-sales";
++
++        if (!Guid.TryParse(tenantIdClaim, out var companyId) || !Guid.TryParse(deviceIdClaim, out var deviceId))
++            return Unauthorized(new { error = "Token inválido ou sem identificação de dispositivo." });
++
++        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
++        var ua = Request.Headers.UserAgent.ToString();
++
++        var result = await _selectBranchHandler.HandleAsync(
++            companyId, deviceId, moduleSlug, request, ip, ua, ct);
++
++        if (!result.IsSuccess)
++            return StatusCode(result.StatusCode ?? 400, new { error = result.Error });
++
++        return Ok(result.Value);
++    }
+ }
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/BranchesController.cs b/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/BranchesController.cs
+new file mode 100644
+index 0000000..6147267
+--- /dev/null
++++ b/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/BranchesController.cs
+@@ -0,0 +1,179 @@
++using Coliseu.Identity.Application.Common;
++using Coliseu.Identity.Api.Filters;
++using Coliseu.Identity.Domain.Entities;
++using Coliseu.Identity.Domain.Interfaces;
++using Microsoft.AspNetCore.Authorization;
++using Microsoft.AspNetCore.Mvc;
++
++namespace Coliseu.Identity.Api.Controllers;
++
++[ApiController]
++[Route("admin/companies/{companyId:guid}/branches")]
++[Authorize(AuthenticationSchemes = "AdminJwt")]
++public sealed class BranchesController : ControllerBase
++{
++    private readonly IBranchRepository _branchRepo;
++    private readonly ICompanyRepository _companyRepo;
++    private readonly IAuditLogRepository _auditRepo;
++
++    public BranchesController(
++        IBranchRepository branchRepo,
++        ICompanyRepository companyRepo,
++        IAuditLogRepository auditRepo)
++    {
++        _branchRepo = branchRepo;
++        _companyRepo = companyRepo;
++        _auditRepo = auditRepo;
++    }
++
++    [HttpGet]
++    [RequirePermission("companies.read")]
++    public async Task<IActionResult> List(Guid companyId, CancellationToken ct)
++    {
++        var company = await _companyRepo.GetByIdAsync(companyId, ct);
++        if (company is null) return NotFound(new { error = "Empresa não encontrada." });
++
++        var branches = await _branchRepo.GetByCompanyAsync(companyId, ct);
++        var dtos = branches.Select(b => new
++        {
++            b.Id,
++            b.Name,
++            b.Cnpj,
++            b.ErpEmpresaId,
++            b.ErpDeptoPadrao,
++            b.ErpCentroPadrao,
++            b.IsDefault,
++            Status = b.Status.ToString(),
++            b.CreatedAt
++        });
++
++        return Ok(dtos);
++    }
++
++    [HttpPost]
++    [RequirePermission("companies.update")]
++    public async Task<IActionResult> Create(Guid companyId, [FromBody] CreateBranchRequest req, CancellationToken ct)
++    {
++        var company = await _companyRepo.GetByIdAsync(companyId, ct);
++        if (company is null) return NotFound(new { error = "Empresa não encontrada." });
++
++        if (await _branchRepo.GetByErpIdAsync(companyId, req.ErpEmpresaId, ct) is not null)
++            return BadRequest(new { error = "Já existe uma filial com este ID do ERP para esta empresa." });
++
++        // Se for a primeira filial, marca como default obrigatoriamente
++        var existingBranches = await _branchRepo.GetByCompanyAsync(companyId, ct);
++        var isDefault = existingBranches.Count == 0 || req.IsDefault;
++
++        if (isDefault)
++        {
++            // Remove o default das outras
++            foreach (var b in existingBranches.Where(x => x.IsDefault))
++            {
++                b.SetDefault(false);
++            }
++        }
++
++        var branch = Branch.Create(
++            companyId, req.Name, req.ErpEmpresaId, req.ErpDeptoPadrao, req.ErpCentroPadrao, isDefault, req.Cnpj);
++
++        await _branchRepo.AddAsync(branch, ct);
++
++        var adminEmail = GetAdminEmail();
++        var adminId = GetAdminId();
++        await _auditRepo.AddAsync(AuditLog.CreateAdmin("branch.created", adminEmail, companyId, $"AdminId: {adminId} | Name: {req.Name} | ErpId: {req.ErpEmpresaId}"), ct);
++
++        await _branchRepo.SaveChangesAsync(ct);
++
++        return Created($"/admin/companies/{companyId}/branches/{branch.Id}", new
++        {
++            branch.Id,
++            branch.Name,
++            branch.IsDefault
++        });
++    }
++
++    [HttpPut("{branchId:guid}")]
++    [RequirePermission("companies.update")]
++    public async Task<IActionResult> Update(Guid companyId, Guid branchId, [FromBody] UpdateBranchRequest req, CancellationToken ct)
++    {
++        var branch = await _branchRepo.GetByIdAsync(branchId, ct);
++        if (branch is null || branch.CompanyId != companyId)
++            return NotFound(new { error = "Filial não encontrada." });
++
++        if (branch.ErpEmpresaId != req.ErpEmpresaId)
++        {
++            var conflictingBranch = await _branchRepo.GetByErpIdAsync(companyId, req.ErpEmpresaId, ct);
++            if (conflictingBranch is not null && conflictingBranch.Id != branchId)
++                return BadRequest(new { error = "Já existe outra filial com este ID do ERP." });
++        }
++
++        branch.UpdateDetails(req.Name, req.Cnpj, req.ErpEmpresaId, req.ErpDeptoPadrao, req.ErpCentroPadrao);
++
++        if (req.IsDefault && !branch.IsDefault)
++        {
++            var existingBranches = await _branchRepo.GetByCompanyAsync(companyId, ct);
++            foreach (var b in existingBranches.Where(x => x.IsDefault && x.Id != branchId))
++            {
++                b.SetDefault(false);
++            }
++            branch.SetDefault(true);
++        }
++
++        var adminEmail = GetAdminEmail();
++        var adminId = GetAdminId();
++        await _auditRepo.AddAsync(AuditLog.CreateAdmin("branch.updated", adminEmail, companyId, $"AdminId: {adminId} | Branch: {req.Name}"), ct);
++
++        await _branchRepo.SaveChangesAsync(ct);
++
++        return Ok(new { message = "Filial atualizada com sucesso." });
++    }
++
++    [HttpDelete("{branchId:guid}")]
++    [RequirePermission("companies.update")]
++    public async Task<IActionResult> Delete(Guid companyId, Guid branchId, CancellationToken ct)
++    {
++        var branch = await _branchRepo.GetByIdAsync(branchId, ct);
++        if (branch is null || branch.CompanyId != companyId)
++            return NotFound(new { error = "Filial não encontrada." });
++
++        if (branch.IsDefault)
++            return BadRequest(new { error = "Não é possível excluir a filial padrão. Defina outra como padrão antes." });
++
++        await _branchRepo.DeleteAsync(branchId, ct);
++
++        var adminEmail = GetAdminEmail();
++        var adminId = GetAdminId();
++        await _auditRepo.AddAsync(AuditLog.CreateAdmin("branch.deleted", adminEmail, companyId, $"AdminId: {adminId} | Branch: {branch.Name}"), ct);
++
++        await _branchRepo.SaveChangesAsync(ct);
++
++        return Ok(new { message = "Filial excluída com sucesso." });
++    }
++
++    private Guid GetAdminId()
++        => Guid.TryParse(User.FindFirst("adminId")?.Value, out var id) ? id : Guid.Empty;
++
++    private string GetAdminEmail()
++        => User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
++           ?? User.FindFirst("email")?.Value
++           ?? User.FindFirst("sub")?.Value
++           ?? $"admin:{GetAdminId().ToString()[..8]}";
++}
++
++public sealed record CreateBranchRequest(
++    string Name,
++    string? Cnpj,
++    int ErpEmpresaId,
++    int ErpDeptoPadrao,
++    int ErpCentroPadrao,
++    bool IsDefault
++);
++
++public sealed record UpdateBranchRequest(
++    string Name,
++    string? Cnpj,
++    int ErpEmpresaId,
++    int ErpDeptoPadrao,
++    int ErpCentroPadrao,
++    bool IsDefault
++);
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/InternalController.cs b/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/InternalController.cs
+index f2f0151..587f414 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/InternalController.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/InternalController.cs
+@@ -62,4 +62,24 @@ public class InternalController : ControllerBase
+             return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Falha ao decifrar credenciais Firebird. Verifique a chave de encriptação (ENCRYPTION_KEY)." });
+         }
+     }
++
++    /// <summary>
++    /// Retorna as filiais ativas da empresa para uso do Worker (isolamento multi-tenant).
++    /// </summary>
++    [HttpGet("companies/{id:guid}/branches")]
++    public async Task<IActionResult> GetBranches([FromServices] IBranchRepository branchRepo, Guid id, CancellationToken ct)
++    {
++        var branches = await branchRepo.GetByCompanyAsync(id, ct);
++        var dtos = branches.Select(b => new
++        {
++            id = b.Id,
++            name = b.Name,
++            cnpj = b.Cnpj,
++            erpEmpresaId = b.ErpEmpresaId,
++            erpDeptoPadrao = b.ErpDeptoPadrao,
++            erpCentroPadrao = b.ErpCentroPadrao,
++            isDefault = b.IsDefault
++        });
++        return Ok(dtos);
++    }
+ }
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Api/Program.cs b/Coliseu.Identity/src/Coliseu.Identity.Api/Program.cs
+index c6b39ba..26c2add 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Api/Program.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Api/Program.cs
+@@ -73,15 +73,26 @@ try
+         sp.GetRequiredService<Coliseu.Identity.Domain.Interfaces.IAuditLogRepository>(),
+         sp.GetRequiredService<Coliseu.Identity.Application.Services.IJwtService>(),
+         jwtRefreshDays));
++    builder.Services.AddScoped(sp => new SelectBranchHandler(
++        sp.GetRequiredService<Coliseu.Identity.Domain.Interfaces.IBranchRepository>(),
++        sp.GetRequiredService<Coliseu.Identity.Domain.Interfaces.ICompanyRepository>(),
++        sp.GetRequiredService<Coliseu.Identity.Domain.Interfaces.IDeviceRepository>(),
++        sp.GetRequiredService<Coliseu.Identity.Domain.Interfaces.ISessionRepository>(),
++        sp.GetRequiredService<Coliseu.Identity.Domain.Interfaces.IAuditLogRepository>(),
++        sp.GetRequiredService<Coliseu.Identity.Application.Services.IJwtService>(),
++        salesApiBaseUrl,
++        jwtRefreshDays,
++        sp.GetRequiredService<Coliseu.Identity.Domain.Interfaces.ICompanyModuleRepository>()));
+     builder.Services.AddScoped<AdminLoginHandler>();
+     builder.Services.AddScoped<CreateCompanyHandler>();
+     builder.Services.AddScoped<AdminUsersHandler>();
+     builder.Services.AddScoped<PermissionGroupHandler>();
+     builder.Services.AddSingleton<Coliseu.Identity.Application.Services.TotpService>();
+ 
+-    // ── JWT Bearer Authentication (Admin) ────────────────────────────────────
+     var adminSigningKey = builder.Configuration["Jwt:AdminSigningKey"]
+         ?? throw new InvalidOperationException("[Startup] Jwt:AdminSigningKey não configurado.");
++    var deviceSigningKey = builder.Configuration["Jwt:DeviceSigningKey"]
++        ?? throw new InvalidOperationException("[Startup] Jwt:DeviceSigningKey não configurado.");
+ 
+     builder.Services.AddAuthentication()
+         .AddJwtBearer("AdminJwt", options =>
+@@ -98,6 +109,21 @@ try
+                     Encoding.UTF8.GetBytes(adminSigningKey)),
+                 ClockSkew = TimeSpan.FromSeconds(30),
+             };
++        })
++        .AddJwtBearer("DeviceJwt", options =>
++        {
++            options.TokenValidationParameters = new TokenValidationParameters
++            {
++                ValidateIssuer = true,
++                ValidIssuer = "coliseu-identity-device",
++                ValidateAudience = true,
++                ValidAudience = "coliseu-sales-api",
++                ValidateLifetime = true,
++                ValidateIssuerSigningKey = true,
++                IssuerSigningKey = new SymmetricSecurityKey(
++                    Encoding.UTF8.GetBytes(deviceSigningKey)),
++                ClockSkew = TimeSpan.FromSeconds(30),
++            };
+         });
+ 
+     builder.Services.AddAuthorization();
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Application/Auth/Handlers/SelectBranchHandler.cs b/Coliseu.Identity/src/Coliseu.Identity.Application/Auth/Handlers/SelectBranchHandler.cs
+new file mode 100644
+index 0000000..a2f2ffa
+--- /dev/null
++++ b/Coliseu.Identity/src/Coliseu.Identity.Application/Auth/Handlers/SelectBranchHandler.cs
+@@ -0,0 +1,133 @@
++using Coliseu.Identity.Application.Common;
++using Coliseu.Identity.Application.Services;
++using Coliseu.Identity.Domain.Entities;
++using Coliseu.Identity.Domain.Interfaces;
++
++namespace Coliseu.Identity.Application.Auth.Handlers;
++
++public sealed record SelectBranchRequest(Guid BranchId);
++
++public sealed record SelectBranchResponse(
++    string AccessToken,
++    string RefreshToken,
++    int ExpiresInSeconds,
++    string BaseUrl,
++    string CompanyName,
++    Guid TenantId,
++    Guid DeviceId,
++    Guid BranchId,
++    string BranchName,
++    int ErpEmpresaId
++);
++
++/// <summary>
++/// Handler para selecionar uma filial. 
++/// Requer que o dispositivo já tenha um JWT inicial (genérico da empresa).
++/// Retorna um novo JWT restrito àquela Branch, contendo os claims da filial.
++/// </summary>
++public sealed class SelectBranchHandler
++{
++    private readonly IBranchRepository _branchRepo;
++    private readonly ICompanyRepository _companyRepo;
++    private readonly IDeviceRepository _deviceRepo;
++    private readonly ISessionRepository _sessionRepo;
++    private readonly IAuditLogRepository _auditRepo;
++    private readonly ICompanyModuleRepository _moduleRepo;
++    private readonly IJwtService _jwt;
++
++    private readonly string _salesApiBaseUrl;
++    private readonly int _refreshTokenDays;
++
++    public SelectBranchHandler(
++        IBranchRepository branchRepo,
++        ICompanyRepository companyRepo,
++        IDeviceRepository deviceRepo,
++        ISessionRepository sessionRepo,
++        IAuditLogRepository auditRepo,
++        IJwtService jwt,
++        string salesApiBaseUrl,
++        int refreshTokenDays = 30,
++        ICompanyModuleRepository? moduleRepo = null)
++    {
++        _branchRepo = branchRepo;
++        _companyRepo = companyRepo;
++        _deviceRepo = deviceRepo;
++        _sessionRepo = sessionRepo;
++        _auditRepo = auditRepo;
++        _jwt = jwt;
++        _salesApiBaseUrl = salesApiBaseUrl;
++        _refreshTokenDays = refreshTokenDays;
++        _moduleRepo = moduleRepo!;
++    }
++
++    public async Task<Result<SelectBranchResponse>> HandleAsync(
++        Guid companyId,
++        Guid deviceId,
++        string moduleSlug,
++        SelectBranchRequest request,
++        string? ipAddress,
++        string? userAgent,
++        CancellationToken ct = default)
++    {
++        var company = await _companyRepo.GetByIdAsync(companyId, ct);
++        if (company is null || !company.IsOperational)
++        {
++            return Result<SelectBranchResponse>.Forbidden("Empresa não encontrada ou inativa.");
++        }
++
++        var device = await _deviceRepo.GetByIdAsync(deviceId, ct);
++        if (device is null || device.CompanyId != companyId || !device.CanAuthenticate)
++        {
++            return Result<SelectBranchResponse>.Forbidden("Dispositivo não encontrado ou não autorizado.");
++        }
++
++        var branch = await _branchRepo.GetByIdAsync(request.BranchId, ct);
++        if (branch is null || branch.CompanyId != companyId)
++        {
++            return Result<SelectBranchResponse>.NotFound("Filial não encontrada para esta empresa.");
++        }
++
++        string middlewareUrl = _salesApiBaseUrl;
++        if (_moduleRepo is not null)
++        {
++            var companyModule = await _moduleRepo.GetByCompanyAndSlugAsync(company.Id, moduleSlug, ct);
++            if (companyModule is not null && companyModule.IsActive && !string.IsNullOrWhiteSpace(companyModule.MiddlewareBaseUrl))
++            {
++                middlewareUrl = companyModule.MiddlewareBaseUrl;
++            }
++        }
++
++        var (accessToken, expiresIn) = _jwt.GenerateDeviceTokenWithBranch(
++            company.Id, device.Id, company.Name, branch.Id, branch.ErpEmpresaId, moduleSlug);
++
++        // Gerar novo refresh token e invalidar o anterior
++        await _sessionRepo.RevokeAllByDeviceAsync(device.Id, ct);
++        var refreshToken = TokenGenerator.GenerateRefreshToken();
++        var session = Session.Create(device.Id, refreshToken, DateTime.UtcNow.AddDays(_refreshTokenDays));
++        await _sessionRepo.AddAsync(session, ct);
++
++        // Audit
++        var log = AuditLog.Create("device_branch_selected", company.Id, device.Id, ipAddress, userAgent, $"BranchId: {branch.Id} | Name: {branch.Name}");
++        await _auditRepo.AddAsync(log, ct);
++
++        device.RecordAccess(device.Model ?? "Unknown", device.OS ?? "Unknown", device.AppVersion ?? "Unknown");
++
++        // Save
++        await _sessionRepo.SaveChangesAsync(ct);
++        await _auditRepo.SaveChangesAsync(ct);
++        await _deviceRepo.SaveChangesAsync(ct);
++
++        return Result<SelectBranchResponse>.Success(new SelectBranchResponse(
++            AccessToken: accessToken,
++            RefreshToken: refreshToken,
++            ExpiresInSeconds: expiresIn,
++            BaseUrl: middlewareUrl,
++            CompanyName: company.Name,
++            TenantId: company.Id,
++            DeviceId: device.Id,
++            BranchId: branch.Id,
++            BranchName: branch.Name,
++            ErpEmpresaId: branch.ErpEmpresaId
++        ));
++    }
++}
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Application/Services/IJwtService.cs b/Coliseu.Identity/src/Coliseu.Identity.Application/Services/IJwtService.cs
+index d2fafd7..af19a35 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Application/Services/IJwtService.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Application/Services/IJwtService.cs
+@@ -16,6 +16,11 @@ public interface IJwtService
+         Guid tenantId, Guid deviceId, string companyName,
+         string moduleSlug = "coliseu-sales");
+ 
++    /// <summary>Gera JWT para um dispositivo autenticado, incluindo contexto da filial (Branch).</summary>
++    (string Token, int ExpiresInSeconds) GenerateDeviceTokenWithBranch(
++        Guid tenantId, Guid deviceId, string companyName,
++        Guid branchId, int erpEmpresaId, string moduleSlug = "coliseu-sales");
++
+     /// <summary>Gera JWT para um administrador autenticado.</summary>
+     /// <param name="adminId">ID do admin (claim: adminId).</param>
+     /// <param name="email">E-mail do admin (claim: email).</param>
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Domain/Entities/Branch.cs b/Coliseu.Identity/src/Coliseu.Identity.Domain/Entities/Branch.cs
+new file mode 100644
+index 0000000..6874d39
+--- /dev/null
++++ b/Coliseu.Identity/src/Coliseu.Identity.Domain/Entities/Branch.cs
+@@ -0,0 +1,106 @@
++using Coliseu.Identity.Domain.Enums;
++
++namespace Coliseu.Identity.Domain.Entities;
++
++/// <summary>
++/// Filial de uma empresa (Branch).
++/// Representa a granularidade fina de acesso de estoque e financeiro do ERP.
++/// </summary>
++public sealed class Branch
++{
++    public Guid Id { get; private set; }
++    public Guid CompanyId { get; private set; }
++    public Company Company { get; private set; } = null!;
++    
++    public string Name { get; private set; } = null!;
++    public string? Cnpj { get; private set; }
++    
++    /// <summary>
++    /// Corresponde ao ID_EMPRESA do Firebird.
++    /// </summary>
++    public int ErpEmpresaId { get; private set; }
++    
++    /// <summary>
++    /// Corresponde ao ID vinculado ao departamento para consultar Estoque no Firebird.
++    /// </summary>
++    public int ErpDeptoPadrao { get; private set; }
++    
++    /// <summary>
++    /// Corresponde ao ID vinculado ao Centro de Custo no Financeiro no Firebird.
++    /// </summary>
++    public int ErpCentroPadrao { get; private set; }
++    
++    /// <summary>
++    /// Define se esta é a filial matriz padrão usada como fallback ou filial principal da empresa.
++    /// Apenas uma filial na empresa pode ter isso como verdadeiro.
++    /// </summary>
++    public bool IsDefault { get; private set; }
++    
++    public CompanyStatus Status { get; private set; }
++    public DateTime CreatedAt { get; private set; }
++    public DateTime? UpdatedAt { get; private set; }
++
++    // Navigation (opcional: poderia ter coleções de pedidos se o C# genciasse, mas quem gerencia é o Node)
++    
++    private Branch() { }
++
++    public static Branch Create(
++        Guid companyId,
++        string name,
++        int erpEmpresaId,
++        int erpDeptoPadrao,
++        int erpCentroPadrao,
++        bool isDefault = false,
++        string? cnpj = null)
++    {
++        if (companyId == Guid.Empty)
++            throw new ArgumentException("CompanyId é obrigatório.", nameof(companyId));
++        if (string.IsNullOrWhiteSpace(name))
++            throw new ArgumentException("Nome da filial é obrigatório.", nameof(name));
++            
++        return new Branch
++        {
++            Id = Guid.NewGuid(),
++            CompanyId = companyId,
++            Name = name.Trim(),
++            ErpEmpresaId = erpEmpresaId,
++            ErpDeptoPadrao = erpDeptoPadrao,
++            ErpCentroPadrao = erpCentroPadrao,
++            IsDefault = isDefault,
++            Cnpj = cnpj?.Trim(),
++            Status = CompanyStatus.Active,
++            CreatedAt = DateTime.UtcNow
++        };
++    }
++
++    public void UpdateDetails(string name, string? cnpj, int erpEmpresaId, int erpDeptoPadrao, int erpCentroPadrao)
++    {
++        if (!string.IsNullOrWhiteSpace(name))
++            Name = name.Trim();
++            
++        Cnpj = cnpj?.Trim();
++        ErpEmpresaId = erpEmpresaId;
++        ErpDeptoPadrao = erpDeptoPadrao;
++        ErpCentroPadrao = erpCentroPadrao;
++        
++        UpdatedAt = DateTime.UtcNow;
++    }
++
++    public void SetDefault(bool isDefault)
++    {
++        IsDefault = isDefault;
++        UpdatedAt = DateTime.UtcNow;
++    }
++
++    public void Suspend()
++    {
++        Status = CompanyStatus.Suspended;
++        UpdatedAt = DateTime.UtcNow;
++    }
++
++    public void Activate()
++    {
++        Status = CompanyStatus.Active;
++        UpdatedAt = DateTime.UtcNow;
++    }
++}
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Domain/Entities/Company.cs b/Coliseu.Identity/src/Coliseu.Identity.Domain/Entities/Company.cs
+index 019fe27..19a2391 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Domain/Entities/Company.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Domain/Entities/Company.cs
+@@ -47,6 +47,9 @@ public sealed class Company
+     private readonly List<Device> _devices = new();
+     public IReadOnlyCollection<Device> Devices => _devices.AsReadOnly();
+ 
++    private readonly List<Branch> _branches = new();
++    public IReadOnlyCollection<Branch> Branches => _branches.AsReadOnly();
++
+     // EF Core needs parameterless constructor
+     private Company() { }
+ 
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Domain/Interfaces/IBranchRepository.cs b/Coliseu.Identity/src/Coliseu.Identity.Domain/Interfaces/IBranchRepository.cs
+new file mode 100644
+index 0000000..a61d08f
+--- /dev/null
++++ b/Coliseu.Identity/src/Coliseu.Identity.Domain/Interfaces/IBranchRepository.cs
+@@ -0,0 +1,14 @@
++using Coliseu.Identity.Domain.Entities;
++
++namespace Coliseu.Identity.Domain.Interfaces;
++
++/// <summary>Repositório de filiais (branches).</summary>
++public interface IBranchRepository
++{
++    Task<Branch?> GetByIdAsync(Guid id, CancellationToken ct = default);
++    Task<Branch?> GetByErpIdAsync(Guid companyId, int erpEmpresaId, CancellationToken ct = default);
++    Task<List<Branch>> GetByCompanyAsync(Guid companyId, CancellationToken ct = default);
++    Task AddAsync(Branch branch, CancellationToken ct = default);
++    Task DeleteAsync(Guid id, CancellationToken ct = default);
++    Task SaveChangesAsync(CancellationToken ct = default);
++}
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/DependencyInjection.cs b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/DependencyInjection.cs
+index f4400e6..4f98942 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/DependencyInjection.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/DependencyInjection.cs
+@@ -55,6 +55,7 @@ public static class DependencyInjection
+         services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+         services.AddScoped<IPermissionGroupRepository, PermissionGroupRepository>();
+         services.AddScoped<ICompanyModuleRepository, CompanyModuleRepository>();
++        services.AddScoped<IBranchRepository, BranchRepository>();
+ 
+         // ── Security Services ─────────────────────────────────────────────────
+         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.Section));
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Configurations/EntityConfigurations.cs b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Configurations/EntityConfigurations.cs
+index fdfa8b6..34c0181 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Configurations/EntityConfigurations.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Configurations/EntityConfigurations.cs
+@@ -35,6 +35,11 @@ public sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
+             .WithOne(m => m.Company)
+             .HasForeignKey(m => m.CompanyId)
+             .OnDelete(DeleteBehavior.Cascade);
++
++        builder.HasMany(c => c.Branches)
++            .WithOne(b => b.Company)
++            .HasForeignKey(b => b.CompanyId)
++            .OnDelete(DeleteBehavior.Cascade);
+     }
+ }
+ 
+@@ -200,3 +205,37 @@ public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
+         builder.HasIndex(l => l.AdminEmail);
+     }
+ }
++
++public sealed class BranchConfiguration : IEntityTypeConfiguration<Branch>
++{
++    public void Configure(EntityTypeBuilder<Branch> builder)
++    {
++        builder.ToTable("branches");
++
++        builder.HasKey(b => b.Id);
++        builder.Property(b => b.Id).ValueGeneratedNever();
++
++        builder.Property(b => b.CompanyId).IsRequired();
++        builder.Property(b => b.Name).HasMaxLength(100).IsRequired();
++        builder.Property(b => b.Cnpj).HasMaxLength(20);
++        builder.Property(b => b.ErpEmpresaId).IsRequired();
++        builder.Property(b => b.ErpDeptoPadrao).IsRequired().HasDefaultValue(0);
++        builder.Property(b => b.ErpCentroPadrao).IsRequired().HasDefaultValue(0);
++        builder.Property(b => b.IsDefault).IsRequired().HasDefaultValue(false);
++        builder.Property(b => b.Status).HasConversion<int>().IsRequired();
++        builder.Property(b => b.CreatedAt).IsRequired();
++        builder.Property(b => b.UpdatedAt);
++
++        builder.HasIndex(b => b.CompanyId);
++
++        builder.HasIndex(b => new { b.CompanyId, b.ErpEmpresaId })
++            .IsUnique()
++            .HasDatabaseName("IX_branches_CompanyId_ErpEmpresaId");
++
++        // Apenas uma filial pode ser IsDefault por Company
++        builder.HasIndex(b => b.CompanyId)
++            .IsUnique()
++            .HasFilter("\"IsDefault\" = true")
++            .HasDatabaseName("IX_branches_DefaultBranch");
++    }
++}
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/IdentityDbContext.cs b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/IdentityDbContext.cs
+index b5e0f66..8938b3b 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/IdentityDbContext.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/IdentityDbContext.cs
+@@ -15,6 +15,7 @@ public sealed class IdentityDbContext : DbContext
+         : base(options) { }
+ 
+     public DbSet<Company>         Companies        => Set<Company>();
++    public DbSet<Branch>          Branches         => Set<Branch>();
+     public DbSet<CompanyModule>   CompanyModules   => Set<CompanyModule>();
+     public DbSet<Device>          Devices          => Set<Device>();
+     public DbSet<Session>         Sessions         => Set<Session>();
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/20260420174048_AddBranchesTable.Designer.cs b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/20260420174048_AddBranchesTable.Designer.cs
+new file mode 100644
+index 0000000..ecf3055
+--- /dev/null
++++ b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/20260420174048_AddBranchesTable.Designer.cs
+@@ -0,0 +1,497 @@
++﻿// <auto-generated />
++using System;
++using Coliseu.Identity.Infrastructure.Persistence;
++using Microsoft.EntityFrameworkCore;
++using Microsoft.EntityFrameworkCore.Infrastructure;
++using Microsoft.EntityFrameworkCore.Migrations;
++using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
++
++#nullable disable
++
++namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
++{
++    [DbContext(typeof(IdentityDbContext))]
++    [Migration("20260420174048_AddBranchesTable")]
++    partial class AddBranchesTable
++    {
++        /// <inheritdoc />
++        protected override void BuildTargetModel(ModelBuilder modelBuilder)
++        {
++#pragma warning disable 612, 618
++            modelBuilder.HasAnnotation("ProductVersion", "8.0.11");
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.AdminUser", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Email")
++                        .IsRequired()
++                        .HasMaxLength(255)
++                        .HasColumnType("TEXT");
++
++                    b.Property<bool>("IsActive")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(true);
++
++                    b.Property<DateTime?>("LastLoginAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Name")
++                        .HasMaxLength(200)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("PasswordHash")
++                        .IsRequired()
++                        .HasMaxLength(255)
++                        .HasColumnType("TEXT");
++
++                    b.Property<Guid?>("PermissionGroupId")
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("Role")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<bool>("TotpEnabled")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<string>("TotpSecretEncrypted")
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("Email")
++                        .IsUnique();
++
++                    b.HasIndex("PermissionGroupId");
++
++                    b.ToTable("admin_users", (string)null);
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.AuditLog", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Action")
++                        .IsRequired()
++                        .HasMaxLength(100)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("AdminEmail")
++                        .HasMaxLength(200)
++                        .HasColumnType("TEXT");
++
++                    b.Property<Guid?>("CompanyId")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Details")
++                        .HasMaxLength(2000)
++                        .HasColumnType("TEXT");
++
++                    b.Property<Guid?>("DeviceId")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("IpAddress")
++                        .HasMaxLength(45)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("UserAgent")
++                        .HasMaxLength(500)
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("Action");
++
++                    b.HasIndex("AdminEmail");
++
++                    b.HasIndex("CompanyId");
++
++                    b.HasIndex("CreatedAt");
++
++                    b.ToTable("audit_logs", (string)null);
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Branch", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Cnpj")
++                        .HasMaxLength(20)
++                        .HasColumnType("TEXT");
++
++                    b.Property<Guid>("CompanyId")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("ErpCentroPadrao")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(0);
++
++                    b.Property<int>("ErpDeptoPadrao")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(0);
++
++                    b.Property<int>("ErpEmpresaId")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<bool>("IsDefault")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(false);
++
++                    b.Property<string>("Name")
++                        .IsRequired()
++                        .HasMaxLength(100)
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("Status")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<DateTime?>("UpdatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("CompanyId")
++                        .IsUnique()
++                        .HasDatabaseName("IX_branches_DefaultBranch")
++                        .HasFilter("\"IsDefault\" = true");
++
++                    b.HasIndex("CompanyId", "ErpEmpresaId")
++                        .IsUnique()
++                        .HasDatabaseName("IX_branches_CompanyId_ErpEmpresaId");
++
++                    b.ToTable("branches", (string)null);
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Company", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<bool>("AllowNegativeStock")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<string>("CompanyKeyHash")
++                        .IsRequired()
++                        .HasMaxLength(64)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("ContactEmail")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("DeviceLimit")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<string>("FirebirdDatabasePath")
++                        .IsRequired()
++                        .HasMaxLength(500)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("FirebirdHost")
++                        .IsRequired()
++                        .HasMaxLength(255)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("FirebirdPasswordEncrypted")
++                        .IsRequired()
++                        .HasMaxLength(500)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("FirebirdUser")
++                        .IsRequired()
++                        .HasMaxLength(100)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("LogoBase64")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Name")
++                        .IsRequired()
++                        .HasMaxLength(200)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("PriceTableMode")
++                        .IsRequired()
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("Status")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<DateTime?>("UpdatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("CompanyKeyHash")
++                        .IsUnique();
++
++                    b.HasIndex("Name");
++
++                    b.ToTable("companies", (string)null);
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.CompanyModule", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("ApiKeyHash")
++                        .IsRequired()
++                        .HasMaxLength(64)
++                        .HasColumnType("TEXT");
++
++                    b.Property<Guid>("CompanyId")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("DeviceLimit")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<bool>("IsActive")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(true);
++
++                    b.Property<string>("MiddlewareBaseUrl")
++                        .HasMaxLength(500)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("ModuleSlug")
++                        .IsRequired()
++                        .HasMaxLength(50)
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime?>("UpdatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("ApiKeyHash")
++                        .HasDatabaseName("IX_company_modules_ApiKeyHash");
++
++                    b.HasIndex("CompanyId", "ModuleSlug")
++                        .IsUnique()
++                        .HasDatabaseName("IX_company_modules_CompanyId_ModuleSlug");
++
++                    b.ToTable("company_modules", (string)null);
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Device", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("ActivationKey")
++                        .IsRequired()
++                        .HasMaxLength(10)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("AppVersion")
++                        .HasMaxLength(50)
++                        .HasColumnType("TEXT");
++
++                    b.Property<Guid>("CompanyId")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("DeviceUuid")
++                        .HasMaxLength(255)
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("FirstActivation")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("LastAccess")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Model")
++                        .HasMaxLength(200)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("ModuleSlug")
++                        .IsRequired()
++                        .ValueGeneratedOnAdd()
++                        .HasMaxLength(50)
++                        .HasColumnType("TEXT")
++                        .HasDefaultValue("coliseu-sales");
++
++                    b.Property<string>("OS")
++                        .HasMaxLength(100)
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("Status")
++                        .HasColumnType("INTEGER");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("ActivationKey")
++                        .IsUnique();
++
++                    b.HasIndex("CompanyId");
++
++                    b.HasIndex("ModuleSlug");
++
++                    b.HasIndex("DeviceUuid", "CompanyId", "ModuleSlug")
++                        .IsUnique()
++                        .HasDatabaseName("IX_devices_DeviceUuid_CompanyId_Module")
++                        .HasFilter("\"DeviceUuid\" IS NOT NULL");
++
++                    b.ToTable("devices", (string)null);
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.PermissionGroup", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Description")
++                        .HasMaxLength(500)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Name")
++                        .IsRequired()
++                        .HasMaxLength(200)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Permissions")
++                        .IsRequired()
++                        .HasColumnType("jsonb");
++
++                    b.Property<DateTime?>("UpdatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.ToTable("permission_groups", (string)null);
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Session", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<Guid>("DeviceId")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("ExpiresAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<bool>("IsRevoked")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(false);
++
++                    b.Property<string>("RefreshToken")
++                        .IsRequired()
++                        .HasMaxLength(500)
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("DeviceId");
++
++                    b.HasIndex("RefreshToken")
++                        .IsUnique();
++
++                    b.ToTable("sessions", (string)null);
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.AdminUser", b =>
++                {
++                    b.HasOne("Coliseu.Identity.Domain.Entities.PermissionGroup", "PermissionGroup")
++                        .WithMany("Users")
++                        .HasForeignKey("PermissionGroupId")
++                        .OnDelete(DeleteBehavior.SetNull);
++
++                    b.Navigation("PermissionGroup");
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Branch", b =>
++                {
++                    b.HasOne("Coliseu.Identity.Domain.Entities.Company", "Company")
++                        .WithMany("Branches")
++                        .HasForeignKey("CompanyId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.Navigation("Company");
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.CompanyModule", b =>
++                {
++                    b.HasOne("Coliseu.Identity.Domain.Entities.Company", "Company")
++                        .WithMany()
++                        .HasForeignKey("CompanyId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.Navigation("Company");
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Device", b =>
++                {
++                    b.HasOne("Coliseu.Identity.Domain.Entities.Company", "Company")
++                        .WithMany("Devices")
++                        .HasForeignKey("CompanyId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.Navigation("Company");
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Session", b =>
++                {
++                    b.HasOne("Coliseu.Identity.Domain.Entities.Device", "Device")
++                        .WithMany("Sessions")
++                        .HasForeignKey("DeviceId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.Navigation("Device");
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Company", b =>
++                {
++                    b.Navigation("Branches");
++
++                    b.Navigation("Devices");
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Device", b =>
++                {
++                    b.Navigation("Sessions");
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.PermissionGroup", b =>
++                {
++                    b.Navigation("Users");
++                });
++#pragma warning restore 612, 618
++        }
++    }
++}
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/20260420174048_AddBranchesTable.cs b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/20260420174048_AddBranchesTable.cs
+new file mode 100644
+index 0000000..05ae340
+--- /dev/null
++++ b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/20260420174048_AddBranchesTable.cs
+@@ -0,0 +1,255 @@
++﻿using System;
++using Microsoft.EntityFrameworkCore.Migrations;
++
++#nullable disable
++
++namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
++{
++    /// <inheritdoc />
++    public partial class AddBranchesTable : Migration
++    {
++        /// <inheritdoc />
++        protected override void Up(MigrationBuilder migrationBuilder)
++        {
++            migrationBuilder.DropIndex(
++                name: "IX_devices_DeviceUuid_CompanyId",
++                table: "devices");
++
++            migrationBuilder.AddColumn<string>(
++                name: "ModuleSlug",
++                table: "devices",
++                type: "TEXT",
++                maxLength: 50,
++                nullable: false,
++                defaultValue: "coliseu-sales");
++
++            migrationBuilder.AlterColumn<string>(
++                name: "PriceTableMode",
++                table: "companies",
++                type: "TEXT",
++                nullable: false,
++                oldClrType: typeof(string),
++                oldType: "TEXT",
++                oldMaxLength: 20,
++                oldDefaultValue: "none");
++
++            migrationBuilder.AddColumn<bool>(
++                name: "AllowNegativeStock",
++                table: "companies",
++                type: "INTEGER",
++                nullable: false,
++                defaultValue: false);
++
++            migrationBuilder.AddColumn<string>(
++                name: "AdminEmail",
++                table: "audit_logs",
++                type: "TEXT",
++                maxLength: 200,
++                nullable: true);
++
++            migrationBuilder.AddColumn<string>(
++                name: "Name",
++                table: "admin_users",
++                type: "TEXT",
++                maxLength: 200,
++                nullable: true);
++
++            migrationBuilder.AddColumn<Guid>(
++                name: "PermissionGroupId",
++                table: "admin_users",
++                type: "TEXT",
++                nullable: true);
++
++            migrationBuilder.CreateTable(
++                name: "branches",
++                columns: table => new
++                {
++                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
++                    CompanyId = table.Column<Guid>(type: "TEXT", nullable: false),
++                    Name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
++                    Cnpj = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
++                    ErpEmpresaId = table.Column<int>(type: "INTEGER", nullable: false),
++                    ErpDeptoPadrao = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
++                    ErpCentroPadrao = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
++                    IsDefault = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: false),
++                    Status = table.Column<int>(type: "INTEGER", nullable: false),
++                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
++                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
++                },
++                constraints: table =>
++                {
++                    table.PrimaryKey("PK_branches", x => x.Id);
++                    table.ForeignKey(
++                        name: "FK_branches_companies_CompanyId",
++                        column: x => x.CompanyId,
++                        principalTable: "companies",
++                        principalColumn: "Id",
++                        onDelete: ReferentialAction.Cascade);
++                });
++
++            migrationBuilder.CreateTable(
++                name: "company_modules",
++                columns: table => new
++                {
++                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
++                    CompanyId = table.Column<Guid>(type: "TEXT", nullable: false),
++                    ModuleSlug = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
++                    ApiKeyHash = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
++                    DeviceLimit = table.Column<int>(type: "INTEGER", nullable: false),
++                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false, defaultValue: true),
++                    MiddlewareBaseUrl = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
++                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
++                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
++                },
++                constraints: table =>
++                {
++                    table.PrimaryKey("PK_company_modules", x => x.Id);
++                    table.ForeignKey(
++                        name: "FK_company_modules_companies_CompanyId",
++                        column: x => x.CompanyId,
++                        principalTable: "companies",
++                        principalColumn: "Id",
++                        onDelete: ReferentialAction.Cascade);
++                });
++
++            migrationBuilder.CreateTable(
++                name: "permission_groups",
++                columns: table => new
++                {
++                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
++                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
++                    Description = table.Column<string>(type: "TEXT", maxLength: 500, nullable: true),
++                    Permissions = table.Column<string>(type: "jsonb", nullable: false),
++                    CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
++                    UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true)
++                },
++                constraints: table =>
++                {
++                    table.PrimaryKey("PK_permission_groups", x => x.Id);
++                });
++
++            migrationBuilder.CreateIndex(
++                name: "IX_devices_DeviceUuid_CompanyId_Module",
++                table: "devices",
++                columns: new[] { "DeviceUuid", "CompanyId", "ModuleSlug" },
++                unique: true,
++                filter: "\"DeviceUuid\" IS NOT NULL");
++
++            migrationBuilder.CreateIndex(
++                name: "IX_devices_ModuleSlug",
++                table: "devices",
++                column: "ModuleSlug");
++
++            migrationBuilder.CreateIndex(
++                name: "IX_audit_logs_AdminEmail",
++                table: "audit_logs",
++                column: "AdminEmail");
++
++            migrationBuilder.CreateIndex(
++                name: "IX_admin_users_PermissionGroupId",
++                table: "admin_users",
++                column: "PermissionGroupId");
++
++            migrationBuilder.CreateIndex(
++                name: "IX_branches_CompanyId_ErpEmpresaId",
++                table: "branches",
++                columns: new[] { "CompanyId", "ErpEmpresaId" },
++                unique: true);
++
++            migrationBuilder.CreateIndex(
++                name: "IX_branches_DefaultBranch",
++                table: "branches",
++                column: "CompanyId",
++                unique: true,
++                filter: "\"IsDefault\" = true");
++
++            migrationBuilder.CreateIndex(
++                name: "IX_company_modules_ApiKeyHash",
++                table: "company_modules",
++                column: "ApiKeyHash");
++
++            migrationBuilder.CreateIndex(
++                name: "IX_company_modules_CompanyId_ModuleSlug",
++                table: "company_modules",
++                columns: new[] { "CompanyId", "ModuleSlug" },
++                unique: true);
++
++            migrationBuilder.AddForeignKey(
++                name: "FK_admin_users_permission_groups_PermissionGroupId",
++                table: "admin_users",
++                column: "PermissionGroupId",
++                principalTable: "permission_groups",
++                principalColumn: "Id",
++                onDelete: ReferentialAction.SetNull);
++        }
++
++        /// <inheritdoc />
++        protected override void Down(MigrationBuilder migrationBuilder)
++        {
++            migrationBuilder.DropForeignKey(
++                name: "FK_admin_users_permission_groups_PermissionGroupId",
++                table: "admin_users");
++
++            migrationBuilder.DropTable(
++                name: "branches");
++
++            migrationBuilder.DropTable(
++                name: "company_modules");
++
++            migrationBuilder.DropTable(
++                name: "permission_groups");
++
++            migrationBuilder.DropIndex(
++                name: "IX_devices_DeviceUuid_CompanyId_Module",
++                table: "devices");
++
++            migrationBuilder.DropIndex(
++                name: "IX_devices_ModuleSlug",
++                table: "devices");
++
++            migrationBuilder.DropIndex(
++                name: "IX_audit_logs_AdminEmail",
++                table: "audit_logs");
++
++            migrationBuilder.DropIndex(
++                name: "IX_admin_users_PermissionGroupId",
++                table: "admin_users");
++
++            migrationBuilder.DropColumn(
++                name: "ModuleSlug",
++                table: "devices");
++
++            migrationBuilder.DropColumn(
++                name: "AllowNegativeStock",
++                table: "companies");
++
++            migrationBuilder.DropColumn(
++                name: "AdminEmail",
++                table: "audit_logs");
++
++            migrationBuilder.DropColumn(
++                name: "Name",
++                table: "admin_users");
++
++            migrationBuilder.DropColumn(
++                name: "PermissionGroupId",
++                table: "admin_users");
++
++            migrationBuilder.AlterColumn<string>(
++                name: "PriceTableMode",
++                table: "companies",
++                type: "TEXT",
++                maxLength: 20,
++                nullable: false,
++                defaultValue: "none",
++                oldClrType: typeof(string),
++                oldType: "TEXT");
++
++            migrationBuilder.CreateIndex(
++                name: "IX_devices_DeviceUuid_CompanyId",
++                table: "devices",
++                columns: new[] { "DeviceUuid", "CompanyId" },
++                unique: true);
++        }
++    }
++}
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/IdentityDbContextModelSnapshot.cs b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/IdentityDbContextModelSnapshot.cs
+index f4916b0..e12395c 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/IdentityDbContextModelSnapshot.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Migrations/IdentityDbContextModelSnapshot.cs
+@@ -1,4 +1,4 @@
+-// <auto-generated />
++﻿// <auto-generated />
+ using System;
+ using Coliseu.Identity.Infrastructure.Persistence;
+ using Microsoft.EntityFrameworkCore;
+@@ -38,11 +38,18 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+                     b.Property<DateTime?>("LastLoginAt")
+                         .HasColumnType("TEXT");
+ 
++                    b.Property<string>("Name")
++                        .HasMaxLength(200)
++                        .HasColumnType("TEXT");
++
+                     b.Property<string>("PasswordHash")
+                         .IsRequired()
+                         .HasMaxLength(255)
+                         .HasColumnType("TEXT");
+ 
++                    b.Property<Guid?>("PermissionGroupId")
++                        .HasColumnType("TEXT");
++
+                     b.Property<int>("Role")
+                         .HasColumnType("INTEGER");
+ 
+@@ -57,6 +64,8 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+                     b.HasIndex("Email")
+                         .IsUnique();
+ 
++                    b.HasIndex("PermissionGroupId");
++
+                     b.ToTable("admin_users", (string)null);
+                 });
+ 
+@@ -70,6 +79,10 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+                         .HasMaxLength(100)
+                         .HasColumnType("TEXT");
+ 
++                    b.Property<string>("AdminEmail")
++                        .HasMaxLength(200)
++                        .HasColumnType("TEXT");
++
+                     b.Property<Guid?>("CompanyId")
+                         .HasColumnType("TEXT");
+ 
+@@ -95,6 +108,8 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+ 
+                     b.HasIndex("Action");
+ 
++                    b.HasIndex("AdminEmail");
++
+                     b.HasIndex("CompanyId");
+ 
+                     b.HasIndex("CreatedAt");
+@@ -102,11 +117,72 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+                     b.ToTable("audit_logs", (string)null);
+                 });
+ 
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Branch", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Cnpj")
++                        .HasMaxLength(20)
++                        .HasColumnType("TEXT");
++
++                    b.Property<Guid>("CompanyId")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("ErpCentroPadrao")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(0);
++
++                    b.Property<int>("ErpDeptoPadrao")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(0);
++
++                    b.Property<int>("ErpEmpresaId")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<bool>("IsDefault")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(false);
++
++                    b.Property<string>("Name")
++                        .IsRequired()
++                        .HasMaxLength(100)
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("Status")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<DateTime?>("UpdatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("CompanyId")
++                        .IsUnique()
++                        .HasDatabaseName("IX_branches_DefaultBranch")
++                        .HasFilter("\"IsDefault\" = true");
++
++                    b.HasIndex("CompanyId", "ErpEmpresaId")
++                        .IsUnique()
++                        .HasDatabaseName("IX_branches_CompanyId_ErpEmpresaId");
++
++                    b.ToTable("branches", (string)null);
++                });
++
+             modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Company", b =>
+                 {
+                     b.Property<Guid>("Id")
+                         .HasColumnType("TEXT");
+ 
++                    b.Property<bool>("AllowNegativeStock")
++                        .HasColumnType("INTEGER");
++
+                     b.Property<string>("CompanyKeyHash")
+                         .IsRequired()
+                         .HasMaxLength(64)
+@@ -151,9 +227,7 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+ 
+                     b.Property<string>("PriceTableMode")
+                         .IsRequired()
+-                        .HasMaxLength(20)
+-                        .HasColumnType("TEXT")
+-                        .HasDefaultValue("none");
++                        .HasColumnType("TEXT");
+ 
+                     b.Property<int>("Status")
+                         .HasColumnType("INTEGER");
+@@ -171,6 +245,54 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+                     b.ToTable("companies", (string)null);
+                 });
+ 
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.CompanyModule", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("ApiKeyHash")
++                        .IsRequired()
++                        .HasMaxLength(64)
++                        .HasColumnType("TEXT");
++
++                    b.Property<Guid>("CompanyId")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<int>("DeviceLimit")
++                        .HasColumnType("INTEGER");
++
++                    b.Property<bool>("IsActive")
++                        .ValueGeneratedOnAdd()
++                        .HasColumnType("INTEGER")
++                        .HasDefaultValue(true);
++
++                    b.Property<string>("MiddlewareBaseUrl")
++                        .HasMaxLength(500)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("ModuleSlug")
++                        .IsRequired()
++                        .HasMaxLength(50)
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime?>("UpdatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.HasIndex("ApiKeyHash")
++                        .HasDatabaseName("IX_company_modules_ApiKeyHash");
++
++                    b.HasIndex("CompanyId", "ModuleSlug")
++                        .IsUnique()
++                        .HasDatabaseName("IX_company_modules_CompanyId_ModuleSlug");
++
++                    b.ToTable("company_modules", (string)null);
++                });
++
+             modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Device", b =>
+                 {
+                     b.Property<Guid>("Id")
+@@ -202,6 +324,13 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+                         .HasMaxLength(200)
+                         .HasColumnType("TEXT");
+ 
++                    b.Property<string>("ModuleSlug")
++                        .IsRequired()
++                        .ValueGeneratedOnAdd()
++                        .HasMaxLength(50)
++                        .HasColumnType("TEXT")
++                        .HasDefaultValue("coliseu-sales");
++
+                     b.Property<string>("OS")
+                         .HasMaxLength(100)
+                         .HasColumnType("TEXT");
+@@ -216,12 +345,45 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+ 
+                     b.HasIndex("CompanyId");
+ 
+-                    b.HasIndex("DeviceUuid", "CompanyId")
+-                        .IsUnique();
++                    b.HasIndex("ModuleSlug");
++
++                    b.HasIndex("DeviceUuid", "CompanyId", "ModuleSlug")
++                        .IsUnique()
++                        .HasDatabaseName("IX_devices_DeviceUuid_CompanyId_Module")
++                        .HasFilter("\"DeviceUuid\" IS NOT NULL");
+ 
+                     b.ToTable("devices", (string)null);
+                 });
+ 
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.PermissionGroup", b =>
++                {
++                    b.Property<Guid>("Id")
++                        .HasColumnType("TEXT");
++
++                    b.Property<DateTime>("CreatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Description")
++                        .HasMaxLength(500)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Name")
++                        .IsRequired()
++                        .HasMaxLength(200)
++                        .HasColumnType("TEXT");
++
++                    b.Property<string>("Permissions")
++                        .IsRequired()
++                        .HasColumnType("jsonb");
++
++                    b.Property<DateTime?>("UpdatedAt")
++                        .HasColumnType("TEXT");
++
++                    b.HasKey("Id");
++
++                    b.ToTable("permission_groups", (string)null);
++                });
++
+             modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Session", b =>
+                 {
+                     b.Property<Guid>("Id")
+@@ -256,6 +418,38 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+                     b.ToTable("sessions", (string)null);
+                 });
+ 
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.AdminUser", b =>
++                {
++                    b.HasOne("Coliseu.Identity.Domain.Entities.PermissionGroup", "PermissionGroup")
++                        .WithMany("Users")
++                        .HasForeignKey("PermissionGroupId")
++                        .OnDelete(DeleteBehavior.SetNull);
++
++                    b.Navigation("PermissionGroup");
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Branch", b =>
++                {
++                    b.HasOne("Coliseu.Identity.Domain.Entities.Company", "Company")
++                        .WithMany("Branches")
++                        .HasForeignKey("CompanyId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.Navigation("Company");
++                });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.CompanyModule", b =>
++                {
++                    b.HasOne("Coliseu.Identity.Domain.Entities.Company", "Company")
++                        .WithMany()
++                        .HasForeignKey("CompanyId")
++                        .OnDelete(DeleteBehavior.Cascade)
++                        .IsRequired();
++
++                    b.Navigation("Company");
++                });
++
+             modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Device", b =>
+                 {
+                     b.HasOne("Coliseu.Identity.Domain.Entities.Company", "Company")
+@@ -280,6 +474,8 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+ 
+             modelBuilder.Entity("Coliseu.Identity.Domain.Entities.Company", b =>
+                 {
++                    b.Navigation("Branches");
++
+                     b.Navigation("Devices");
+                 });
+ 
+@@ -287,6 +483,11 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
+                 {
+                     b.Navigation("Sessions");
+                 });
++
++            modelBuilder.Entity("Coliseu.Identity.Domain.Entities.PermissionGroup", b =>
++                {
++                    b.Navigation("Users");
++                });
+ #pragma warning restore 612, 618
+         }
+     }
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Repositories/Repositories.cs b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Repositories/Repositories.cs
+index 1fd5c67..903a328 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Repositories/Repositories.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Persistence/Repositories/Repositories.cs
+@@ -252,3 +252,34 @@ public sealed class CompanyModuleRepository : ICompanyModuleRepository
+         => await _db.SaveChangesAsync(ct);
+ }
+ 
++public sealed class BranchRepository : IBranchRepository
++{
++    private readonly IdentityDbContext _db;
++    public BranchRepository(IdentityDbContext db) => _db = db;
++
++    public async Task<Branch?> GetByIdAsync(Guid id, CancellationToken ct = default)
++        => await _db.Branches.FindAsync([id], ct);
++
++    public async Task<Branch?> GetByErpIdAsync(Guid companyId, int erpEmpresaId, CancellationToken ct = default)
++        => await _db.Branches
++            .FirstOrDefaultAsync(b => b.CompanyId == companyId && b.ErpEmpresaId == erpEmpresaId, ct);
++
++    public async Task<List<Branch>> GetByCompanyAsync(Guid companyId, CancellationToken ct = default)
++        => await _db.Branches
++            .Where(b => b.CompanyId == companyId)
++            .OrderByDescending(b => b.IsDefault)
++            .ThenBy(b => b.Name)
++            .ToListAsync(ct);
++
++    public async Task AddAsync(Branch branch, CancellationToken ct = default)
++        => await _db.Branches.AddAsync(branch, ct);
++
++    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
++    {
++        var branch = await _db.Branches.FindAsync([id], ct);
++        if (branch is not null) _db.Branches.Remove(branch);
++    }
++
++    public async Task SaveChangesAsync(CancellationToken ct = default)
++        => await _db.SaveChangesAsync(ct);
++}
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Security/JwtService.cs b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Security/JwtService.cs
+index 157429e..1cedd65 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Security/JwtService.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Infrastructure/Security/JwtService.cs
+@@ -76,6 +76,30 @@ public sealed class JwtService : IJwtService
+             _options.DeviceExpirationMinutes);
+     }
+ 
++    /// <inheritdoc />
++    public (string Token, int ExpiresInSeconds) GenerateDeviceTokenWithBranch(
++        Guid tenantId, Guid deviceId, string companyName,
++        Guid branchId, int erpEmpresaId, string moduleSlug = "coliseu-sales")
++    {
++        var claims = new[]
++        {
++            new Claim("tenantId", tenantId.ToString()),
++            new Claim("deviceId", deviceId.ToString()),
++            new Claim("companyName", companyName),
++            new Claim("module", moduleSlug),
++            new Claim("branchId", branchId.ToString()),
++            new Claim("erpEmpresaId", erpEmpresaId.ToString()),
++            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
++        };
++
++        return GenerateToken(
++            claims,
++            _options.DeviceSigningKey,
++            "coliseu-identity-device",
++            "coliseu-sales-api",
++            _options.DeviceExpirationMinutes);
++    }
++
+     /// <inheritdoc />
+     public (string Token, int ExpiresInSeconds) GenerateAdminToken(
+         Guid adminId, string email, string role, IEnumerable<string>? permissions = null)
+diff --git a/ColiseuSales.Configurator/ColiseuSales.Configurator.csproj b/ColiseuSales.Configurator/ColiseuSales.Configurator.csproj
+index 67b628a..582752f 100644
+--- a/ColiseuSales.Configurator/ColiseuSales.Configurator.csproj
++++ b/ColiseuSales.Configurator/ColiseuSales.Configurator.csproj
+@@ -3,9 +3,9 @@
+   <PropertyGroup>
+     <OutputType>WinExe</OutputType>
+     <TargetFramework>net8.0-windows</TargetFramework>
+-    <Version>1.7.9</Version>
+-    <AssemblyVersion>1.7.9</AssemblyVersion>
+-    <FileVersion>1.7.9</FileVersion>
++    <Version>1.8.0</Version>
++    <AssemblyVersion>1.8.0</AssemblyVersion>
++    <FileVersion>1.8.0</FileVersion>
+     <Nullable>enable</Nullable>
+     <UseWindowsForms>true</UseWindowsForms>
+     <ImplicitUsings>enable</ImplicitUsings>
+diff --git a/ColiseuSales.Configurator/MainForm.cs b/ColiseuSales.Configurator/MainForm.cs
+index 1cd5788..a613a19 100644
+--- a/ColiseuSales.Configurator/MainForm.cs
++++ b/ColiseuSales.Configurator/MainForm.cs
+@@ -54,7 +54,12 @@ namespace ColiseuSales.Configurator
+         private TextBox  txtAtendenteUrl     = null!;
+         private TextBox  txtAtendenteApiKey  = null!;
+ 
+-        // ── Monitoramento (WebView2) ───────────────────────────────────────────
++        // 🔧 AutoCenter
++        private CheckBox chkAcEnabled = null!;
++        private TextBox  txtAcUrl     = null!;
++        private TextBox  txtAcApiKey  = null!;
++
++        // 🖥 Monitoramento (WebView2) 🖥───────────────────────────────────────────
+         private Microsoft.Web.WebView2.WinForms.WebView2 _webView = null!;
+ 
+         // ── Aba Logs nativa ───────────────────────────────────────────────────
+@@ -586,6 +591,32 @@ namespace ColiseuSales.Configurator
+             AddSection(panel, "🚀  Iniciar com o Windows", y);
+             y += 30;
+ 
++            AddSection(panel, "🔧  AutoCenter (Oficina Mecânica)", y);
++            y += 30;
++            chkAcEnabled = new CheckBox
++            {
++                Text      = "Habilitar sincronização AutoCenter",
++                Location  = new Point(0, y),
++                Size      = new Size(400, 22),
++                Font      = new Font("Segoe UI", 9f),
++                ForeColor = ColiseuColors.TextDark,
++                Checked   = false,
++            };
++            chkAcEnabled.CheckedChanged += (_, _) =>
++            {
++                txtAcUrl.Enabled    = chkAcEnabled.Checked;
++                txtAcApiKey.Enabled = chkAcEnabled.Checked;
++            };
++            panel.Controls.Add(chkAcEnabled);
++            y += 30;
++            AddFormRow(panel, "URL da API:", out txtAcUrl, y);
++            txtAcUrl.PlaceholderText = "http://localhost:3000";
++            txtAcUrl.Enabled = false;
++            y += 44;
++            AddFormRow(panel, "Internal API Key:", out txtAcApiKey, y, isPassword: true);
++            txtAcApiKey.Enabled = false;
++            y += 58;
++
+             // Checkbox visível com estado atual da tarefa agendada
+             bool autoStartOn = IsAutoStartEnabled();
+             var chkAutoStart = new CheckBox
+@@ -1312,6 +1343,15 @@ namespace ColiseuSales.Configurator
+                 OverrideIfReal(ref txtAtendenteApiKey, TryGet(s, "AtendenteApi", "ApiKey"));
+                 txtAtendenteUrl.Enabled    = chkAtendenteEnabled.Checked;
+                 txtAtendenteApiKey.Enabled = chkAtendenteEnabled.Checked;
++
++                // AutoCenter
++                var acEnabledStr = TryGet(s, "AutoCenterApi", "Enabled");
++                chkAcEnabled.Checked = string.Equals(acEnabledStr, "True", StringComparison.OrdinalIgnoreCase)
++                                       || string.Equals(acEnabledStr, "true", StringComparison.OrdinalIgnoreCase);
++                OverrideIfReal(ref txtAcUrl,    TryGet(s, "AutoCenterApi", "BaseUrl"));
++                OverrideIfReal(ref txtAcApiKey, TryGet(s, "AutoCenterApi", "InternalApiKey"));
++                txtAcUrl.Enabled    = chkAcEnabled.Checked;
++                txtAcApiKey.Enabled = chkAcEnabled.Checked;
+             }
+             catch { }
+         }
+@@ -1359,6 +1399,9 @@ namespace ColiseuSales.Configurator
+                     chkAtendenteEnabled.Checked,
+                     txtAtendenteUrl.Text.Trim(),
+                     txtAtendenteApiKey.Text.Trim(),
++                    chkAcEnabled.Checked,
++                    txtAcUrl.Text.Trim(),
++                    txtAcApiKey.Text.Trim(),
+                     wireCrypt: chkWireCrypt.Checked,
+                     spVariant: "Standard");  // Sempre Standard — bootstrap garante a SP correta
+ 
+@@ -1416,6 +1459,9 @@ namespace ColiseuSales.Configurator
+                         bool   atendenteEnabled = false;
+                         string atendenteUrl   = "";
+                         string atendenteKey   = "";
++                        bool   acEnabled      = false;
++                        string acUrl          = "";
++                        string acKey          = "";
+ 
+                         UI(() =>
+                         {
+@@ -1431,13 +1477,17 @@ namespace ColiseuSales.Configurator
+                             atendenteEnabled = chkAtendenteEnabled.Checked;
+                             atendenteUrl    = txtAtendenteUrl.Text.Trim();
+                             atendenteKey    = txtAtendenteApiKey.Text.Trim();
++                            acEnabled       = chkAcEnabled.Checked;
++                            acUrl           = txtAcUrl.Text.Trim();
++                            acKey           = txtAcApiKey.Text.Trim();
+                         });
+ 
+                         _settings.UpdateSettings(
+                             fbDb, fbUser, fbPass,
+                             vpsUrl, vpsKey, idUrl, tenant,
+                             catalogInterval, orderInterval,
+-                            atendenteEnabled, atendenteUrl, atendenteKey);
++                            atendenteEnabled, atendenteUrl, atendenteKey,
++                            acEnabled, acUrl, acKey);
+                     }
+ 
+                     // 3. Registra URL ACL para o MonitoringServer (HttpListener porta 9001)
+diff --git a/middleware/sql/011_branches.sql b/middleware/sql/011_branches.sql
+new file mode 100644
+index 0000000..465f432
+--- /dev/null
++++ b/middleware/sql/011_branches.sql
+@@ -0,0 +1,34 @@
++-- ============================================================================
++-- 011_branches.sql — Atualização Single-Tenant para Multi-Empresa
++-- 
++-- Tabela branches criada automaticamente pelo EF Core no Coliseu.Identity,
++-- portanto este script lida com a injeção do conceito na tabela `orders`
++-- e na política RLS, permitindo o isolamento multi-filial (Branch).
++-- ============================================================================
++
++-- Garante que se houver pedidos para a empresa e eles não têm filial,
++-- eles terão que ganhar uma filial padrão (backfill feito depois na aplicação se a FK falhar, 
++-- ou via default).
++-- Mas primeiro criamos a coluna NULLABLE.
++
++ALTER TABLE orders 
++ADD COLUMN IF NOT EXISTS branch_id UUID REFERENCES branches("Id") ON DELETE CASCADE;
++
++-- Criar a nova RLS isolando por Branch e Company
++-- Antes, precisamos remover a velha e substituir.
++DROP POLICY IF EXISTS tenant_isolation ON orders;
++
++-- A política "branch_isolation" impõe:
++-- 1. O pedido tem que pertencer à Company X.
++-- 2. SE a requisição informou um branch via 'app.current_branch_id', o pedido tem que ser dele.
++-- 3. SE a requisição NÃO informou um branch, a pessoa é Master/Identidade Geral, 
++--    então ela vê os pedidos da Company inteira (todas as filiais).
++CREATE POLICY branch_isolation ON orders
++    FOR ALL
++    USING (
++        company_id = NULLIF(current_setting('app.current_company_id', true), '')::uuid
++        AND (
++            branch_id = NULLIF(current_setting('app.current_branch_id', true), '')::uuid
++            OR NULLIF(current_setting('app.current_branch_id', true), '') IS NULL
++        )
++    );
+diff --git a/middleware/src/app.js b/middleware/src/app.js
+index 30b34e6..cbd920d 100644
+--- a/middleware/src/app.js
++++ b/middleware/src/app.js
+@@ -34,6 +34,7 @@ const { router: adminStatsRouter, recordRequest } = require('./routes/admin/stat
+ const eventsRouter = require('./routes/events');
+ const cacheWarmRouter = require('./routes/cacheWarm');
+ const adminOrdersRouter = require('./routes/admin/adminOrders');
++const branchesRouter    = require('./routes/branches');
+ 
+ 
+ 
+@@ -94,6 +95,7 @@ app.use('/api/sync/cache/warm', cacheWarmRouter);  // N2: cache warming endpoint
+ app.use('/api/orders', syncOrdersLimit, ordersRouter);
+ app.use('/api/orders', kpiRouter);
+ app.use('/api/orders', eventsRouter);              // audit trail endpoint
++app.use('/api/branches', branchesRouter);          // FASE 3: listagem de filiais por tenant
+ 
+ 
+ 
+diff --git a/middleware/src/db/redis.js b/middleware/src/db/redis.js
+index 1093491..613f8d3 100644
+--- a/middleware/src/db/redis.js
++++ b/middleware/src/db/redis.js
+@@ -106,12 +106,17 @@ client.on('error', (err) => logger.error('[Redis] Erro de conexão', { error: er
+ /**
+  * Monta a chave Redis para um dado de empresa.
+  * Formato: `company:{companyId}:{entity}` (ex: company:abc123:products)
++ * Ou `company:{companyId}:branch:{branchId}:{entity}` se segmentado por filial.
+  *
+  * @param {string} companyId
+  * @param {string} entity    — 'products', 'customers', 'sellers', etc.
++ * @param {string} [branchId]  — Opcional: UUID da filial para isolamento de dados
+  * @returns {string}
+  */
+-function key(companyId, entity) {
++function key(companyId, entity, branchId = null) {
++    if (branchId) {
++        return `company:${companyId}:branch:${branchId}:${entity}`;
++    }
+     return `company:${companyId}:${entity}`;
+ }
+ 
+@@ -123,14 +128,15 @@ function key(companyId, entity) {
+  * @param {string}  entity
+  * @param {Array}   data
+  * @param {number}  [ttlSeconds]  — default: 86400 (24h)
++ * @param {string}  [branchId]  — Opcional: UUID da filial
+  */
+-async function redisSet(companyId, entity, data, ttlSeconds = 86_400) {
++async function redisSet(companyId, entity, data, ttlSeconds = 86_400, branchId = null) {
+     if (client.status !== 'ready') return false;
+     try {
+-        await client.setex(key(companyId, entity), ttlSeconds, JSON.stringify(data));
++        await client.setex(key(companyId, entity, branchId), ttlSeconds, JSON.stringify(data));
+         return true;
+     } catch (err) {
+-        logger.warn('[Redis] Falha ao salvar', { entity, companyId, error: err.message });
++        logger.warn('[Redis] Falha ao salvar', { entity, companyId, branchId, error: err.message });
+         return false;
+     }
+ }
+@@ -140,15 +146,16 @@ async function redisSet(companyId, entity, data, ttlSeconds = 86_400) {
+  *
+  * @param {string} companyId
+  * @param {string} entity
++ * @param {string} [branchId] Opcional: UUID da filial
+  * @returns {Promise<Array|null>} Array de dados ou null (não encontrado/erro)
+  */
+-async function redisGet(companyId, entity) {
++async function redisGet(companyId, entity, branchId = null) {
+     if (client.status !== 'ready') return null;
+     try {
+-        const raw = await client.get(key(companyId, entity));
++        const raw = await client.get(key(companyId, entity, branchId));
+         return raw ? JSON.parse(raw) : null;
+     } catch (err) {
+-        logger.warn('[Redis] Falha ao ler', { entity, companyId, error: err.message });
++        logger.warn('[Redis] Falha ao ler', { entity, companyId, branchId, error: err.message });
+         return null;
+     }
+ }
+@@ -158,12 +165,13 @@ async function redisGet(companyId, entity) {
+  *
+  * @param {string} companyId
+  * @param {string} entity
++ * @param {string} [branchId] Opcional: UUID da filial
+  * @returns {Promise<string|null>} ISO string ou null
+  */
+-async function redisSyncedAt(companyId, entity) {
++async function redisSyncedAt(companyId, entity, branchId = null) {
+     if (client.status !== 'ready') return null;
+     try {
+-        const ttl = await client.ttl(key(companyId, entity));
++        const ttl = await client.ttl(key(companyId, entity, branchId));
+         if (ttl < 0) return null;
+         const savedAt = new Date(Date.now() + (ttl - 86_400) * 1000);
+         return savedAt.toISOString();
+diff --git a/middleware/src/middleware/auth.js b/middleware/src/middleware/auth.js
+index d5e6b94..b03704b 100644
+--- a/middleware/src/middleware/auth.js
++++ b/middleware/src/middleware/auth.js
+@@ -266,10 +266,20 @@ async function requireDeviceJwt(req, res, next) {
+ 
+         req.company = company;
+         req.device = { id: deviceId };
++        
++        const branchId = decoded.branchId;
++        const erpEmpresaId = decoded.erpEmpresaId;
++        if (branchId && erpEmpresaId) {
++            req.branch = {
++                id: branchId,
++                erpEmpresaId: parseInt(erpEmpresaId, 10)
++            };
++        }
+ 
+         logger.info('[Auth] Autenticado (Device JWT)', {
+             companyId: company.id,
+             deviceId: deviceId,
++            branchId: branchId,
+             path: req.path
+         });
+         next();
+diff --git a/middleware/src/routes/branches.js b/middleware/src/routes/branches.js
+new file mode 100644
+index 0000000..f134f0d
+--- /dev/null
++++ b/middleware/src/routes/branches.js
+@@ -0,0 +1,89 @@
++/**
++ * branches.js — Rota de listagem de filiais da empresa autenticada.
++ *
++ * Proxeia para a Identity API interna e aplica filtro de permissão:
++ *   - Admin/Manager: vê todas as filiais da empresa.
++ *   - Seller (vendedor): vê apenas sua própria filial (req.branch).
++ *
++ * Rota:
++ *   GET /api/branches   → lista filiais acessíveis ao token atual
++ *
++ * @module routes/branches
++ */
++'use strict';
++
++const express = require('express');
++const axios   = require('axios');
++const logger  = require('../config/logger');
++
++const router = express.Router();
++
++const IDENTITY_BASE_URL  = process.env.IDENTITY_BASE_URL  || 'http://identity:5000';
++const INTERNAL_API_KEY   = process.env.INTERNAL_API_KEY   || '';
++
++/**
++ * GET /api/branches
++ *
++ * Retorna as filiais acessíveis ao usuário autenticado.
++ * req.company e req.branch são injetados pelo middleware auth.js.
++ *
++ * Resposta:
++ *   200 { branches: [ { id, name, cnpj, erpEmpresaId, erpDeptoPadrao, erpCentroPadrao, isDefault } ] }
++ *   401 se token inválido (tratado globalmente pelo auth.js)
++ *   502 se a Identity API não responder
++ */
++router.get('/', async (req, res) => {
++    const companyId = req.company?.id;
++    if (!companyId) {
++        return res.status(401).json({ error: 'Empresa não identificada no token.' });
++    }
++
++    try {
++        // Consulta Identity API (endpoint interno — protegido por X-Internal-Api-Key)
++        const { data } = await axios.get(
++            `${IDENTITY_BASE_URL}/internal/companies/${companyId}/branches`,
++            {
++                headers: { 'X-Internal-Api-Key': INTERNAL_API_KEY },
++                timeout: 5000,
++            }
++        );
++
++        let branches = Array.isArray(data) ? data : [];
++
++        // Filtro de permissão: vendedores veem apenas sua própria filial
++        const role = req.user?.role || req.company?.role || 'seller';
++        const isManager = ['admin', 'manager', 'owner'].includes(role?.toLowerCase());
++
++        if (!isManager && req.branch?.id) {
++            branches = branches.filter(b => b.id === req.branch.id);
++        }
++
++        logger.debug('[Branches] company=%s role=%s total=%d', companyId, role, branches.length);
++
++        return res.json({ branches });
++    } catch (err) {
++        // Fallback: se Identity API estiver fora, usa a filial do token
++        if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.response?.status >= 500) {
++            logger.warn('[Branches] Identity API indisponível. Retornando filial do token como fallback.');
++
++            const fallback = req.branch?.id
++                ? [{
++                    id:              req.branch.id,
++                    name:            req.branch.name            || 'Filial Padrão',
++                    cnpj:            req.branch.cnpj            || null,
++                    erpEmpresaId:    req.branch.erpEmpresaId    || 1,
++                    erpDeptoPadrao:  req.branch.erpDeptoPadrao  || null,
++                    erpCentroPadrao: req.branch.erpCentroPadrao || null,
++                    isDefault:       true,
++                  }]
++                : [];
++
++            return res.json({ branches: fallback });
++        }
++
++        logger.error('[Branches] Erro ao buscar filiais: %s', err.message);
++        return res.status(502).json({ error: 'Falha ao consultar filiais.' });
++    }
++});
++
++module.exports = router;
+diff --git a/middleware/src/routes/orders.js b/middleware/src/routes/orders.js
+index 09509e4..5780dad 100644
+--- a/middleware/src/routes/orders.js
++++ b/middleware/src/routes/orders.js
+@@ -26,21 +26,24 @@ const router = express.Router();
+ // ── Helper: seta RLS por empresa na transação ─────────────────────────────────
+ 
+ /**
+- * Executa uma query com SET LOCAL para ativar o RLS da empresa.
++ * Executa uma query com SET LOCAL para ativar o RLS da empresa (e opcionalmente da filial).
+  * Garante que mesmo uma query sem WHERE company_id seja bloqueada pelo PG.
+  *
+  * @param {string}  companyId UUID da empresa
+  * @param {string}  sql
+  * @param {Array}   params
++ * @param {string}  [branchId] UUID da filial (opcional)
+  */
+-async function pgQueryRLS(companyId, sql, params) {
++async function pgQueryRLS(companyId, sql, params, branchId = null) {
+     const { pool } = require('../db/postgres');
+     const client = await pool.connect();
+     try {
+         await client.query('BEGIN');
+-        // set_config com is_local=true é equivalente a SET LOCAL, mas aceita parâmetro $1
+-        // (SET LOCAL não suporta placeholders no PostgreSQL)
++        // set_config com is_local=true é equivalente a SET LOCAL
+         await client.query('SELECT set_config($1, $2, true)', ['app.current_company_id', companyId]);
++        if (branchId) {
++            await client.query('SELECT set_config($1, $2, true)', ['app.current_branch_id', branchId]);
++        }
+         const result = await client.query(sql, params);
+         await client.query('COMMIT');
+         return result;
+@@ -65,32 +68,45 @@ async function pgQueryRLS(companyId, sql, params) {
+  */
+ router.get('/pending', async (req, res, next) => {
+     const companyId = req.company.id;
++    const branchId = req.branch?.id;
+     const { confirmedSince } = req.query;
+ 
+     try {
+         if (confirmedSince) {
+             // Polling do Flutter: busca pedidos confirmados após determinada data
+-            const { rows } = await pgQuery(
+-                `SELECT id, erp_order_id, sync_status, customer_name, seller_name, total_amount, created_at, updated_at
++            // Se branch_id estiver presente no request, aplica o filtro extra
++            let sql = `SELECT id, erp_order_id, sync_status, customer_name, seller_name, total_amount, created_at, updated_at
+                  FROM   orders
+                  WHERE  company_id  = $1
+                    AND  sync_status = 'synced'
+-                   AND  updated_at >= $2
+-                 ORDER  BY updated_at DESC
+-                 LIMIT  50`,
+-                [companyId, confirmedSince]
+-            );
++                   AND  updated_at >= $2`;
++            let params = [companyId, confirmedSince];
++            
++            if (branchId) {
++                sql += ` AND (branch_id = $3 OR branch_id IS NULL)`;
++                params.push(branchId);
++            }
++            
++            sql += ` ORDER  BY updated_at DESC LIMIT  50`;
++            
++            const { rows } = await pgQuery(sql, params);
+             return res.json({ orders: rows });
+         }
+ 
+         // Worker: busca pedidos pendentes de integração ERP
+-        const { rows } = await pgQuery(
+-            `SELECT id, payload, created_at
++        let pendingSql = `SELECT id, payload, created_at, branch_id
+              FROM   orders
+-             WHERE  company_id = $1 AND sync_status = 'pending'
+-             ORDER  BY created_at ASC`,
+-            [companyId]
+-        );
++             WHERE  company_id = $1 AND sync_status = 'pending'`;
++        let pendingParams = [companyId];
++        
++        if (branchId) {
++            pendingSql += ` AND (branch_id = $2 OR branch_id IS NULL)`;
++            pendingParams.push(branchId);
++        }
++        
++        pendingSql += ` ORDER  BY created_at ASC`;
++        
++        const { rows } = await pgQuery(pendingSql, pendingParams);
+ 
+         // Devolve payload completo para o Worker processar no Firebird.
+         // Filtra pedidos sem payload (criados antes da migration 008).
+@@ -99,6 +115,7 @@ router.get('/pending', async (req, res, next) => {
+             .map(r => ({
+                 ...r.payload,
+                 id: r.id,
++                branchId: r.branch_id,
+                 createdAt: r.created_at,
+             }));
+ 
+diff --git a/middleware/src/routes/sync/orders.js b/middleware/src/routes/sync/orders.js
+index d991cf2..307c5a7 100644
+--- a/middleware/src/routes/sync/orders.js
++++ b/middleware/src/routes/sync/orders.js
+@@ -209,19 +209,21 @@ router.post('/orders', async (req, res, next) => {
+             // ── 4. Registro de status no PostgreSQL ──────────────────────────
+             try {
+                 const companyId = req.company.id;
++                const branchId = req.branch?.id || null;
+                 const status = integratedInErp ? 'synced' : 'pending';
+ 
+                 await pgQuery(
+                     `INSERT INTO orders
+-                         (id, company_id, sync_status, erp_order_id, customer_name, seller_name, total_amount, payload, created_at)
+-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
++                         (id, company_id, branch_id, sync_status, erp_order_id, customer_name, seller_name, total_amount, payload, created_at)
++                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+                      ON CONFLICT (id) DO UPDATE SET
+                          sync_status  = EXCLUDED.sync_status,
++                         branch_id    = COALESCE(EXCLUDED.branch_id, orders.branch_id),
+                          erp_order_id = COALESCE(EXCLUDED.erp_order_id, orders.erp_order_id),
+                          payload      = COALESCE(orders.payload, EXCLUDED.payload),
+                          updated_at   = NOW()`,
+                     [
+-                        order.id, companyId, status,
++                        order.id, companyId, branchId, status,
+                         erpIdValue ? String(erpIdValue) : null,
+                         order.customerName ?? String(order.customerId),
+                         order.sellerName   ?? String(order.sellerId),
+diff --git a/middleware/src/services/dataStore.js b/middleware/src/services/dataStore.js
+index 2e4c092..4688d7d 100644
+--- a/middleware/src/services/dataStore.js
++++ b/middleware/src/services/dataStore.js
+@@ -25,6 +25,10 @@ const VALID_ENTITIES = new Set([
+     'sales-rankings', 'priceTables', 'productPrices',
+ ]);
+ 
++const BRANCH_SCOPED_ENTITIES = new Set([
++    'products', 'financials', 'performance', 'sales-rankings', 'priceTables', 'productPrices'
++]);
++
+ /**
+  * Armazena (ou atualiza) dados de uma entidade para uma empresa.
+  * Chamado pelo Worker via POST /api/sync/*.
+@@ -32,19 +36,23 @@ const VALID_ENTITIES = new Set([
+  * @param {string} companyId UUID da empresa
+  * @param {string} entity    Nome da entidade
+  * @param {Array}  data      Array de objetos a armazenar
++ * @param {string} [branchId] Opcional: UUID da filial
+  * @returns {Promise<{count: number, syncedAt: string}>}
+  */
+-async function upsert(companyId, entity, data) {
++async function upsert(companyId, entity, data, branchId = null) {
+     if (!VALID_ENTITIES.has(entity)) {
+         throw new TypeError(`dataStore.upsert: entidade inválida "${entity}"`);
+     }
+     if (!Array.isArray(data)) {
+         throw new TypeError(`dataStore.upsert: data deve ser Array (recebido ${typeof data})`);
+     }
++    
++    // Se a entidade é isolada por filial, certifique-se de usar o branchId.
++    const resolvedBranchId = BRANCH_SCOPED_ENTITIES.has(entity) ? branchId : null;
+ 
+     const now = new Date().toISOString();
+-    await redisSet(companyId, entity, data);
+-    logger.info(`[DataStore] ${entity} atualizado`, { companyId, count: data.length });
++    await redisSet(companyId, entity, data, 86400, resolvedBranchId);
++    logger.info(`[DataStore] ${entity} atualizado`, { companyId, branchId: resolvedBranchId, count: data.length });
+     return { count: data.length, syncedAt: now };
+ }
+ 
+@@ -53,9 +61,10 @@ async function upsert(companyId, entity, data) {
+  *
+  * @param {string} companyId
+  * @param {string} entity
++ * @param {string} [branchId] Opcional: UUID da filial
+  * @returns {Promise<{data: Array, syncedAt: string|null, source: 'redis'|'empty'}>}
+  */
+-async function get(companyId, entity) {
++async function get(companyId, entity, branchId = null) {
+     const { redisPing } = require('../db/redis');
+     const isUp = await redisPing();
+ 
+@@ -64,8 +73,10 @@ async function get(companyId, entity) {
+         return { data: [], syncedAt: null, source: 'empty' };
+     }
+ 
+-    const data = await redisGet(companyId, entity);
+-    const syncedAt = data ? await redisSyncedAt(companyId, entity) : null;
++    const resolvedBranchId = BRANCH_SCOPED_ENTITIES.has(entity) ? branchId : null;
++
++    const data = await redisGet(companyId, entity, resolvedBranchId);
++    const syncedAt = data ? await redisSyncedAt(companyId, entity, resolvedBranchId) : null;
+ 
+     if (data && data.length > 0) {
+         return { data, syncedAt, source: 'redis' };
+diff --git a/mobile/lib/core/config/app_config_service.dart b/mobile/lib/core/config/app_config_service.dart
+index ca56da6..5b6a6c9 100644
+--- a/mobile/lib/core/config/app_config_service.dart
++++ b/mobile/lib/core/config/app_config_service.dart
+@@ -22,6 +22,10 @@ class AppConfigService {
+   static const String _keyCompanyName    = 'config_company_name';
+   static const String _keyActivationKey  = 'config_activation_key';
+ 
++  // Branch (filial) selecionada pelo vendedor após o login
++  static const String _keyBranchId       = 'config_branch_id';
++  static const String _keyBranchName     = 'config_branch_name';
++
+   // ─────────────────────────────────────────────────────────────────────────
+   // Valores padrão
+   // ─────────────────────────────────────────────────────────────────────────
+@@ -89,6 +93,24 @@ class AppConfigService {
+     return key != null && key.isNotEmpty;
+   }
+ 
++  /// Retorna o UUID da filial selecionada pelo vendedor (ou null).
++  Future<String?> getBranchId() async {
++    final prefs = await SharedPreferences.getInstance();
++    return prefs.getString(_keyBranchId);
++  }
++
++  /// Retorna o nome da filial selecionada (ou null).
++  Future<String?> getBranchName() async {
++    final prefs = await SharedPreferences.getInstance();
++    return prefs.getString(_keyBranchName);
++  }
++
++  /// Retorna true se uma filial já foi selecionada nesta sessão.
++  Future<bool> hasBranchSelected() async {
++    final id = await getBranchId();
++    return id != null && id.isNotEmpty;
++  }
++
+   // ─────────────────────────────────────────────────────────────────────────
+   // Escrita
+   // ─────────────────────────────────────────────────────────────────────────
+@@ -152,6 +174,20 @@ class AppConfigService {
+     await prefs.setString(_keyCompanyName, name);
+   }
+ 
++  /// Persiste a filial selecionada pelo vendedor.
++  Future<void> setBranch({required String branchId, required String branchName}) async {
++    final prefs = await SharedPreferences.getInstance();
++    await prefs.setString(_keyBranchId, branchId);
++    await prefs.setString(_keyBranchName, branchName);
++  }
++
++  /// Limpa a filial selecionada (força re-seleção no próximo login).
++  Future<void> clearBranch() async {
++    final prefs = await SharedPreferences.getInstance();
++    await prefs.remove(_keyBranchId);
++    await prefs.remove(_keyBranchName);
++  }
++
+   /// Remove todas as configurações (volta ao padrão).
+   Future<void> resetConfig() async {
+     final prefs = await SharedPreferences.getInstance();
+diff --git a/mobile/lib/core/database/database_helper.dart b/mobile/lib/core/database/database_helper.dart
+index c0e2838..e38ad95 100644
+--- a/mobile/lib/core/database/database_helper.dart
++++ b/mobile/lib/core/database/database_helper.dart
+@@ -15,7 +15,7 @@ import 'package:flutter/foundation.dart';
+ 
+ class DatabaseHelper {
+   static const String _dbName    = 'coliseu_sales.db';
+-  static const int    _dbVersion = 32;
++  static const int    _dbVersion = 33;
+ 
+ 
+   // Singleton
+@@ -236,20 +236,21 @@ class DatabaseHelper {
+       // Cache do catálogo de produtos (pull do ERP)
+       await txn.execute('''
+         CREATE TABLE products (
+-          code           TEXT  PRIMARY KEY,
+-          name           TEXT  NOT NULL,
+-          name_short     TEXT,
+-          price          REAL  NOT NULL DEFAULT 0,
+-          price_min      REAL,
+-          stock          REAL  NOT NULL DEFAULT 0,
+-          unit           TEXT,
+-          brand          TEXT,
+-          bar_code       TEXT,
+-          reference      TEXT,
+-          max_discount   REAL,
+-          category       TEXT,
+-          price_cost     REAL,
+-          last_synced_at TEXT
++          code              TEXT  PRIMARY KEY,
++          name              TEXT  NOT NULL,
++          name_short        TEXT,
++          price             REAL  NOT NULL DEFAULT 0,
++          price_min         REAL,
++          stock             REAL  NOT NULL DEFAULT 0,
++          unit              TEXT,
++          brand             TEXT,
++          bar_code          TEXT,
++          reference         TEXT,
++          max_discount      REAL,
++          category          TEXT,
++          price_cost        REAL,
++          erp_depto_padrao  INTEGER,
++          last_synced_at    TEXT
+         )
+       ''');
+ 
+@@ -972,6 +973,17 @@ class DatabaseHelper {
+             "ALTER TABLE orders ADD COLUMN order_discount_mode TEXT NOT NULL DEFAULT 'percent'");
+       } catch (_) {}
+     }
++    if (oldVersion < 33) {
++      // ── v33: Metadados de filial no catálogo de produtos (FASE 4 Multi-tenant) ──
++      // erp_depto_padrao: ID do departamento ERP da filial padrão da empresa.
++      // Populado pelo Worker (SyncCatalogJob) com base nas filiais configuradas.
++      // Usado pelo app para exibir badge de estoque por filial no catálogo.
++      try {
++        await db.execute(
++          'ALTER TABLE products ADD COLUMN erp_depto_padrao INTEGER',
++        );
++      } catch (_) {} // seguro: coluna pode já existir em instalações limpas
++    }
+   } // fim _onUpgrade
+ 
+ 
+diff --git a/mobile/lib/core/network/jwt_interceptor.dart b/mobile/lib/core/network/jwt_interceptor.dart
+index 2069e13..4c54d24 100644
+--- a/mobile/lib/core/network/jwt_interceptor.dart
++++ b/mobile/lib/core/network/jwt_interceptor.dart
+@@ -4,11 +4,12 @@ import 'package:flutter/foundation.dart';
+ import '../config/app_config_service.dart';
+ import '../session/session_service.dart';
+ 
+-/// Interceptador que anexa o JWT e o CompanyId nas requisições do Dio.
++/// Interceptador que anexa o JWT, CompanyId e BranchId nas requisições do Dio.
+ ///
+ /// Headers enviados em cada request:
+-/// - Authorization: Bearer <jwt>  — autenticação do vendedor
+-/// - X-Company-Id: <companyId>   — isolamento multi-tenant no Sales API (Rule-03)
++/// - Authorization: Bearer <jwt>   — autenticação do vendedor
++/// - X-Company-Id: <companyId>    — isolamento multi-tenant no Sales API (Rule-03)
++/// - X-Branch-Id:  <branchId>     — isolamento de filial no middleware (FASE 3)
+ class JwtInterceptor extends Interceptor {
+   final SessionService _sessionService;
+ 
+@@ -42,9 +43,16 @@ class JwtInterceptor extends Interceptor {
+       }
+     }
+ 
++    // FASE 3: Envia BranchId selecionado pelo vendedor (Rule-03 multi-tenant)
++    final String? branchId = await config.getBranchId();
++    if (branchId != null && branchId.isNotEmpty) {
++      options.headers['X-Branch-Id'] = branchId;
++    }
++
+     debugPrint('[JwtInterceptor] ${options.method} ${options.uri} '
+         'hasAuth=${token != null && token.isNotEmpty} '
+-        'hasApiKey=${activationKey != null && activationKey.isNotEmpty}');
++        'hasApiKey=${activationKey != null && activationKey.isNotEmpty} '
++        'branchId=${branchId ?? "none"}');
+     
+     super.onRequest(options, handler);
+   }
+diff --git a/mobile/lib/core/sync/sync_service.dart b/mobile/lib/core/sync/sync_service.dart
+index b35d9f9..f96896f 100644
+--- a/mobile/lib/core/sync/sync_service.dart
++++ b/mobile/lib/core/sync/sync_service.dart
+@@ -277,20 +277,22 @@ class SyncService {
+             final code = (p['CODE'] ?? p['code'])?.toString();
+             if (code == null || code.isEmpty) continue;
+             rows.add({
+-              'code':          code,
+-              'name':          _cleanOemChars(_trim(p['NAME']            ?? p['name'])),
+-              'name_short':    _trim(p['NAMESHORT']       ?? p['nameShort']       ?? p['nameshort']),
+-              'price':         _toDouble(p['PRICE']       ?? p['price'])          ?? 0.0,
+-              'price_min':     _toDouble(p['PRICEMIN']    ?? p['priceMin']        ?? p['pricemin']),
+-              'price_cost':    _toDouble(p['PRICECOST']   ?? p['priceCost']       ?? p['pricecost']),
+-              'stock':         _toDouble(p['STOCK']       ?? p['stock'])          ?? 0.0,
+-              'unit':          _trim(p['UNIT']            ?? p['unit']),
+-              'brand':         _trim(p['BRAND']           ?? p['brand']),
+-              'bar_code':      _trim(p['BARCODE']         ?? p['barCode']         ?? p['barcode']),
+-              'reference':     _trim(p['REFERENCE']       ?? p['reference']),
+-              'max_discount':  _toDouble(p['MAXDISCOUNT'] ?? p['maxDiscount']     ?? p['maxdiscount']),
+-              'category':      _trim(p['CATEGORY']        ?? p['category']),
+-              'last_synced_at': now,
++              'code':             code,
++              'name':             _cleanOemChars(_trim(p['NAME']            ?? p['name'])),
++              'name_short':       _trim(p['NAMESHORT']       ?? p['nameShort']       ?? p['nameshort']),
++              'price':            _toDouble(p['PRICE']       ?? p['price'])          ?? 0.0,
++              'price_min':        _toDouble(p['PRICEMIN']    ?? p['priceMin']        ?? p['pricemin']),
++              'price_cost':       _toDouble(p['PRICECOST']   ?? p['priceCost']       ?? p['pricecost']),
++              'stock':            _toDouble(p['STOCK']       ?? p['stock'])          ?? 0.0,
++              'unit':             _trim(p['UNIT']            ?? p['unit']),
++              'brand':            _trim(p['BRAND']           ?? p['brand']),
++              'bar_code':         _trim(p['BARCODE']         ?? p['barCode']         ?? p['barcode']),
++              'reference':        _trim(p['REFERENCE']       ?? p['reference']),
++              'max_discount':     _toDouble(p['MAXDISCOUNT'] ?? p['maxDiscount']     ?? p['maxdiscount']),
++              'category':         _trim(p['CATEGORY']        ?? p['category']),
++              // FASE 4: Departamento ERP da filial padrão (exibição de estoque por filial)
++              'erp_depto_padrao': _toInt(p['erpDeptoPadrao'] ?? p['ERPDEPTOPADRAO']),
++              'last_synced_at':   now,
+             });
+           }
+ 
+diff --git a/mobile/lib/features/auth/branch_selection_screen.dart b/mobile/lib/features/auth/branch_selection_screen.dart
+new file mode 100644
+index 0000000..376a142
+--- /dev/null
++++ b/mobile/lib/features/auth/branch_selection_screen.dart
+@@ -0,0 +1,390 @@
++/// branch_selection_screen.dart — Tela de seleção de filial pós-login.
++///
++/// Exibida condicionalmente após autenticação bem-sucedida, quando:
++///   - A empresa possui mais de uma filial configurada no Identity Server; OU
++///   - Nenhuma filial está salva no SharedPreferences.
++///
++/// Fluxo:
++///   1. Busca `GET /api/branches` no Middleware (JWT já presente no header via JwtInterceptor).
++///   2. Se só houver uma filial → seleciona automaticamente e navega para Home.
++///   3. Se houver múltiplas → exibe lista para o vendedor escolher.
++///   4. Ao confirmar → salva branchId + branchName via AppConfigService e vai para Home.
++///
++/// Rule-02: totalmente async. Sem bloqueios de UI.
++library;
++
++import 'package:flutter/material.dart';
++import 'package:dio/dio.dart';
++import '../../core/config/app_config_service.dart';
++
++// ── Model ──────────────────────────────────────────────────────────────────────
++
++class BranchItem {
++  final String id;
++  final String name;
++  final String? cnpj;
++  final int erpEmpresaId;
++  final bool isDefault;
++
++  const BranchItem({
++    required this.id,
++    required this.name,
++    this.cnpj,
++    required this.erpEmpresaId,
++    this.isDefault = false,
++  });
++
++  factory BranchItem.fromJson(Map<String, dynamic> json) {
++    return BranchItem(
++      id:           json['id']           as String,
++      name:         json['name']         as String,
++      cnpj:         json['cnpj']         as String?,
++      erpEmpresaId: (json['erpEmpresaId'] ?? 1) as int,
++      isDefault:    (json['isDefault']   ?? false) as bool,
++    );
++  }
++}
++
++// ── Screen ─────────────────────────────────────────────────────────────────────
++
++class BranchSelectionScreen extends StatefulWidget {
++  /// Rota nomeada para o Navigator.
++  static const routeName = '/branch-selection';
++
++  const BranchSelectionScreen({super.key});
++
++  @override
++  State<BranchSelectionScreen> createState() => _BranchSelectionScreenState();
++}
++
++class _BranchSelectionScreenState extends State<BranchSelectionScreen> {
++  final _config = AppConfigService();
++
++  List<BranchItem> _branches = [];
++  BranchItem?      _selected;
++  bool             _isLoading = true;
++  bool             _isConfirming = false;
++  String?          _errorMsg;
++
++  @override
++  void initState() {
++    super.initState();
++    _loadBranches();
++  }
++
++  // ── Data fetching ────────────────────────────────────────────────────────────
++
++  Future<void> _loadBranches() async {
++    setState(() { _isLoading = true; _errorMsg = null; });
++    try {
++      final serverUrl  = await _config.getServerUrl();
++      final token      = await _config.getAccessToken();
++      final dio = Dio(BaseOptions(
++        baseUrl: serverUrl,
++        headers: {
++          if (token != null && token.isNotEmpty) 'Authorization': 'Bearer $token',
++        },
++      ));
++
++      final response = await dio.get('/api/branches');
++      final list = (response.data['branches'] as List<dynamic>? ?? [])
++          .map((e) => BranchItem.fromJson(e as Map<String, dynamic>))
++          .toList();
++
++      if (!mounted) return;
++
++      // Auto-seleção: única filial → vai direto pra Home
++      if (list.length == 1) {
++        await _persistAndNavigate(list.first);
++        return;
++      }
++
++      // Pré-selecionar a filial padrão (isDefault = true)
++      final defaultBranch = list.where((b) => b.isDefault).firstOrNull ?? list.firstOrNull;
++
++      setState(() {
++        _branches = list;
++        _selected = defaultBranch;
++        _isLoading = false;
++      });
++    } on DioException catch (e) {
++      if (!mounted) return;
++      setState(() {
++        _isLoading = false;
++        _errorMsg = 'Erro ao carregar filiais: ${e.message ?? e.type.name}';
++      });
++    } catch (e) {
++      if (!mounted) return;
++      setState(() {
++        _isLoading = false;
++        _errorMsg = 'Erro inesperado: $e';
++      });
++    }
++  }
++
++  Future<void> _persistAndNavigate(BranchItem branch) async {
++    await _config.setBranch(branchId: branch.id, branchName: branch.name);
++    if (!mounted) return;
++    // Substitui a tela atual para que o Back não volte para a seleção
++    Navigator.of(context).pushReplacementNamed('/home');
++  }
++
++  Future<void> _handleConfirm() async {
++    final branch = _selected;
++    if (branch == null) return;
++
++    setState(() => _isConfirming = true);
++    try {
++      await _persistAndNavigate(branch);
++    } finally {
++      if (mounted) setState(() => _isConfirming = false);
++    }
++  }
++
++  // ── UI ──────────────────────────────────────────────────────────────────────
++
++  @override
++  Widget build(BuildContext context) {
++    final theme = Theme.of(context);
++    final colors = theme.colorScheme;
++
++    return Scaffold(
++      backgroundColor: colors.surface,
++      body: SafeArea(
++        child: Padding(
++          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
++          child: Column(
++            crossAxisAlignment: CrossAxisAlignment.start,
++            children: [
++              // ── Header ─────────────────────────────────────────────────────
++              Icon(Icons.business_outlined, size: 40, color: colors.primary),
++              const SizedBox(height: 16),
++              Text(
++                'Qual filial você vai atender?',
++                style: theme.textTheme.headlineSmall?.copyWith(
++                  fontWeight: FontWeight.w700,
++                  color: colors.onSurface,
++                ),
++              ),
++              const SizedBox(height: 8),
++              Text(
++                'Selecione a filial para iniciar sua sessão de vendas.',
++                style: theme.textTheme.bodyMedium?.copyWith(
++                  color: colors.onSurface.withOpacity(0.6),
++                ),
++              ),
++              const SizedBox(height: 32),
++
++              // ── Content ────────────────────────────────────────────────────
++              Expanded(child: _buildContent(theme, colors)),
++
++              // ── Footer: Confirmar ──────────────────────────────────────────
++              if (!_isLoading && _branches.isNotEmpty)
++                _buildConfirmButton(colors),
++            ],
++          ),
++        ),
++      ),
++    );
++  }
++
++  Widget _buildContent(ThemeData theme, ColorScheme colors) {
++    if (_isLoading) {
++      return const Center(child: CircularProgressIndicator());
++    }
++
++    if (_errorMsg != null) {
++      return Center(
++        child: Column(
++          mainAxisSize: MainAxisSize.min,
++          children: [
++            Icon(Icons.error_outline, size: 48, color: colors.error),
++            const SizedBox(height: 12),
++            Text(_errorMsg!, textAlign: TextAlign.center,
++                style: theme.textTheme.bodyMedium?.copyWith(color: colors.error)),
++            const SizedBox(height: 20),
++            FilledButton.icon(
++              onPressed: _loadBranches,
++              icon: const Icon(Icons.refresh),
++              label: const Text('Tentar novamente'),
++            ),
++          ],
++        ),
++      );
++    }
++
++    if (_branches.isEmpty) {
++      return Center(
++        child: Text(
++          'Nenhuma filial encontrada.\nContate o administrador.',
++          textAlign: TextAlign.center,
++          style: theme.textTheme.bodyMedium?.copyWith(
++            color: colors.onSurface.withOpacity(0.5),
++          ),
++        ),
++      );
++    }
++
++    return ListView.separated(
++      itemCount: _branches.length,
++      separatorBuilder: (_, __) => const SizedBox(height: 10),
++      itemBuilder: (context, index) {
++        final branch = _branches[index];
++        final isSelected = _selected?.id == branch.id;
++
++        return _BranchTile(
++          branch: branch,
++          isSelected: isSelected,
++          onTap: () => setState(() => _selected = branch),
++        );
++      },
++    );
++  }
++
++  Widget _buildConfirmButton(ColorScheme colors) {
++    return SizedBox(
++      width: double.infinity,
++      child: FilledButton(
++        onPressed: _selected != null && !_isConfirming ? _handleConfirm : null,
++        style: FilledButton.styleFrom(
++          padding: const EdgeInsets.symmetric(vertical: 16),
++          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
++        ),
++        child: _isConfirming
++            ? const SizedBox(
++                height: 20, width: 20,
++                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
++              )
++            : const Text('Entrar nesta filial', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
++      ),
++    );
++  }
++}
++
++// ── Branch Tile ────────────────────────────────────────────────────────────────
++
++class _BranchTile extends StatelessWidget {
++  final BranchItem branch;
++  final bool isSelected;
++  final VoidCallback onTap;
++
++  const _BranchTile({
++    required this.branch,
++    required this.isSelected,
++    required this.onTap,
++  });
++
++  @override
++  Widget build(BuildContext context) {
++    final colors = Theme.of(context).colorScheme;
++
++    return AnimatedContainer(
++      duration: const Duration(milliseconds: 180),
++      child: InkWell(
++        borderRadius: BorderRadius.circular(14),
++        onTap: onTap,
++        child: Container(
++          padding: const EdgeInsets.all(16),
++          decoration: BoxDecoration(
++            borderRadius: BorderRadius.circular(14),
++            border: Border.all(
++              color: isSelected ? colors.primary : colors.outline.withOpacity(0.4),
++              width: isSelected ? 2 : 1,
++            ),
++            color: isSelected
++                ? colors.primary.withOpacity(0.07)
++                : colors.surfaceVariant.withOpacity(0.35),
++          ),
++          child: Row(
++            children: [
++              // Radio indicator
++              Container(
++                width: 22,
++                height: 22,
++                decoration: BoxDecoration(
++                  shape: BoxShape.circle,
++                  border: Border.all(
++                    color: isSelected ? colors.primary : colors.outline,
++                    width: 2,
++                  ),
++                ),
++                child: isSelected
++                    ? Center(
++                        child: Container(
++                          width: 12,
++                          height: 12,
++                          decoration: BoxDecoration(
++                            shape: BoxShape.circle,
++                            color: colors.primary,
++                          ),
++                        ),
++                      )
++                    : null,
++              ),
++              const SizedBox(width: 14),
++
++              // Branch info
++              Expanded(
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    Row(
++                      children: [
++                        Expanded(
++                          child: Text(
++                            branch.name,
++                            style: TextStyle(
++                              fontWeight: FontWeight.w700,
++                              fontSize: 15,
++                              color: isSelected ? colors.primary : colors.onSurface,
++                            ),
++                          ),
++                        ),
++                        if (branch.isDefault) ...[
++                          const SizedBox(width: 6),
++                          Container(
++                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
++                            decoration: BoxDecoration(
++                              color: Colors.amber.withOpacity(0.15),
++                              borderRadius: BorderRadius.circular(20),
++                              border: Border.all(color: Colors.amber.shade300, width: 1),
++                            ),
++                            child: const Text(
++                              'Padrão',
++                              style: TextStyle(
++                                fontSize: 10, fontWeight: FontWeight.w700,
++                                color: Colors.amber,
++                              ),
++                            ),
++                          ),
++                        ],
++                      ],
++                    ),
++                    if (branch.cnpj != null && branch.cnpj!.isNotEmpty) ...[
++                      const SizedBox(height: 3),
++                      Text(
++                        branch.cnpj!,
++                        style: TextStyle(
++                          fontSize: 12,
++                          color: colors.onSurface.withOpacity(0.55),
++                        ),
++                      ),
++                    ],
++                    const SizedBox(height: 3),
++                    Text(
++                      'ERP Empresa: ${branch.erpEmpresaId}',
++                      style: TextStyle(
++                        fontSize: 11,
++                        color: colors.onSurface.withOpacity(0.45),
++                      ),
++                    ),
++                  ],
++                ),
++              ),
++            ],
++          ),
++        ),
++      ),
++    );
++  }
++}
+diff --git a/mobile/lib/features/auth/login_screen.dart b/mobile/lib/features/auth/login_screen.dart
+index c026899..30223aa 100644
+--- a/mobile/lib/features/auth/login_screen.dart
++++ b/mobile/lib/features/auth/login_screen.dart
+@@ -26,6 +26,7 @@ import '../../../core/design/app_colors.dart';
+ import '../../../core/design/app_typography.dart';
+ import '../home/main_navigation_scaffold.dart';
+ import '../setup/setup_screen.dart';
++import 'branch_selection_screen.dart';
+ 
+ class LoginScreen extends StatefulWidget {
+   const LoginScreen({super.key});
+@@ -177,9 +178,25 @@ class _LoginScreenState extends State<LoginScreen>
+         pin:      _pin,
+       );
+       if (!mounted) return;
+-      Navigator.of(context).pushReplacement(
+-        MaterialPageRoute(builder: (_) => const MainNavigationScaffold()),
+-      );
++
++      // FASE 4: Verificar se precisa selecionar filial
++      // Se branchId já está salvo (sessão anterior), vai direto para Home.
++      final config = GetIt.I<AppConfigService>();
++      final hasBranch = await config.hasBranchSelected();
++
++      if (!mounted) return;
++
++      if (hasBranch) {
++        // Filial já conhecida — vai direto para a Home
++        Navigator.of(context).pushReplacement(
++          MaterialPageRoute(builder: (_) => const MainNavigationScaffold()),
++        );
++      } else {
++        // Força seleção de filial antes de continuar
++        Navigator.of(context).pushReplacement(
++          MaterialPageRoute(builder: (_) => const BranchSelectionScreen()),
++        );
++      }
+     } on AuthException catch (e) {
+       _failedAttempts++;
+       HapticFeedback.mediumImpact();
+diff --git a/mobile/pubspec.yaml b/mobile/pubspec.yaml
+index 07cee67..ce83543 100644
+--- a/mobile/pubspec.yaml
++++ b/mobile/pubspec.yaml
+@@ -1,6 +1,6 @@
+ name: coliseu_sales
+ description: "Força de Vendas Mobile Offline-First — Coliseu"
+-version: 1.8.4+40
++version: 1.9.0+41
+ 
+ environment:
+   sdk: '>=3.3.0 <4.0.0'
+diff --git a/shared/Dtos/SyncDtos.cs b/shared/Dtos/SyncDtos.cs
+index 4e0a4db..ad343da 100644
+--- a/shared/Dtos/SyncDtos.cs
++++ b/shared/Dtos/SyncDtos.cs
+@@ -164,6 +164,7 @@ public sealed record PendingOrderDto(
+     int                PaymentDaysPerInstallment = 30,  // FORMA_PGTO.DIAS_PARCELAS
+     int                PaymentEntryDays          = 0,   // FORMA_PGTO.DIAS_ENTRADA
+     string             CreatedAt  = "",
++    Guid?              BranchId   = null,
+     List<OrderItemDto>? Items     = null
+ );
+ 
+diff --git a/worker/Jobs/SyncCatalogJob.cs b/worker/Jobs/SyncCatalogJob.cs
+index 4871f9c..0807f05 100644
+--- a/worker/Jobs/SyncCatalogJob.cs
++++ b/worker/Jobs/SyncCatalogJob.cs
+@@ -25,12 +25,18 @@ public sealed partial class SyncCatalogJob
+     private readonly AtendenteApiClient     _atendente;
+     private readonly StatusStore            _status;
+     private readonly ILogger<SyncCatalogJob> _logger;
++    private readonly IdentityApiClient      _identity;
++    private readonly string                 _companyId;
++
++    private List<BranchDto>? _cachedBranches;
+ 
+     public SyncCatalogJob(
+         FirebirdService        firebird,
+         VpsApiClient           vps,
+         AtendenteApiClient     atendente,
+         StatusStore            status,
++        IOptions<VpsApiOptions> vpsOpts,
++        IdentityApiClient      identity,
+         ILogger<SyncCatalogJob> logger)
+     {
+         _firebird  = firebird;
+@@ -38,6 +44,8 @@ public sealed partial class SyncCatalogJob
+         _atendente = atendente;
+         _status    = status;
+         _logger    = logger;
++        _identity  = identity;
++        _companyId = vpsOpts.Value.CompanyId;
+     }
+ 
+     /// <summary>
+@@ -53,9 +61,13 @@ public sealed partial class SyncCatalogJob
+         _logger.LogInformation("[CatalogSync] Iniciando sync. Mode={Mode}", mode);
+         _status.AppendLog($"[{DateTime.Now:HH:mm:ss}] === Iniciando ciclo de sync ({mode}) ===");
+ 
+-        // Acumula falhas por entidade sem interromper as demais
+         var failed = new List<string>();
+ 
++        if (Guid.TryParse(_companyId, out var cid))
++        {
++            _cachedBranches = await _identity.GetBranchesAsync(cid, ct);
++        }
++
+         await RunStep("Sellers",          () => SyncSellersAsync(ct),           failed);
+         await RunStep("Catalog",          () => SyncCatalogAsync(null, ct),    failed); // sempre full sync — o store precisa do catálogo completo
+         await RunStep("Customers",        () => SyncCustomersAsync(ct),         failed);
+@@ -101,7 +113,14 @@ public sealed partial class SyncCatalogJob
+         _logger.LogDebug("[CatalogSync] Buscando vendedores...");
+         try
+         {
+-            var rows = await _firebird.QueryAsync(@"
++            var branchFilter = "";
++            if (_cachedBranches != null && _cachedBranches.Count > 0)
++            {
++                var empresaIds = string.Join(",", _cachedBranches.Select(b => b.ErpEmpresaId));
++                branchFilter = $" AND (F.ID_EMPRESA IN ({empresaIds}) OR F.ID_EMPRESA IS NULL)";
++            }
++
++            var rows = await _firebird.QueryAsync($@"
+                 SELECT
+                     F.ID_FUNCIONARIO  AS id,
+                     F.ID_MOBILE       AS mobileId,
+@@ -111,7 +130,7 @@ public sealed partial class SyncCatalogJob
+                     F.DESCONTO_MAX    AS maxDiscount,
+                     F.COMISSAO        AS commissionRate
+                 FROM FUNCIONARIOS F
+-                WHERE F.MOB_ACESSO = 1
++                WHERE F.MOB_ACESSO = 1 {branchFilter}
+                 ORDER BY F.NOME", ct: ct);
+ 
+             if (rows.Count == 0)
+@@ -187,7 +206,24 @@ public sealed partial class SyncCatalogJob
+                 return;
+             }
+ 
+-            var products = rows.Select(MapToApiObject).ToList();
++            // FASE 4: Adiciona metadados de filial a cada produto.
++            // Cada produto recebe o ID_DEPTO da filial padrão do tenant
++            // (se houver exatamente uma filial ativa; com múltiplas filiais,
++            // o app usa o branchId do JWT para filtrar no display).
++            var defaultBranch = _cachedBranches?.FirstOrDefault(b => b.IsDefault)
++                             ?? _cachedBranches?.FirstOrDefault();
++
++            var products = rows.Select(r =>
++            {
++                // MapToApiObject retorna object (internamente Dictionary<string,object?>)
++                // Cast é seguro pois a implementação sempre retorna Dictionary.
++                var obj = (Dictionary<string, object?>)MapToApiObject(r);
++                if (defaultBranch != null)
++                {
++                    obj["erpDeptoPadrao"] = defaultBranch.ErpDeptoPadrao;
++                }
++                return (object)obj;
++            }).ToList();
+ 
+             // Envia TODOS em um único POST — múltiplos POSTs sobrescreveriam o store Redis
+             var ok = await _vps.PushCatalogAsync(products, ct);
+@@ -501,9 +537,15 @@ public sealed partial class SyncCatalogJob
+         _logger.LogDebug("[CatalogSync] Buscando KPIs de desempenho...");
+         try
+         {
+-            // Busca vendedores ativos
++            var branchFilter = "";
++            if (_cachedBranches != null && _cachedBranches.Count > 0)
++            {
++                var empresaIds = string.Join(",", _cachedBranches.Select(b => b.ErpEmpresaId));
++                branchFilter = $" AND (ID_EMPRESA IN ({empresaIds}) OR ID_EMPRESA IS NULL)";
++            }
++
+             var sellers = await _firebird.QueryAsync(
+-                "SELECT ID_FUNCIONARIO FROM FUNCIONARIOS WHERE MOB_ACESSO = 1",
++                $"SELECT ID_FUNCIONARIO, COALESCE(ID_EMPRESA, 1) AS ID_EMPRESA FROM FUNCIONARIOS WHERE MOB_ACESSO = 1 {branchFilter}",
+                 ct: ct);
+ 
+             if (sellers.Count == 0)
+@@ -524,6 +566,7 @@ public sealed partial class SyncCatalogJob
+             foreach (var seller in sellers)
+             {
+                 var sellerId = Convert.ToInt32(seller["ID_FUNCIONARIO"]);
++                var sellerEmpresaId = Convert.ToInt32(seller["ID_EMPRESA"]);
+                 try
+                 {
+                     // MINHASVENDAS(VENDEDOR, MES, ANO, DATA)
+@@ -546,7 +589,7 @@ public sealed partial class SyncCatalogJob
+                             { "@DATAI", firstDay },
+                             { "@DATAF", lastDay },
+                             { "@DIA", today },
+-                            { "@EMPRESA", 1 },
++                            { "@EMPRESA", sellerEmpresaId },
+                         }, ct);
+ 
+                     var main = mainResult.FirstOrDefault() ?? new();
+diff --git a/worker/Jobs/SyncOrdersJob.cs b/worker/Jobs/SyncOrdersJob.cs
+index 62104c1..e7bcf3f 100644
+--- a/worker/Jobs/SyncOrdersJob.cs
++++ b/worker/Jobs/SyncOrdersJob.cs
+@@ -40,6 +40,10 @@ public sealed class SyncOrdersJob
+     private readonly ILogger<SyncOrdersJob> _logger;
+     private readonly FirebirdOptions        _fbOpts;
+     private readonly StatusStore            _status;
++    private readonly IdentityApiClient      _identity;
++    private readonly string                 _companyId;
++
++    private List<BranchDto>? _cachedBranches;
+ 
+     /// <summary>
+     /// Semáforo que garante no máximo UMA execução simultânea do RunAsync.
+@@ -57,13 +61,17 @@ public sealed class SyncOrdersJob
+         VpsApiClient           vps,
+         ILogger<SyncOrdersJob> logger,
+         IOptions<FirebirdOptions> fbOpts,
+-        StatusStore            status)
++        IOptions<VpsApiOptions> vpsOpts,
++        StatusStore            status,
++        IdentityApiClient      identity)
+     {
+         _firebird = firebird;
+         _vps      = vps;
+         _logger   = logger;
+         _fbOpts   = fbOpts.Value;
+         _status   = status;
++        _identity = identity;
++        _companyId = vpsOpts.Value.CompanyId;
+     }
+ 
+     /// <summary>Executa um ciclo de processamento de pedidos.</summary>
+@@ -84,6 +92,11 @@ public sealed class SyncOrdersJob
+             try
+             {
+                 orders = await _vps.GetPendingOrdersAsync(ct);
++                // Pré-carrega as filiais (faz cache do ciclo atual)
++                if (Guid.TryParse(_companyId, out var cid))
++                {
++                    _cachedBranches = await _identity.GetBranchesAsync(cid, ct);
++                }
+             }
+             catch (Exception ex)
+             {
+@@ -441,6 +454,32 @@ public sealed class SyncOrdersJob
+                 await cmd.ExecuteNonQueryAsync(innerCt);
+             }
+ 
++            // FASE 3 (Multi-tenant): rateio do pedido para a Filial correta no ERP
++            if (order.BranchId.HasValue && _cachedBranches != null)
++            {
++                var branch = _cachedBranches.FirstOrDefault(b => b.Id == order.BranchId.Value);
++                if (branch != null)
++                {
++                    cmd.CommandText = "UPDATE PEDIDOS SET ID_DEPTO = @DEPTO, ID_PORTADOR = @CENTRO WHERE ID_PEDIDO = @ID_PEDIDO";
++                    cmd.CommandType = System.Data.CommandType.Text;
++                    cmd.Parameters.Clear();
++                    cmd.Parameters.Add(new FbParameter("@DEPTO", FbDbType.Integer) { Value = branch.ErpDeptoPadrao });
++                    cmd.Parameters.Add(new FbParameter("@CENTRO", FbDbType.Integer) { Value = branch.ErpCentroPadrao });
++                    cmd.Parameters.Add(new FbParameter("@ID_PEDIDO", FbDbType.Integer) { Value = erpOrderId });
++                    
++                    try
++                    {
++                        await cmd.ExecuteNonQueryAsync(innerCt);
++                        _logger.LogInformation("[OrderSync] Pedido {OrderId} rateado no ERP: Depto={Depto}, Centro={Centro}",
++                            order.Id, branch.ErpDeptoPadrao, branch.ErpCentroPadrao);
++                    }
++                    catch (Exception ex)
++                    {
++                        _logger.LogWarning("[OrderSync] Falha ao atualizar Depto/Centro do pedido {OrderId}: {Error}. Operacao continua.", order.Id, ex.Message);
++                    }
++                }
++            }
++
+             // Transação commited aqui pelo TransactionAsync — ERP já tem o pedido
+         }, ct);
+ 
+diff --git a/worker/Jobs/SyncSalesRankingsJob.cs b/worker/Jobs/SyncSalesRankingsJob.cs
+index d748a06..6649047 100644
+--- a/worker/Jobs/SyncSalesRankingsJob.cs
++++ b/worker/Jobs/SyncSalesRankingsJob.cs
+@@ -1,4 +1,6 @@
++using ColiseuSales.Worker.Config;
+ using ColiseuSales.Worker.Services;
++using Microsoft.Extensions.Options;
+ 
+ namespace ColiseuSales.Worker.Jobs;
+ 
+@@ -17,17 +19,25 @@ public sealed class SyncSalesRankingsJob
+     private readonly VpsApiClient                     _vps;
+     private readonly StatusStore                      _status;
+     private readonly ILogger<SyncSalesRankingsJob>    _logger;
++    private readonly IdentityApiClient                _identity;
++    private readonly string                           _companyId;
++
++    private List<BranchDto>? _cachedBranches;
+ 
+     public SyncSalesRankingsJob(
+         FirebirdService                 firebird,
+         VpsApiClient                    vps,
+         StatusStore                     status,
++        IOptions<ColiseuSales.Worker.Config.VpsApiOptions> vpsOpts,
++        IdentityApiClient               identity,
+         ILogger<SyncSalesRankingsJob>   logger)
+     {
+-        _firebird = firebird;
+-        _vps      = vps;
+-        _status   = status;
+-        _logger   = logger;
++        _firebird  = firebird;
++        _vps       = vps;
++        _status    = status;
++        _logger    = logger;
++        _identity  = identity;
++        _companyId = vpsOpts.Value.CompanyId;
+     }
+ 
+     /// <summary>
+@@ -39,9 +49,21 @@ public sealed class SyncSalesRankingsJob
+ 
+         try
+         {
+-            // 1. Busca vendedores ativos
++            if (Guid.TryParse(_companyId, out var cid))
++            {
++                _cachedBranches = await _identity.GetBranchesAsync(cid, ct);
++            }
++
++            var branchFilter = "";
++            if (_cachedBranches != null && _cachedBranches.Count > 0)
++            {
++                var empresaIds = string.Join(",", _cachedBranches.Select(b => b.ErpEmpresaId));
++                branchFilter = $" AND (ID_EMPRESA IN ({empresaIds}) OR ID_EMPRESA IS NULL)";
++            }
++
++            // 1. Busca vendedores ativos filtrados pela empresa do tenant
+             var sellers = await _firebird.QueryAsync(
+-                "SELECT ID_FUNCIONARIO, NOME FROM FUNCIONARIOS WHERE MOB_ACESSO = 1",
++                $"SELECT ID_FUNCIONARIO, NOME, COALESCE(ID_EMPRESA, 1) AS ID_EMPRESA FROM FUNCIONARIOS WHERE MOB_ACESSO = 1 {branchFilter}",
+                 ct: ct);
+ 
+             if (sellers.Count == 0)
+diff --git a/worker/Program.cs b/worker/Program.cs
+index d1bcbd2..409d908 100644
+--- a/worker/Program.cs
++++ b/worker/Program.cs
+@@ -62,6 +62,9 @@ try
+     builder.Services.Configure<AtendenteApiOptions>(
+         builder.Configuration.GetSection(AtendenteApiOptions.Section));
+ 
++    builder.Services.Configure<AutoCenterApiOptions>(
++        builder.Configuration.GetSection(AutoCenterApiOptions.Section));
++
+     // ── Validação de configuração obrigatória ────────────────────────────────
+     var identitySection = builder.Configuration.GetSection(IdentityApiOptions.Section);
+     if (string.IsNullOrWhiteSpace(identitySection["BaseUrl"]))
+@@ -124,6 +127,28 @@ try
+             }
+         });
+ 
++    // ── HTTP Client para AutoCenter API (opcional) ────────────────────────────
++    var acSection = builder.Configuration.GetSection(AutoCenterApiOptions.Section);
++    var acBaseUrl = acSection["BaseUrl"] ?? string.Empty;
++    var acApiKey  = acSection["InternalApiKey"]  ?? string.Empty;
++    var acEnabled = string.Equals(acSection["Enabled"], "true", StringComparison.OrdinalIgnoreCase);
++
++    builder.Services
++        .AddHttpClient("AutoCenterApiClient", client =>
++        {
++            if (!string.IsNullOrWhiteSpace(acBaseUrl))
++            {
++                client.BaseAddress = new Uri(acBaseUrl);
++                client.DefaultRequestHeaders.Add("X-Internal-Api-Key", acApiKey);
++                client.Timeout = TimeSpan.FromSeconds(
++                    int.TryParse(acSection["TimeoutSeconds"], out var at) ? at : 30);
++            }
++        })
++        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
++        {
++            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
++        });
++
+     // ── Services ─────────────────────────────────────────────────────────────
+     builder.Services.AddSingleton<FirebirdService>();
+     builder.Services.AddSingleton<StatusStore>();
+@@ -135,6 +160,9 @@ try
+     builder.Services.AddSingleton<SyncAtendenteOrdersJob>();
+     builder.Services.AddSingleton<SyncCustomerCreationJob>();
+     builder.Services.AddSingleton<SyncSalesRankingsJob>();
++    builder.Services.AddSingleton<SyncAutoCenterCatalogJob>();
++    builder.Services.AddSingleton<SyncAutoCenterCustomersJob>();
++    builder.Services.AddSingleton<SyncAutoCenterQuotesJob>();
+     builder.Services.AddSingleton<HealthCheckJob>();
+ 
+     // ── Worker (IHostedService) ───────────────────────────────────────────────
+@@ -143,10 +171,11 @@ try
+     // ── Build e Run ────────────────────────────────────────────────────────────
+     var host = builder.Build();
+ 
+-    Log.Information("[Startup] VPS API: {Url} | Tenant ID: {Tenant} | Atendente: {AtendenteEnabled}",
++    Log.Information("[Startup] VPS API: {Url} | Tenant ID: {Tenant} | Atendente: {AtendenteEnabled} | AutoCenter: {AcEnabled}",
+         vpsBaseUrl,
+         identitySection["TenantId"],
+-        atendenteEnabled ? atendenteBaseUrl : "DESABILITADO");
++        atendenteEnabled ? atendenteBaseUrl : "DESABILITADO",
++        acEnabled ? acBaseUrl : "DESABILITADO");
+ 
+     // Inicia o servidor de monitoramento local (localhost:9001)
+     var monitoringServer = host.Services.GetRequiredService<MonitoringServer>();
+diff --git a/worker/Services/IdentityApiClient.cs b/worker/Services/IdentityApiClient.cs
+index 8045c4d..cd0f6bc 100644
+--- a/worker/Services/IdentityApiClient.cs
++++ b/worker/Services/IdentityApiClient.cs
+@@ -43,6 +43,29 @@ public sealed class IdentityApiClient
+             return null;
+         }
+     }
++
++    /// <summary>
++    /// Busca a lista de filiais da empresa para enriquecer a integração com ERP.
++    /// </summary>
++    public async Task<List<BranchDto>> GetBranchesAsync(Guid tenantId, CancellationToken ct = default)
++    {
++        try
++        {
++            var response = await _httpClient.GetAsync($"/internal/companies/{tenantId}/branches", ct);
++            if (!response.IsSuccessStatusCode)
++            {
++                var error = await response.Content.ReadAsStringAsync(ct);
++                _logger.LogError("[IdentityApi] Falha ao buscar filiais. Status: {StatusCode}. {Error}", response.StatusCode, error);
++                return [];
++            }
++            return await response.Content.ReadFromJsonAsync<List<BranchDto>>(cancellationToken: ct) ?? [];
++        }
++        catch (Exception ex)
++        {
++            _logger.LogError(ex, "[IdentityApi] Erro ao buscar filiais do tenant {TenantId}.", tenantId);
++            return [];
++        }
++    }
+ }
+ 
+ public sealed class FirebirdConfigResponse
+@@ -59,3 +82,13 @@ public sealed class FirebirdConfigResponse
+     [JsonPropertyName("password")]
+     public string Password { get; set; } = string.Empty;
+ }
++
++public sealed record BranchDto(
++    [property: JsonPropertyName("id")] Guid Id,
++    [property: JsonPropertyName("name")] string Name,
++    [property: JsonPropertyName("cnpj")] string? Cnpj,
++    [property: JsonPropertyName("erpEmpresaId")] int ErpEmpresaId,
++    [property: JsonPropertyName("erpDeptoPadrao")] int ErpDeptoPadrao,
++    [property: JsonPropertyName("erpCentroPadrao")] int ErpCentroPadrao,
++    [property: JsonPropertyName("isDefault")] bool IsDefault
++);
+diff --git a/worker/WorkerService.cs b/worker/WorkerService.cs
+index e7ea76c..f7f4015 100644
+--- a/worker/WorkerService.cs
++++ b/worker/WorkerService.cs
+@@ -26,6 +26,9 @@ public sealed class WorkerService : BackgroundService
+     private readonly SyncAtendenteOrdersJob      _atendenteOrders;
+     private readonly SyncCustomerCreationJob     _customerCreation;
+     private readonly SyncSalesRankingsJob        _salesRankings;
++    private readonly SyncAutoCenterCatalogJob    _acCatalog;
++    private readonly SyncAutoCenterCustomersJob  _acCustomers;
++    private readonly SyncAutoCenterQuotesJob     _acQuotes;
+     private readonly HealthCheckJob          _health;
+     private readonly IdentityApiClient       _identity;
+     private readonly MonitoringServer        _monitoringServer;
+@@ -43,6 +46,9 @@ public sealed class WorkerService : BackgroundService
+         SyncAtendenteOrdersJob     atendenteOrders,
+         SyncCustomerCreationJob    customerCreation,
+         SyncSalesRankingsJob       salesRankings,
++        SyncAutoCenterCatalogJob   acCatalog,
++        SyncAutoCenterCustomersJob acCustomers,
++        SyncAutoCenterQuotesJob    acQuotes,
+         HealthCheckJob             health,
+         IdentityApiClient      identity,
+         MonitoringServer       monitoringServer,
+@@ -56,6 +62,9 @@ public sealed class WorkerService : BackgroundService
+         _atendenteOrders  = atendenteOrders;
+         _customerCreation = customerCreation;
+         _salesRankings    = salesRankings;
++        _acCatalog        = acCatalog;
++        _acCustomers      = acCustomers;
++        _acQuotes         = acQuotes;
+         _health           = health;
+         _identity         = identity;
+         _monitoringServer = monitoringServer;
+@@ -122,6 +131,9 @@ public sealed class WorkerService : BackgroundService
+                 _ = SafeRunAsync(_atendenteOrders.RunAsync(stoppingToken), "ForcedAtendenteOrderSync");
+                 _ = SafeRunAsync(_customerCreation.RunAsync(stoppingToken), "ForcedCustomerCreationSync");
+                 _ = SafeRunAsync(_salesRankings.RunAsync(stoppingToken), "ForcedSalesRankingsSync");
++                _ = SafeRunAsync(_acCatalog.RunAsync(stoppingToken), "ForcedAcCatalogSync");
++                _ = SafeRunAsync(_acCustomers.RunAsync(stoppingToken), "ForcedAcCustomersSync");
++                _ = SafeRunAsync(_acQuotes.RunAsync(stoppingToken), "ForcedAcQuotesSync");
+                 lastCatalog = now;
+                 lastOrder   = now;
+                 continue; // já sincronizou, não verifica timers neste ciclo
+@@ -147,7 +159,11 @@ public sealed class WorkerService : BackgroundService
+                 }
+                 else
+                 {
+-                    _ = SafeRunAsync(RunCatalogSyncAsync(stoppingToken), "CatalogSync");
++                    var tCatalog = SafeRunAsync(RunCatalogSyncAsync(stoppingToken), "CatalogSync");
++                    var tAcCat   = SafeRunAsync(_acCatalog.RunAsync(stoppingToken), "AcCatalogSync");
++                    var tAcCust  = SafeRunAsync(_acCustomers.RunAsync(stoppingToken), "AcCustomersSync");
++                    var tAcQuot  = SafeRunAsync(_acQuotes.RunAsync(stoppingToken), "AcQuotesSync");
++                    _ = Task.WhenAll(tCatalog, tAcCat, tAcCust, tAcQuot);
+                     _ = SafeRunAsync(_salesRankings.RunAsync(stoppingToken), "SalesRankingsSync");
+                 }
+             }
+-- 
+2.53.0.windows.1
+

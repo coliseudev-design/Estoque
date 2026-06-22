@@ -1,0 +1,107 @@
+version: '3.9'
+
+# =============================================================================
+# docker-compose.yml — Coliseu Sales Middleware (Desenvolvimento Local)
+#
+# Sobe: PostgreSQL 16, Redis 7, Node.js Middleware
+#
+# Uso:
+#   docker-compose up -d                  # Sobe tudo em background
+#   docker-compose logs -f middleware     # Acompanhar logs do middleware
+#   docker-compose down -v               # Para e remove volumes
+#
+# Produção: use docker-compose.prod.yml separado com variáveis de env reais.
+# =============================================================================
+
+services:
+
+  # ── PostgreSQL 16 ──────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: coliseu_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: coliseu_sales
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-dev_password_change_in_prod}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data_v2:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d # Migrations executadas no primeiro boot
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d coliseu_sales" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis 7 ───────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: coliseu_redis
+    restart: unless-stopped
+    command: >
+      redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_v2:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Middleware Node.js ────────────────────────────────────────────────────
+  middleware:
+    build:
+      context: ./middleware
+      dockerfile: Dockerfile
+    container_name: coliseu_middleware
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      API_KEY: ${API_KEY:-dev-api-key}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-Coliseu2026!IdentitySuperSecretKeyOauth20}
+      IDENTITY_BASE_URL: ${IDENTITY_BASE_URL:-http://host.docker.internal:5100}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-Coliseu2026!IdentitySuperSecretKeyOauth20}
+      # PostgreSQL
+      PG_HOST: postgres
+      PG_PORT: 5432
+      PG_DATABASE: coliseu_sales
+      PG_USER: postgres
+      PG_PASSWORD: ${PG_PASSWORD:-dev_password_change_in_prod}
+      PG_SSL: "false"
+      # Redis
+      REDIS_URL: redis://redis:6379
+      # Firebird (modo mock em dev)
+      FB_MOCK: ${FB_MOCK:-false}
+      FB_HOST: ${FB_HOST:-host.docker.internal}
+      FB_PORT: ${FB_PORT:-3050}
+      FB_DATABASE: ${FB_DATABASE:-C:/Coliseu/Data/PIVETA.FDB}
+      FB_USER: ${FB_USER:-SYSDBA}
+      FB_PASSWORD: ${FB_PASSWORD:-masterkey}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./middleware/logs:/app/logs
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:3000/health | grep -q '\"status\":\"ok\"'" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+# ── Volumes persistentes ──────────────────────────────────────────────────────
+volumes:
+  pg_data_v2:
+    driver: local
+  redis_data_v2:
+    driver: local

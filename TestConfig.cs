@@ -1,0 +1,1 @@
+using System; using System.IO; using Microsoft.Extensions.Configuration; class Program { static void Main() { var b = new ConfigurationBuilder().AddJsonFile(@C:\Sales\appsettings.json); var c = b.Build(); var s = c.GetSection(DashboardApi); Console.WriteLine($Enabled: {s[" Enabled\]}, Url: {s[\BaseUrl\]}); } }

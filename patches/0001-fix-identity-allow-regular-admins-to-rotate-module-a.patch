@@ -1,0 +1,26 @@
+From 34852d6f13b2007bb10fd06c1cd31bc1cba84f8e Mon Sep 17 00:00:00 2001
+From: Coliseu Sistemas <coliseu.dev@gmail.com>
+Date: Fri, 17 Apr 2026 17:27:36 -0400
+Subject: [PATCH 1/5] fix(identity): allow regular admins to rotate module api
+ keys
+
+---
+ .../Controllers/CompanyModulesController.cs                     | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/CompanyModulesController.cs b/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/CompanyModulesController.cs
+index 9d560c8..72ca25b 100644
+--- a/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/CompanyModulesController.cs
++++ b/Coliseu.Identity/src/Coliseu.Identity.Api/Controllers/CompanyModulesController.cs
+@@ -137,7 +137,7 @@ public sealed class CompanyModulesController : ControllerBase
+     /// Apps e Workers precisam ser atualizados.
+     /// </summary>
+     [HttpPost("{moduleId:guid}/rotate-key")]
+-    [Authorize(Roles = "SuperAdmin")]
++    [RequirePermission("companies.update")]
+     public async Task<IActionResult> RotateKey(
+         Guid companyId, Guid moduleId, CancellationToken ct)
+     {
+-- 
+2.53.0.windows.1
+

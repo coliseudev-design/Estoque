@@ -1,0 +1,90 @@
+# ==============================================================================
+# FASTLANE FASTFILE
+# ==============================================================================
+
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    # Garante que estamos usando UTF-8 no terminal
+    ENV["LANG"] = "en_US.UTF-8"
+    ENV["LC_ALL"] = "en_US.UTF-8"
+    
+    # Caso utilize App Store Connect API Token para ignorar o 2FA no terminal (Recomendado):
+    # app_store_connect_api_key(
+    #   key_id: "<KEY_ID>",
+    #   issuer_id: "<ISSUER_ID>",
+    #   key_filepath: "fastlane/app_store_connect_api_key.p8",
+    #   duration: 1200,
+    #   in_house: false
+    # )
+  end
+
+  desc "Sincroniza os certificados e perfis de provisionamento com o Apple Match"
+  lane :sync_certificates do
+    match(
+      type: "appstore",
+      readonly: true
+    )
+  end
+
+  desc "Gera o build IPA e envia para homologação interna no TestFlight"
+  lane :beta do
+    # 1. Atualiza o número de build do Xcode de acordo com o timestamp
+    increment_build_number(
+      build_number: Time.now.strftime("%Y%m%d%H%M") # Formato: YYYYMMDDHHMM
+    )
+
+    # 2. Compila o app iOS usando Gym
+    build_app(
+      scheme: "Runner",
+      workspace: "Runner.xcworkspace",
+      clean: true,
+      output_directory: "./build",
+      output_name: "ColiseuSales.ipa",
+      export_method: "app-store"
+    )
+
+    # 3. Faz o upload para o TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      skip_submission: true
+    )
+  end
+
+  desc "Gera o build IPA e envia para a App Store Connect pronto para publicação"
+  lane :release do
+    # 1. Incrementa o build automaticamente
+    increment_build_number(
+      build_number: Time.now.strftime("%Y%m%d%H%M")
+    )
+
+    # 2. Compila o app iOS
+    build_app(
+      scheme: "Runner",
+      workspace: "Runner.xcworkspace",
+      clean: true,
+      output_directory: "./build",
+      output_name: "ColiseuSales.ipa",
+      export_method: "app-store"
+    )
+
+    # 3. Envia para a App Store Connect
+    upload_to_app_store(
+      force: true,
+      skip_metadata: false,
+      metadata_path: "../../apple_store_submission/metadata",
+      skip_screenshots: true,
+      submit_for_review: false,
+      automatic_release: false
+    )
+  end
+
+  after_all do |lane|
+    # Executado após o sucesso
+  end
+
+  error do |lane, exception|
+    # Executado caso ocorra algum erro
+  end
+end

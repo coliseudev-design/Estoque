@@ -1,0 +1,68 @@
+# docker-compose.prod.yml — Stack de Produção
+#
+# Diferenças em relação ao docker-compose.yml de dev:
+#   - Middleware NÃO expõe porta ao host (acesso apenas via nginx)
+#   - PostgreSQL e Redis NÃO expõem portas (rede interna)
+#   - nginx como único ponto de entrada (80 + 443)
+#   - restart: always em todos os serviços
+#   - Volumes nomeados para persistência garantida
+#
+# Pré-requisitos:
+#   1. Certificados SSL em /etc/letsencrypt/live/<seu-dominio>/
+#      (obtidos com: certbot certonly --standalone -d <seu-dominio>)
+#   2. Arquivo .env preenchido com os valores de produção
+
+services:
+
+  # Bancos locais e Redis foram removidos para usar o Banco Central do Coolify.
+
+  # ── Node.js Middleware ─────────────────────────────────────────────────────
+  middleware:
+    build:
+      context: ./middleware
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      SYNC_MODE: ${SYNC_MODE:-async}
+      FB_MOCK: ${FB_MOCK:-true}
+      API_KEY: ${API_KEY}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      IDENTITY_BASE_URL: ${IDENTITY_BASE_URL}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      PG_HOST: ${PG_HOST}
+      PG_PORT: 5432
+      PG_DATABASE: ${PG_DATABASE:-coliseu_identity}
+      PG_USER: ${PG_USER:-coliseu_admin}
+      PG_PASSWORD: ${PG_PASSWORD}
+      REDIS_URL: ${REDIS_URL}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-200}
+    networks:
+      - coolify
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Nginx — Ponto de Entrada Único ────────────────────────────────────────
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      middleware:
+        condition: service_healthy
+    networks:
+      - coolify
+
+# ── Networks ──────────────────────────────────────────────────────────────
+networks:
+  coolify:
+    external: true

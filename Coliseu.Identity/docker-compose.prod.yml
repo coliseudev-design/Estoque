@@ -1,0 +1,148 @@
+# docker-compose.prod.yml — Coliseu.Identity (Produção / Coolify)
+#
+# ARQUITETURA DE REDE COOLIFY:
+#   - A rede interna isola PostgreSQL e Redis (sem acesso externo)
+#   - O nginx é conectado TAMBÉM à rede global `coolify` (gerenciada pelo Traefik)
+#   - O Traefik do Coolify roteia requisições HTTPS para o nginx via labels
+#
+# IMPORTANTE: Os nomes dos serviços usam prefixo "coliseu-" para evitar
+# conflito DNS com o Redis/Postgres internos do Coolify na rede `coolify`.
+
+services:
+
+  # Bancos de dados removidos deste arquivo.
+  # Agora eles rodam de forma nativa e centralizada no Coolify.
+
+  # ── Identity API (.NET 8) ─────────────────────────────────────────────────
+  identity:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Host=${PG_HOST:-coliseu-db};Database=${PG_DATABASE:-coliseu_identity};Username=${PG_USER:-coliseu_admin};Password=${POSTGRES_PASSWORD}"
+      Jwt__DeviceSigningKey: ${JWT_DEVICE_KEY}
+      Jwt__AdminSigningKey: ${JWT_ADMIN_KEY}
+      Encryption__Key: ${ENCRYPTION_KEY}
+      SalesApi__BaseUrl: http://middleware:3000
+      SalesApi__InternalAdminKey: ${ADMIN_API_KEY}
+      InternalApiKey: ${INTERNAL_API_KEY}
+      Redis__ConnectionString: ${REDIS_HOST:-coliseu-redis}:${REDIS_PORT:-6379},password=${REDIS_PASSWORD}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+      Uazapi__ServerUrl: ${UAZAPI_SERVER_URL:-https://api.uazapi.com.br}
+      Uazapi__Token: ${UAZAPI_TOKEN}
+      Uazapi__Enabled: ${UAZAPI_ENABLED:-false}
+      Uazapi__AdminPhone: ${UAZAPI_ADMIN_PHONE}
+    networks:
+      - internal
+      - coolify
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- --timeout=5 http://localhost:8080/health || exit 1" ]
+      interval: 15s
+      timeout: 8s
+      retries: 6
+      start_period: 45s
+
+  # ── Middleware Node.js (Sales API) ─────────────────────────────────────────
+  # Labels Traefik explícitos para licencas.coliseusistemas.com.br.
+  middleware:
+    build:
+      context: ../middleware
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      SYNC_MODE: ${SYNC_MODE:-async}
+      FB_MOCK: ${FB_MOCK:-true}
+      API_KEY: ${API_KEY:-fallback-not-used-in-production}
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      # Mesma chave do Identity para validar JWTs de dispositivos móveis
+      JWT_ACCESS_SECRET: ${JWT_DEVICE_KEY}
+      PG_HOST: ${PG_HOST:-coliseu-db}
+      PG_PORT: ${PG_PORT:-5432}
+      PG_DATABASE: ${PG_DATABASE:-coliseu_identity}
+      PG_USER: ${PG_USER:-coliseu_admin}
+      PG_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_SSL: ${PG_SSL:-false}
+      REDIS_HOST: ${REDIS_HOST:-coliseu-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-500}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://adminlicencas.coliseusistemas.com.br,https://licencas.coliseusistemas.com.br}
+    networks:
+      - internal
+      - coolify
+
+    expose:
+      - "3000"
+
+    # Labels Traefik explícitos:
+    # - traefik.docker.network: garante que o Traefik usa o IP da rede `coolify`
+    #   (sem isso, com 2 redes, o Traefik pode pegar o IP da rede `internal` isolada)
+    # - loadbalancer.server.port: força porta 3000 (padrão do Traefik é 80)
+    labels:
+      - "traefik.docker.network=coolify"
+      - "traefik.http.services.coliseu-middleware.loadbalancer.server.port=3000"
+      - "traefik.http.routers.coliseu-middleware-https.rule=Host(`licencas.coliseusistemas.com.br`)"
+      - "traefik.http.routers.coliseu-middleware-https.entrypoints=https"
+      - "traefik.http.routers.coliseu-middleware-https.service=coliseu-middleware"
+      - "traefik.http.routers.coliseu-middleware-https.tls=true"
+      - "traefik.http.routers.coliseu-middleware-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.coliseu-middleware-http.rule=Host(`licencas.coliseusistemas.com.br`)"
+      - "traefik.http.routers.coliseu-middleware-http.entrypoints=http"
+      - "traefik.http.routers.coliseu-middleware-http.service=coliseu-middleware"
+
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ── Nginx (React SPA + reverse proxy para o .NET API) ─────────────────────
+  # Labels Traefik explícitos: Coolify não injeta automaticamente para multi-service compose.
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+      args:
+        # VITE_ vars are inlined by Vite into the JS bundle at build time.
+        # VITE_SALES_API_KEY is no longer baked into the bundle —
+        # the nginx proxy now injects Admin-Api-Key server-side via envsubst.
+        VITE_SALES_API_URL: ${VITE_SALES_API_URL:-https://licencas.coliseusistemas.com.br}
+        VITE_IDENTITY_API_URL: ${VITE_IDENTITY_API_URL:-https://adminlicencas.coliseusistemas.com.br}
+    environment:
+      # Runtime: substituted into nginx.conf by envsubst at container startup.
+      # nginx uses this to inject Admin-Api-Key header for /api/sales/admin/orders/ routes.
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+    restart: always
+    depends_on:
+      identity:
+        condition: service_healthy
+    networks:
+      - internal
+      - coolify
+
+    expose:
+      - "80"
+
+    # Garante que o Traefik usa o IP da rede `coolify` e não da `internal` (isolada)
+    labels:
+      - "traefik.docker.network=coolify"
+
+# ── Volumes ────────────────────────────────────────────────────────────────
+# Volumes pg_data_v8 e redis_data_v8 foram removidos pois os bancos estão centralizados.
+
+# ── Networks ──────────────────────────────────────────────────────────────
+# - internal: isola DB e Redis do mundo externo
+# - O Coolify injeta a rede externa automaticamente via configuração de domínios na UI
+networks:
+  internal:
+    driver: bridge
+    internal: true
+  coolify:
+    external: true

@@ -1,0 +1,97 @@
+@page "/login"
+@layout Layout.EmptyLayout
+@inject IdentityApiService Api
+@inject NavigationManager Nav
+@inject ILocalStorageService LocalStorage
+@inject AuthenticationStateProvider AuthProvider
+
+<PageTitle>Login | Coliseu Identity Admin</PageTitle>
+
+<div class="login-container">
+    <div class="login-box card shadow-lg">
+        <div class="card-body p-4">
+            <h2 class="text-center mb-4">Coliseu Identity</h2>
+            <p class="text-secondary text-center">Painel Administrativo</p>
+
+            <EditForm Model="@_model" OnValidSubmit="HandleLogin">
+                <DataAnnotationsValidator />
+
+                <div class="mb-3">
+                    <label class="form-label">E-mail</label>
+                    <InputText @bind-Value="_model.Email" class="form-control" placeholder="admin@coliseu.com.br" />
+                    <ValidationMessage For="@(() => _model.Email)" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Senha</label>
+                    <InputText @bind-Value="_model.Password" type="password" class="form-control" />
+                    <ValidationMessage For="@(() => _model.Password)" />
+                </div>
+
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="alert alert-danger">@_error</div>
+                }
+
+                <button type="submit" class="btn btn-primary w-100" disabled="@_loading">
+                    @if (_loading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    Entrar
+                </button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+<style>
+    .login-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+    }
+    .login-box {
+        width: 100%;
+        max-width: 400px;
+        border-radius: 1rem;
+    }
+</style>
+
+@code {
+    private AdminLoginRequest _model = new("", "");
+    private string? _error;
+    private bool _loading;
+
+    private async Task HandleLogin()
+    {
+        _error = null;
+        _loading = true;
+
+        try
+        {
+            var result = await Api.LoginAsync(_model);
+
+            if (result.IsSuccess)
+            {
+                await LocalStorage.SetItemAsync("authToken", result.Value!.AccessToken);
+                ((JwtAuthenticationStateProvider)AuthProvider).NotifyUserAuthentication(result.Value.AccessToken);
+                Nav.NavigateTo("/");
+            }
+            else
+            {
+                _error = result.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = "Erro inesperado ao realizar login.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

@@ -1,0 +1,93 @@
+# ==============================================================================
+# FASTLANE FASTFILE TEMPLATE
+# Local original do arquivo no projeto: mobile/ios/fastlane/Fastfile
+# ==============================================================================
+
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    # Garante que estamos usando UTF-8 no terminal
+    ENV["LANG"] = "en_US.UTF-8"
+    ENV["LC_ALL"] = "en_US.UTF-8"
+    
+    # Caso utilize App Store Connect API Token para ignorar o 2FA no terminal (Recomendado):
+    # app_store_connect_api_key(
+    #   key_id: "<KEY_ID>",
+    #   issuer_id: "<ISSUER_ID>",
+    #   key_filepath: "fastlane/app_store_connect_api_key.p8",
+    #   duration: 1200,
+    #   in_house: false
+    # )
+  end
+
+  desc "Sincroniza os certificados e perfis de provisionamento com o Apple Match"
+  lane :sync_certificates do
+    # NOTA: O Match requer um repositório Git privado para armazenar os certificados criptografados.
+    # Se você preferir gerenciamento manual de certificados no Xcode, pode ignorar esta lane.
+    match(
+      type: "appstore",
+      readonly: true # Apenas baixa os certificados, não cria novos na Apple Developer
+    )
+  end
+
+  desc "Gera o build IPA e envia para homologação interna no TestFlight"
+  lane :beta do
+    # 1. Atualiza o número de build do Xcode de acordo com o timestamp
+    increment_build_number(
+      build_number: Time.now.strftime("%Y%m%d%H%M") # Formato: YYYYMMDDHHMM (Garante builds sempre únicos)
+    )
+
+    # 2. Compila o app iOS usando Xcode build (Gym)
+    build_app(
+      scheme: "Runner",
+      workspace: "Runner.xcworkspace",
+      clean: true,
+      output_directory: "./build",
+      output_name: "ColiseuSales.ipa",
+      export_method: "app-store"
+    )
+
+    # 3. Faz o upload para o TestFlight
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true, # Libera o terminal assim que o upload for feito
+      skip_submission: true                    # Não submete a revisão automática interna
+    )
+  end
+
+  desc "Gera o build IPA e envia para a App Store Connect pronto para publicação"
+  lane :release do
+    # 1. Incrementa o build automaticamente com base no timestamp
+    increment_build_number(
+      build_number: Time.now.strftime("%Y%m%d%H%M")
+    )
+
+    # 2. Compila o app iOS
+    build_app(
+      scheme: "Runner",
+      workspace: "Runner.xcworkspace",
+      clean: true,
+      output_directory: "./build",
+      output_name: "ColiseuSales.ipa",
+      export_method: "app-store"
+    )
+
+    # 3. Envia para a App Store Connect
+    upload_to_app_store(
+      force: true,                             # Pula a confirmação HTML pós-upload
+      skip_metadata: false,                    # Altere para true se não quiser subir os arquivos de metadados via CLI
+      metadata_path: "../../apple_store_submission/metadata",
+      skip_screenshots: true,                  # Altere para false se quiser subir capturas de tela via CLI
+      submit_for_review: false,                # Deixa como rascunho na App Store Connect (revisão manual na web)
+      automatic_release: false                 # Liberação manual após aprovação da Apple
+    )
+  end
+
+  after_all do |lane|
+    # Executado após o sucesso de qualquer lane
+  end
+
+  error do |lane, exception|
+    # Executado caso ocorra algum erro na execução da lane
+  end
+end

@@ -1,0 +1,20 @@
+# key.properties.example — Template do arquivo de assinatura para a Google Play Store
+#
+# INSTRUÇÕES:
+# 1. Copie este arquivo para android/key.properties (sem o .example)
+# 2. Preencha com os dados reais do keystore de produção
+# 3. NUNCA commite o arquivo key.properties no git (já está no .gitignore)
+#
+# CRIAR O KEYSTORE (execute UMA VEZ e faça backup em local seguro):
+#   keytool -genkey -v -keystore coliseu-release.jks ^
+#     -alias coliseu -keyalg RSA -keysize 2048 -validity 36500 ^
+#     -dname "CN=Coliseu Sistemas, OU=Mobile, O=Coliseu, L=BR, ST=BR, C=BR"
+#
+# ATENÇÃO: Perder o .jks ou as senhas impede PERMANENTEMENTE futuras atualizações
+# do app na Play Store. Guarde em gerenciador de senhas (Bitwarden, 1Password, etc.)
+# ============================================================================
+
+storePassword=SUBSTITUA-PELA-SENHA-DO-KEYSTORE
+keyPassword=SUBSTITUA-PELA-SENHA-DA-CHAVE
+keyAlias=coliseu
+storeFile=C:/caminho/para/coliseu-release.jks

@@ -1,0 +1,82 @@
+
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: coliseu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: coliseu_identity
+      POSTGRES_USER: coliseu_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./backups:/backups
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U coliseu_admin" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis (Rate Limiting + Cache) ──────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: coliseu-redis
+    restart: unless-stopped
+    command: >
+      redis-server --requirepass ${REDIS_PASSWORD} --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  # ── Identity Server ────────────────────────────────────────
+  identity:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coliseu-identity
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=coliseu_identity;Username=coliseu_admin;Password=${POSTGRES_PASSWORD}
+      - Jwt__DeviceSigningKey=${JWT_DEVICE_KEY}
+      - Jwt__AdminSigningKey=${JWT_ADMIN_KEY}
+      - Encryption__Key=${ENCRYPTION_KEY}
+      - SalesApi__BaseUrl=${SALES_API_BASE_URL}
+      - Uazapi__ServerUrl=${UAZAPI_SERVER_URL}
+      - Uazapi__Token=${UAZAPI_TOKEN}
+      - Uazapi__Enabled=${UAZAPI_ENABLED}
+      - Uazapi__AdminPhone=${UAZAPI_ADMIN_PHONE}
+    volumes:
+      # Persiste DataProtection Keys entre restarts — sem isso sessions invalidam a cada deploy
+      - identity_dp_keys:/home/coliseu/.aspnet/DataProtection-Keys
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "127.0.0.1:5100:8080"
+
+  # ── Nginx Reverse Proxy ────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: coliseu-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - identity
+
+volumes:
+  pg_data:
+  redis_data:
+  identity_dp_keys:   # DataProtection Keys do ASP.NET Core

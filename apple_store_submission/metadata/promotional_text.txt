@@ -1,0 +1,5 @@
+# ==============================================================================
+# TEXTO PROMOCIONAL (promotional_text.txt)
+# Limite máximo de caracteres: 170 caracteres.
+# ==============================================================================
+Acelere suas vendas externas com o Coliseu App! Cadastre pedidos offline, acesse o catálogo completo e integre tudo ao seu ERP de forma rápida e segura.

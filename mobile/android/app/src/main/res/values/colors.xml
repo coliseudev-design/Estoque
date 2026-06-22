@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cores para ícone adaptativo do launcher (Android 8.0+) -->
+<resources>
+    <!-- Azul escuro — identidade visual Coliseu Sales -->
+    <color name="ic_launcher_background">#FFFFFF</color>
+</resources>

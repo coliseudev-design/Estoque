@@ -1,0 +1,6 @@
+# ==============================================================================
+# URL DE SUPORTE (support_url.txt)
+# Limite máximo: Link válido (URL).
+# Obrigatório: Sim.
+# ==============================================================================
+https://coliseusistemas.com.br/suporte

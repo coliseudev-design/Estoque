@@ -1,0 +1,116 @@
+==============================================================================
+             GUIA DE HOMOLOGAÇÃO E PUBLICAÇÃO IOS (APP STORE CONNECT)
+==============================================================================
+
+Este guia orienta passo a passo o processo de preenchimento de metadados, 
+geração automática de ícones e upload do build (.ipa) para o TestFlight e 
+App Store utilizando a ferramenta Fastlane.
+
+------------------------------------------------------------------------------
+1. ESTRUTURA DE AUTOMAÇÃO CRIADA
+------------------------------------------------------------------------------
+Na raiz do seu projeto foi criada a pasta "apple_store_submission/" contendo:
+
+- metadata/pt-BR/
+  Contém os metadados reais pré-preenchidos do Coliseu App no formato exigido 
+  pelo Fastlane para upload automático (descrição, palavras-chave, URLs, etc.).
+
+- ios_config/
+  Contém o template de permissões do Info.plist (Info_privacy_snippets.plist)
+  e os arquivos de configuração do Fastlane (Appfile e Fastfile).
+
+- assets_automation/
+  Contém o script Python "generate_icons.py" responsável por cortar a imagem 
+  do ícone para todas as 21 resoluções exigidas pelo iOS.
+
+- COMO_ENVIAR.md
+  Este guia completo de instruções em formato Markdown.
+
+- COMO_ENVIAR.txt
+  Este guia em formato de texto puro.
+
+------------------------------------------------------------------------------
+2. AJUSTES PREVENTIVOS DE AUDITORIA APLICADOS
+------------------------------------------------------------------------------
+Para garantir que seu app passe sem problemas pela revisão da Apple:
+
+1. Bypass de Criptografia (TestFlight Instantâneo):
+   Adicionamos a chave <key>ITSAppUsesNonExemptEncryption</key><false/> direto 
+   no seu arquivo mobile/ios/Runner/Info.plist. Isso impede que seus builds 
+   fiquem travados em "Conformidade ausente" no painel da Apple.
+
+2. Configuração de Bundle ID:
+   O arquivo de configuração do Fastlane (Appfile) já foi pré-configurado 
+   automaticamente com o Bundle ID real do seu app: com.kleber.coliseusalesdev.
+
+------------------------------------------------------------------------------
+3. PASSO A PASSO PARA SUBIR O APLICATIVO
+------------------------------------------------------------------------------
+
+PASSO 1: PREENCHIMENTO DE METADADOS
+Se for colar manualmente no portal App Store Connect (https://appstoreconnect.apple.com):
+- description.txt      -> Versão do App > Descrição (Description) [Max: 4.000 ch]
+- keywords.txt         -> Versão do App > Palavras-chave (Keywords) [Max: 100 ch]
+- privacy_url.txt      -> Informações do App > URL da Política de Privacidade
+- support_url.txt      -> Versão do App > URL de Suporte
+- whats_new.txt        -> Versão do App > Novidades desta Versão [Max: 4.000 ch]
+- promotional_text.txt -> Versão do App > Texto Promocional [Max: 170 ch]
+
+* NOTA: Se você usar o Fastlane (Passo 3), esses textos serão enviados 
+  automaticamente da pasta "metadata/pt-BR/".
+
+
+PASSO 2: ATUALIZAR ÍCONES (OPCIONAL - JÁ REALIZADO)
+Caso queira trocar o ícone do aplicativo no futuro:
+1. Cole o novo ícone original (1024x1024 pixels, formato PNG) na pasta 
+   "apple_store_submission/assets_automation/" com o nome de "icon.png".
+2. Abra o terminal na raiz do projeto e execute:
+   python3 apple_store_submission/assets_automation/generate_icons.py
+3. Digite "S" ou "Sim" quando o script perguntar se deseja copiar os ícones 
+   para o projeto iOS. Os arquivos serão redimensionados e substituídos de 
+   forma 100% automatizada.
+
+
+PASSO 3: INSTALAR E CONFIGURAR O FASTLANE
+1. Instale o Fastlane no seu macOS via terminal (caso não possua):
+   brew install fastlane
+
+2. Configure suas credenciais de desenvolvedor Apple:
+   Abra o arquivo "mobile/ios/fastlane/Appfile" no editor de sua preferência e:
+   - Substitua o valor em <SEU_EMAIL_APPLE_ID> pelo seu e-mail da conta Apple.
+   - Substitua o valor em <SEU_APPLE_TEAM_ID> pelo seu Team ID de desenvolvedor 
+     (que você encontra no site developer.apple.com na aba Membership).
+
+
+PASSO 4: COMPILAR E SUBIR O BUILD (.IPA)
+
+A) Para homologação interna (TestFlight):
+No terminal da sua máquina, acesse a pasta do iOS e execute a lane beta:
+   cd mobile/ios
+   fastlane beta
+
+* O que o comando faz:
+  1. Incrementa e ajusta o número da Build baseado na data/hora para evitar erros.
+  2. Compila e gera o arquivo do aplicativo (.ipa).
+  3. Envia o app diretamente ao TestFlight da Apple de forma automática.
+
+B) Para envio definitivo à App Store:
+No terminal da sua máquina, acesse a pasta do iOS e execute a lane release:
+   cd mobile/ios
+   fastlane release
+
+* O que o comando faz:
+  1. Incrementa a Build e compila o aplicativo.
+  2. Carrega todos os textos contidos em "apple_store_submission/metadata/pt-BR/".
+  3. Envia o build e os textos para a App Store Connect. O aplicativo ficará em 
+     modo rascunho no painel web da Apple, pronto para você clicar em "Enviar 
+     para Revisão".
+
+------------------------------------------------------------------------------
+DICA SÊNIOR DE SEGURANÇA (EVITANDO 2FA EM CI/CD):
+Para não precisar digitar sua senha da Apple e código de duas etapas (2FA) 
+toda vez que enviar um build, crie um "App Store Connect API Key" (chave .p8) 
+no portal App Store Connect (Usuários e Acesso > Integrações) e configure-a 
+nas primeiras linhas do seu "Fastfile" conforme as instruções comentadas no 
+próprio arquivo.
+==============================================================================

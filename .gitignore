@@ -1,0 +1,81 @@
+# Dependencies and Tooling
+node_modules/
+.npm
+# package-lock.json (Removido para permitir npm ci no deploy)
+.agent/
+.agentic/
+.ag/
+.brain/
+.system_generated/
+.github/
+
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+ephemeral/
+*.app_
+*.dll
+*.exe
+*.ipa
+*.apk
+*.aab
+*.metadata
+*.pdb
+
+# Android
+.gradle/
+local.properties
+*.out
+*.xml
+!**/AndroidManifest.xml
+!**/res/**/*.xml
+# (Note: keeping android/app/build.gradle etc but ignoring local/build artifacts)
+app/build/
+
+# iOS
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+DerivedData/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.DS_Store
+
+# Environments
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.log
+
+# C# / .NET
+[Bb]in/
+[Oo]bj/
+[Tt]est[Rr]esults/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.history/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+publish/
+publish_release/
