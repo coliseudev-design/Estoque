@@ -70,7 +70,8 @@ class _SetupScreenState extends State<SetupScreen> {
         'deviceUuid':    uuid,
         'model':         info.model,
         'os':            info.os,
-        'appVersion':    '1.0.0' // TODO: Pegar do package_info_plus
+        'appVersion':    '1.0.0', // TODO: Pegar do package_info_plus
+        'moduleSlug':    'coliseuspeed',
       });
 
       if (resp.statusCode == 200 || resp.statusCode == 201) {

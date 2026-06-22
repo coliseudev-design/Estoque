@@ -78,6 +78,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
           'model'        : deviceInfo.model,
           'os'           : deviceInfo.os,
           'appVersion'   : '1.0.0',
+          'moduleSlug'   : 'coliseuspeed',
         },
       );
 

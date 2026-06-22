@@ -182,6 +182,7 @@ class _AuthGateState extends State<AuthGate> {
         'model':         info.model,
         'os':            info.os,
         'appVersion':    kAppVersion,
+        'moduleSlug':    'coliseuspeed',
       });
 
       if (resp.statusCode == 200 || resp.statusCode == 201) {
