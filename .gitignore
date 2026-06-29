@@ -7,7 +7,6 @@ node_modules/
 .ag/
 .brain/
 .system_generated/
-.github/
 
 # Flutter/Dart
 .dart_tool/

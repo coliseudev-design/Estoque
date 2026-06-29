@@ -45,6 +45,7 @@ namespace ColiseuSales.Configurator
         public static readonly Color NexusModule     = Color.FromArgb(  0, 150, 136); // Teal (#009688)
         public static readonly Color VisionModule    = Color.FromArgb(236,  72, 153); // Rosa Choque (#EC4899)
         public static readonly Color GarantiasModule = Color.FromArgb( 52, 152, 219); // Azul (#3498DB)
+        public static readonly Color ColiseSpeedModule = Color.FromArgb(  0, 188, 212); // Cyan
     }
 
     public partial class MainForm : Form
@@ -104,6 +105,11 @@ namespace ColiseuSales.Configurator
         private CheckBox chkGarantiasEnabled = null!;
         private TextBox  txtGarantiasUrl     = null!;
         private TextBox  txtGarantiasApiKey  = null!;
+
+        // 🚀 ColiseSpeed
+        private CheckBox chkColiseSpeedEnabled = null!;
+        private TextBox  txtColiseSpeedUrl     = null!;
+        private TextBox  txtColiseSpeedApiKey  = null!;
 
         // 🖥 Monitoramento 🖥───────────────────────────────────────────
         private FlowLayoutPanel _cardsPanel = null!;
@@ -819,6 +825,32 @@ namespace ColiseuSales.Configurator
             y += 44;
             AddFormRow(panel, "Internal API Key:", out txtGarantiasApiKey, y);
             txtGarantiasApiKey.Enabled = false;
+            y += 58;
+
+            AddSection(panel, "🚀  ColiseSpeed", y);
+            y += 30;
+            chkColiseSpeedEnabled = new CheckBox
+            {
+                Text      = "Habilitar sincronização com ColiseSpeed",
+                Location  = new Point(0, y),
+                Size      = new Size(450, 22),
+                Font      = new Font("Segoe UI", 9f),
+                ForeColor = ColiseuColors.TextDark,
+                Checked   = false,
+            };
+            chkColiseSpeedEnabled.CheckedChanged += (_, _) =>
+            {
+                txtColiseSpeedUrl.Enabled    = chkColiseSpeedEnabled.Checked;
+                txtColiseSpeedApiKey.Enabled = chkColiseSpeedEnabled.Checked;
+            };
+            panel.Controls.Add(chkColiseSpeedEnabled);
+            y += 30;
+            AddFormRow(panel, "URL da API:", out txtColiseSpeedUrl, y);
+            txtColiseSpeedUrl.PlaceholderText = "https://speed.coliseusistemas.com.br";
+            txtColiseSpeedUrl.Enabled = false;
+            y += 44;
+            AddFormRow(panel, "Internal API Key:", out txtColiseSpeedApiKey, y);
+            txtColiseSpeedApiKey.Enabled = false;
             y += 58;
 
             // Checkbox visível com estado atual da tarefa agendada
@@ -1626,6 +1658,7 @@ namespace ColiseuSales.Configurator
             chkNexusEnabled.Enabled = !isLocked;
             chkVisionEnabled.Enabled = !isLocked;
             chkGarantiasEnabled.Enabled = !isLocked;
+            chkColiseSpeedEnabled.Enabled = !isLocked;
 
             // NumericUpDowns
             numCatalogSync.Enabled = !isLocked;
@@ -1656,6 +1689,8 @@ namespace ColiseuSales.Configurator
                 txtVisionApiKey.Enabled = false;
                 txtGarantiasUrl.Enabled = false;
                 txtGarantiasApiKey.Enabled = false;
+                txtColiseSpeedUrl.Enabled = false;
+                txtColiseSpeedApiKey.Enabled = false;
             }
             else
             {
@@ -1673,6 +1708,8 @@ namespace ColiseuSales.Configurator
                 txtVisionApiKey.Enabled = chkVisionEnabled.Checked;
                 txtGarantiasUrl.Enabled = chkGarantiasEnabled.Checked;
                 txtGarantiasApiKey.Enabled = chkGarantiasEnabled.Checked;
+                txtColiseSpeedUrl.Enabled = chkColiseSpeedEnabled.Checked;
+                txtColiseSpeedApiKey.Enabled = chkColiseSpeedEnabled.Checked;
             }
         }
 
@@ -1699,6 +1736,7 @@ namespace ColiseuSales.Configurator
             txtNexusUrl.Text     = "https://nexus.coliseusistemas.com.br";
             txtVisionUrl.Text    = "https://vision.coliseusistemas.com.br";
             txtGarantiasUrl.Text = "https://garantias.coliseusistemas.com.br";
+            txtColiseSpeedUrl.Text = "https://speed.coliseusistemas.com.br";
 
             // Sobrescreve com o que estiver salvo no appsettings (se não for placeholder)
             try
@@ -1814,6 +1852,15 @@ namespace ColiseuSales.Configurator
                 OverrideIfReal(ref txtGarantiasApiKey, TryGet(s, "GarantiasApi", "InternalApiKey"));
                 txtGarantiasUrl.Enabled    = chkGarantiasEnabled.Checked;
                 txtGarantiasApiKey.Enabled = chkGarantiasEnabled.Checked;
+
+                // ColiseSpeed
+                var coliseSpeedEnabledStr = TryGet(s, "ColiseSpeedApi", "Enabled");
+                chkColiseSpeedEnabled.Checked = string.Equals(coliseSpeedEnabledStr, "True", StringComparison.OrdinalIgnoreCase)
+                                       || string.Equals(coliseSpeedEnabledStr, "true", StringComparison.OrdinalIgnoreCase);
+                OverrideIfReal(ref txtColiseSpeedUrl,    TryGet(s, "ColiseSpeedApi", "BaseUrl"));
+                OverrideIfReal(ref txtColiseSpeedApiKey, TryGet(s, "ColiseSpeedApi", "InternalApiKey"));
+                txtColiseSpeedUrl.Enabled    = chkColiseSpeedEnabled.Checked;
+                txtColiseSpeedApiKey.Enabled = chkColiseSpeedEnabled.Checked;
             }
             catch { }
             SetFieldsLockState(true);
@@ -1901,7 +1948,10 @@ namespace ColiseuSales.Configurator
                     visionBaseUrl: txtVisionUrl.Text.Trim(),
                     visionApiKey: txtVisionApiKey.Text.Trim(),
                     serviceSuffix: txtServiceSuffix.Text.Trim(),
-                    vpsEnabled: chkSalesEnabled.Checked);
+                    vpsEnabled: chkSalesEnabled.Checked,
+                    coliseSpeedEnabled: chkColiseSpeedEnabled.Checked,
+                    coliseSpeedBaseUrl: txtColiseSpeedUrl.Text.Trim(),
+                    coliseSpeedApiKey: txtColiseSpeedApiKey.Text.Trim());
 
                 // Reinicia o Worker — settings já foram salvas acima, não salva novamente
                 _ = EnsureWorkerReadyAsync(saveSettings: false);
@@ -1992,6 +2042,9 @@ namespace ColiseuSales.Configurator
                         bool   garantiasEnabled = false;
                         string garantiasUrl     = "";
                         string garantiasKey     = "";
+                        bool   coliseSpeedEnabled = false;
+                        string coliseSpeedUrl   = "";
+                        string coliseSpeedKey   = "";
 
                         UI(() =>
                         {
@@ -2024,6 +2077,9 @@ namespace ColiseuSales.Configurator
                             garantiasEnabled = chkGarantiasEnabled.Checked;
                             garantiasUrl    = txtGarantiasUrl.Text.Trim();
                             garantiasKey    = txtGarantiasApiKey.Text.Trim();
+                            coliseSpeedEnabled = chkColiseSpeedEnabled.Checked;
+                            coliseSpeedUrl  = txtColiseSpeedUrl.Text.Trim();
+                            coliseSpeedKey  = txtColiseSpeedApiKey.Text.Trim();
                         });
 
                         _settings.UpdateSettings(
@@ -2043,7 +2099,10 @@ namespace ColiseuSales.Configurator
                             visionEnabled: visionEnabled,
                             visionBaseUrl: visionUrl,
                             visionApiKey: visionKey,
-                            serviceSuffix: serviceSuffix);
+                            serviceSuffix: serviceSuffix,
+                            coliseSpeedEnabled: coliseSpeedEnabled,
+                            coliseSpeedBaseUrl: coliseSpeedUrl,
+                            coliseSpeedApiKey: coliseSpeedKey);
                     }
 
                     // 3. Registra URL ACL para o MonitoringServer (HttpListener porta 9001)

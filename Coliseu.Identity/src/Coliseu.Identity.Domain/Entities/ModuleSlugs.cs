@@ -24,10 +24,13 @@ public static class ModuleSlugs
     /// <summary>Módulo de Inteligência de Dados e Visão Computacional.</summary>
     public const string Vision = "vision";
 
+    /// <summary>Módulo ColiseSpeed — sincronização de tabelas dedicadas via Worker.</summary>
+    public const string ColiseSpeed = "colisespeed";
+
     /// <summary>Valida se o slug é conhecido pelo sistema.</summary>
     public static bool IsValid(string slug) =>
-        slug is ColiseuSales or AutoCenter or ColiseuDash or ControleGarantias or Nexus or Vision;
+        slug is ColiseuSales or AutoCenter or ColiseuDash or ControleGarantias or Nexus or Vision or ColiseSpeed;
 
     /// <summary>Lista todos os slugs registrados.</summary>
-    public static readonly IReadOnlyList<string> All = [ColiseuSales, AutoCenter, ColiseuDash, ControleGarantias, Nexus, Vision];
+    public static readonly IReadOnlyList<string> All = [ColiseuSales, AutoCenter, ColiseuDash, ControleGarantias, Nexus, Vision, ColiseSpeed];
 }

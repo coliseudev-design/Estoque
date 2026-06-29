@@ -1,60 +1,84 @@
-# docker-compose.prod.yml — Stack de Produção
-#
-# Diferenças em relação ao docker-compose.yml de dev:
-#   - Middleware NÃO expõe porta ao host (acesso apenas via nginx)
-#   - PostgreSQL e Redis NÃO expõem portas (rede interna)
-#   - nginx como único ponto de entrada (80 + 443)
-#   - restart: always em todos os serviços
-#   - Volumes nomeados para persistência garantida
-#
-# Pré-requisitos:
-#   1. Certificados SSL em /etc/letsencrypt/live/<seu-dominio>/
-#      (obtidos com: certbot certonly --standalone -d <seu-dominio>)
-#   2. Arquivo .env preenchido com os valores de produção
+# ================================================================
+# ColiseSpeed — Docker Compose PRODUÇÃO
+# ================================================================
+# PostgreSQL e Redis removidos — usar os do Coolify central
+# Apenas middleware + nginx, conectados à rede coolify
+# Deploy: speed.coliseusistemas.com.br
+# ================================================================
 
 services:
 
-  # Bancos locais e Redis foram removidos para usar o Banco Central do Coolify.
-
-  # ── Node.js Middleware ─────────────────────────────────────────────────────
+  # ── Node.js Middleware ──────────────────────────────────────────
   middleware:
     build:
       context: ./middleware
       dockerfile: Dockerfile
+      target: production
+    container_name: colisespeed-middleware
     restart: always
     environment:
       NODE_ENV: production
       PORT: 3000
-      SYNC_MODE: ${SYNC_MODE:-async}
-      FB_MOCK: ${FB_MOCK:-true}
+      # PostgreSQL (Coolify central)
+      PG_HOST: ${PG_HOST}
+      PG_PORT: ${PG_PORT:-5432}
+      PG_DATABASE: ${PG_DATABASE:-colisespeed}
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      PG_SSL: ${PG_SSL:-false}
+      # Redis (Coolify central)
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_URL: ${REDIS_URL:-}
+      # Auth
       API_KEY: ${API_KEY}
       ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-}
+      # Identity
       IDENTITY_BASE_URL: ${IDENTITY_BASE_URL}
       INTERNAL_API_KEY: ${INTERNAL_API_KEY}
-      PG_HOST: ${PG_HOST}
-      PG_PORT: 5432
-      PG_DATABASE: ${PG_DATABASE:-coliseu_identity}
-      PG_USER: ${PG_USER:-coliseu_admin}
-      PG_PASSWORD: ${PG_PASSWORD}
-      REDIS_URL: ${REDIS_URL}
+      # Company
+      COMPANY_NAME: ${COMPANY_NAME:-}
+      COMPANY_ID: ${COMPANY_ID:-}
+      # Firebird (Worker mode — middleware não conecta)
+      FB_MOCK: ${FB_MOCK:-true}
+      SYNC_MODE: ${SYNC_MODE:-async}
+      # CORS
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      # Rate Limiting
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-200}
-    networks:
-      - coolify
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:
-      test: [ "CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1" ]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - coolify
 
-  # ── Nginx — Ponto de Entrada Único ────────────────────────────────────────
+  # ── Nginx — Reverse Proxy ──────────────────────────────────────
   nginx:
     build:
       context: ./nginx
       dockerfile: Dockerfile
+    container_name: colisespeed-nginx
     restart: always
     depends_on:
       middleware:
@@ -62,7 +86,7 @@ services:
     networks:
       - coolify
 
-# ── Networks ──────────────────────────────────────────────────────────────
+# ── Networks ──────────────────────────────────────────────────────
 networks:
   coolify:
     external: true

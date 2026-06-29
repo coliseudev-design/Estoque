@@ -100,7 +100,8 @@ namespace ColiseuSales.Configurator
             bool wireCrypt = false, string spVariant = "Standard",
             bool nexusEnabled = false, string nexusBaseUrl = "", string nexusApiKey = "",
             bool visionEnabled = false, string visionBaseUrl = "", string visionApiKey = "",
-            string serviceSuffix = "", bool vpsEnabled = true)
+            string serviceSuffix = "", bool vpsEnabled = true,
+            bool coliseSpeedEnabled = false, string coliseSpeedBaseUrl = "", string coliseSpeedApiKey = "")
         {
             if (!File.Exists(_appSettingsPath))
                 CreateDefaultSettings();
@@ -189,6 +190,13 @@ namespace ColiseuSales.Configurator
             jsonNode["GarantiasApi"]["Enabled"] = garantiasEnabled;
             jsonNode["GarantiasApi"]["BaseUrl"] = garantiasBaseUrl;
             jsonNode["GarantiasApi"]["InternalApiKey"]  = garantiasApiKey;
+
+            // Update ColiseSpeedApi Node
+            if (jsonNode["ColiseSpeedApi"] == null) jsonNode["ColiseSpeedApi"] = new JsonObject();
+            jsonNode["ColiseSpeedApi"]["Enabled"] = coliseSpeedEnabled;
+            jsonNode["ColiseSpeedApi"]["BaseUrl"] = coliseSpeedBaseUrl;
+            jsonNode["ColiseSpeedApi"]["InternalApiKey"]  = coliseSpeedApiKey;
+            jsonNode["ColiseSpeedApi"]["TimeoutSeconds"]  = 30;
 
             // Serialize and Save (Preserves formatting with WriteIndented)
             var options = new JsonSerializerOptions { WriteIndented = true };
