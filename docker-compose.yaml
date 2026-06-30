@@ -9,7 +9,7 @@
 services:
 
   # ── Node.js Middleware ──────────────────────────────────────────
-  middleware:
+  speed-middleware:
     build:
       context: ./middleware
       dockerfile: Dockerfile
@@ -63,7 +63,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     depends_on:
-      middleware:
+      speed-middleware:
         condition: service_started
     networks:
       - coolify
