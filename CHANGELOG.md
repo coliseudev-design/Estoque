@@ -1,4 +1,4 @@
-# Changelog — Coliseu Sales
+# Changelog — Coliseu Speed
 
 Histórico de atualizações e alterações do projeto.
 
@@ -18,5 +18,5 @@ Histórico de atualizações e alterações do projeto.
 
 ### Build & Deploy
 - Atualizada a versão do Configurator para `2.5.38`.
-- Publicado com sucesso o executável unificado `ColiseuSales_Configurator_2.5.38.exe` compilando Worker + Configurator.
-- Transferidos e commitados todos os arquivos modificados para o repositório original do GitHub Desktop em `C:\Users\rober\OneDrive\Documentos\GitHub\ColiseuSales`.
+- Publicado com sucesso o executável unificado `ColiseuSpeed_Configurator_2.5.38.exe` compilando Worker + Configurator.
+- Transferidos e commitados todos os arquivos modificados para o repositório original do GitHub Desktop em `C:\Users\rober\OneDrive\Documentos\GitHub\ColiseuSpeed`.

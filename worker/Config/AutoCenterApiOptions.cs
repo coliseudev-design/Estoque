@@ -1,4 +1,4 @@
-namespace ColiseuSales.Worker.Config;
+namespace ColiseuSpeed.Worker.Config;
 
 /// <summary>
 /// Mapeia a seção "AutoCenterApi" do appsettings.json.

@@ -1,10 +1,10 @@
-using ColiseuSales.Api.Auth;
-using ColiseuSales.Api.Data;
-using ColiseuSales.Api.Data.Entities;
-using ColiseuSales.Shared.Dtos;
+using ColiseuSpeed.Api.Auth;
+using ColiseuSpeed.Api.Data;
+using ColiseuSpeed.Api.Data.Entities;
+using ColiseuSpeed.Shared.Dtos;
 using Microsoft.EntityFrameworkCore;
 
-namespace ColiseuSales.Api.Endpoints;
+namespace ColiseuSpeed.Api.Endpoints;
 
 /// <summary>
 /// Endpoints de pedidos.

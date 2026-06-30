@@ -1,4 +1,4 @@
-/// Tokens de espaçamento e raio de borda — Coliseu Sales Force.
+/// Tokens de espaçamento e raio de borda — Coliseu Speed Force.
 ///
 /// Uso consistente garante ritmo visual uniforme em todas as telas.
 /// Nunca use valores mágicos; sempre use estas constantes.

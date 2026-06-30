@@ -63,14 +63,14 @@ public sealed class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.Property(d => d.ModuleSlug)
             .HasMaxLength(50)
             .IsRequired()
-            .HasDefaultValue("coliseu-sales");
+            .HasDefaultValue("coliseu-speed");
         builder.Property(d => d.FirstActivation).IsRequired();
         builder.Property(d => d.LastAccess).IsRequired();
 
         // One pending device per activation key
         builder.HasIndex(d => d.ActivationKey).IsUnique();
 
-        // One device per UUID per company per module (backward: existing rows keep module='coliseu-sales')
+        // One device per UUID per company per module (backward: existing rows keep module='coliseu-speed')
         builder.HasIndex(d => new { d.DeviceUuid, d.CompanyId, d.ModuleSlug })
             .HasFilter("\"DeviceUuid\" IS NOT NULL")
             .HasDatabaseName("IX_devices_DeviceUuid_CompanyId_Module");

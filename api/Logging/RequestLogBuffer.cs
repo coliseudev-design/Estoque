@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace ColiseuSales.Api.Logging;
+namespace ColiseuSpeed.Api.Logging;
 
 /// <summary>
 /// Buffer circular em memória para os últimos N requests HTTP.

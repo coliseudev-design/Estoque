@@ -3,10 +3,10 @@
 # Use apenas em ambiente de desenvolvimento ou ao atualizar o schema.
 
 param(
-    [string]$DbPath = ".\coliseu_sales.db"
+    [string]$DbPath = ".\coliseu_speed.db"
 )
 
-Write-Host "=== Coliseu Sales API — Reset de Banco de Dados ===" -ForegroundColor Cyan
+Write-Host "=== Coliseu Speed API — Reset de Banco de Dados ===" -ForegroundColor Cyan
 Write-Host ""
 
 # Confirmar antes de apagar em produção

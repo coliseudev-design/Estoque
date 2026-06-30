@@ -1,5 +1,5 @@
 # install_service.ps1 — v2
-# Instala o Coliseu Sales Worker como Windows Service.
+# Instala o Coliseu Speed Worker como Windows Service.
 #
 # Fluxo:
 #   1. Verifica execução como Administrador
@@ -19,12 +19,12 @@
 #Requires -Version 5.1
 
 param(
-    [string]$ServiceName = "ColiseuSalesWorker",
-    [string]$DisplayName = "Coliseu Sales - Worker Service",
-    [string]$Description = "Sincroniza dados entre o ERP Firebird e a VPS Coliseu Sales",
+    [string]$ServiceName = "ColiseuSpeedWorker",
+    [string]$DisplayName = "Coliseu Speed - Worker Service",
+    [string]$Description = "Sincroniza dados entre o ERP Firebird e a VPS Coliseu Speed",
     [string]$ProjectPath = "$PSScriptRoot",
     [string]$PublishDir = "$PSScriptRoot\publish",
-    [string]$ExePath = "$PSScriptRoot\publish\ColiseuSales.Worker.exe",
+    [string]$ExePath = "$PSScriptRoot\publish\ColiseuSpeed.Worker.exe",
     [switch]$ForceBuild = $false,
     [switch]$Remove = $false
 )
@@ -212,7 +212,7 @@ catch {
 
 Write-Host ""
 Write-Host "=========================================" -ForegroundColor Green
-Write-Host "  Coliseu Sales Worker instalado!        " -ForegroundColor Green
+Write-Host "  Coliseu Speed Worker instalado!        " -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Comandos uteis:" -ForegroundColor Cyan

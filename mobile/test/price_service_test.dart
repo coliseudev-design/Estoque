@@ -19,9 +19,9 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:coliseu_sales/core/services/price_service.dart';
-import 'package:coliseu_sales/core/repositories/models/models.dart';
-import 'package:coliseu_sales/core/database/database_helper.dart';
+import 'package:coliseu_speed/core/services/price_service.dart';
+import 'package:coliseu_speed/core/repositories/models/models.dart';
+import 'package:coliseu_speed/core/database/database_helper.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Setup do SQLite em memória para testes

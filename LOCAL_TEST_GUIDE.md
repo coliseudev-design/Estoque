@@ -1,4 +1,4 @@
-# Guia de Teste Local — Coliseu Sales
+# Guia de Teste Local — Coliseu Speed
 
 ## Pré-requisitos
 
@@ -57,7 +57,7 @@ dotnet run --environment Development
 cd Coliseu_Sales\worker
 dotnet run --environment Development
 ```
-✅ Aguarde: `[Worker] Coliseu Sales Worker iniciado.`
+✅ Aguarde: `[Worker] Coliseu Speed Worker iniciado.`
 
 ---
 
@@ -91,7 +91,7 @@ No terminal do Worker, após ~1 minuto você deve ver:
 ```
 http://localhost:5000/api/sync/sellers
 ```
-Header obrigatório: `API-Key: dev-coliseu-sales-2026-secure-key-xyz`
+Header obrigatório: `API-Key: dev-coliseu-speed-2026-secure-key-xyz`
 
 ---
 
@@ -133,7 +133,7 @@ flutter run
 |---|---|---|
 | `Connection refused :5000` | API não está rodando | Rode `dotnet run` no diretório `api/` |
 | `Firebird connection error` | Caminho do .FDB errado | Ajuste `Firebird.Database` no appsettings |
-| `API Key inválida` | Header faltando | Usar `API-Key: dev-coliseu-sales-2026-secure-key-xyz` |
+| `API Key inválida` | Header faltando | Usar `API-Key: dev-coliseu-speed-2026-secure-key-xyz` |
 | `Vendedor não encontrado` | sellers table vazia | Aguardar 1min para Worker sincronizar |
 | `flutter: Connection refused` | URL errada no Flutter | Usar `10.0.2.2:5000` para emulador Android |
 | `Build failed: PendingOrderDto` | Conflito de DTOs (já corrigido) | Fazer `dotnet clean` e `dotnet build` |
@@ -145,9 +145,9 @@ flutter run
 ```
 Flutter (emulador)
     ↓ HTTP para 10.0.2.2:5000
-ColiseuSales.Api  → localhost:5000 → coliseu_sales_dev.db (SQLite)
+ColiseuSpeed.Api  → localhost:5000 → coliseu_speed_dev.db (SQLite)
     ↑
-ColiseuSales.Worker → localhost:5000 (push dados)
+ColiseuSpeed.Worker → localhost:5000 (push dados)
     ↓
 Firebird PIVETA.FDB → localhost:3050
 ```

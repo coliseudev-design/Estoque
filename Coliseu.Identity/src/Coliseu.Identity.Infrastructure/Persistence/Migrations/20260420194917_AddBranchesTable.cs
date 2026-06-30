@@ -35,7 +35,7 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
                 type: "character varying(50)",
                 maxLength: 50,
                 nullable: false,
-                defaultValue: "coliseu-sales");
+                defaultValue: "coliseu-speed");
 
 
 

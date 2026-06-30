@@ -6,7 +6,7 @@ namespace Coliseu.Identity.Tests.Domain;
 public sealed class ModuleSlugsTests
 {
     [Theory]
-    [InlineData(ModuleSlugs.ColiseuSales)]
+    [InlineData(ModuleSlugs.ColiseuSpeed)]
     [InlineData(ModuleSlugs.AutoCenter)]
     [InlineData(ModuleSlugs.ColiseuDash)]
     [InlineData(ModuleSlugs.ControleGarantias)]
@@ -39,7 +39,7 @@ public sealed class ModuleSlugsTests
     public void All_ShouldContainAllRegisteredSlugs()
     {
         // Act & Assert
-        Assert.Contains(ModuleSlugs.ColiseuSales, ModuleSlugs.All);
+        Assert.Contains(ModuleSlugs.ColiseuSpeed, ModuleSlugs.All);
         Assert.Contains(ModuleSlugs.AutoCenter, ModuleSlugs.All);
         Assert.Contains(ModuleSlugs.ColiseuDash, ModuleSlugs.All);
         Assert.Contains(ModuleSlugs.ControleGarantias, ModuleSlugs.All);

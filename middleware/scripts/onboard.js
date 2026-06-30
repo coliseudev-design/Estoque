@@ -68,7 +68,7 @@ function request(url, method, body, headers) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-    console.log('\n🚀  Coliseu Sales — Onboarding de Empresa');
+    console.log('\n🚀  Coliseu Speed — Onboarding de Empresa');
     console.log('─'.repeat(50));
     console.log(`   Nome:    ${name}`);
     console.log(`   API URL: ${baseUrl}`);
@@ -117,7 +117,7 @@ async function main() {
     console.log('\n📌  Próximos passos:');
     console.log('   1. Instale o Worker .NET na máquina da empresa');
     console.log('   2. Cole o trecho acima no appsettings.json');
-    console.log('   3. Inicie o Worker: dotnet ColiseuSales.Worker.exe');
+    console.log('   3. Inicie o Worker: dotnet ColiseuSpeed.Worker.exe');
     console.log('   4. Verifique o sync: GET /health\n');
 }
 

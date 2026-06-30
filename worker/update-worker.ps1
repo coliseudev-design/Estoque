@@ -1,13 +1,13 @@
 # update-worker.ps1
-# Publica e reinstala o Coliseu Sales Worker com a nova versão (monitoramento SSE).
+# Publica e reinstala o Coliseu Speed Worker com a nova versão (monitoramento SSE).
 # IMPORTANTE: Execute como Administrador.
 
-$WorkerSrc = "C:\Users\rober\OneDrive\Documentos\GitHub\ColiseuSales\worker"
+$WorkerSrc = "C:\Users\rober\OneDrive\Documentos\GitHub\ColiseuSpeed\worker"
 $InstallDir = "C:\COLISEU SALES APLICACAO"
-$ServiceName = "Coliseu Sales Worker"
+$ServiceName = "Coliseu Speed Worker"
 
 Write-Host "===================================================" -ForegroundColor Cyan
-Write-Host " Coliseu Sales Worker — Atualização" -ForegroundColor Cyan
+Write-Host " Coliseu Speed Worker — Atualização" -ForegroundColor Cyan
 Write-Host "===================================================" -ForegroundColor Cyan
 
 # 1. Parar o serviço
@@ -29,7 +29,7 @@ catch {
 
 # 2. Publicar o Worker
 Write-Host "`n[2/4] Publicando Worker em modo Release..." -ForegroundColor Yellow
-$pub = dotnet publish "$WorkerSrc\ColiseuSales.Worker.csproj" `
+$pub = dotnet publish "$WorkerSrc\ColiseuSpeed.Worker.csproj" `
     -c Release -r win-x64 --self-contained `
     -o "$InstallDir\_publish_temp" 2>&1
 

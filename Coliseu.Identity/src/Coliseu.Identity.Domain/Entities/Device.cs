@@ -22,10 +22,10 @@ public sealed class Device
     public DeviceStatus Status { get; private set; }
     /// <summary>
     /// Identifica o módulo/produto a que este dispositivo pertence.
-    /// Ex: "coliseu-sales" | "autocenter"
-    /// Padrão "coliseu-sales" garante backward compatibility com devices existentes.
+    /// Ex: "coliseu-speed" | "autocenter"
+    /// Padrão "coliseu-speed" garante backward compatibility com devices existentes.
     /// </summary>
-    public string ModuleSlug { get; private set; } = ModuleSlugs.ColiseuSales;
+    public string ModuleSlug { get; private set; } = ModuleSlugs.ColiseuSpeed;
     public DateTime FirstActivation { get; private set; }
     public DateTime LastAccess { get; private set; }
 
@@ -42,9 +42,9 @@ public sealed class Device
     /// </summary>
     /// <param name="companyId">ID da empresa proprietária.</param>
     /// <param name="activationKey">Chave de 10 dígitos para ativação no mobile.</param>
-    /// <param name="moduleSlug">Módulo ao qual o device pertence (default: coliseu-sales).</param>
+    /// <param name="moduleSlug">Módulo ao qual o device pertence (default: coliseu-speed).</param>
     public static Device CreatePending(Guid companyId, string activationKey,
-        string moduleSlug = ModuleSlugs.ColiseuSales)
+        string moduleSlug = ModuleSlugs.ColiseuSpeed)
     {
         if (companyId == Guid.Empty)
             throw new ArgumentException("CompanyId é obrigatório.", nameof(companyId));

@@ -119,7 +119,7 @@ class OrderPdfService {
 
     final pdf = pw.Document(
       title: '$docTitle - ${order.customerName}',
-      author: 'Coliseu Sales',
+      author: 'Coliseu Speed',
     );
 
     // Carrega logo da empresa (se disponível via sync)
@@ -170,7 +170,7 @@ class OrderPdfService {
     final path = await generatePdf(order);
     await Share.shareXFiles(
       [XFile(path, mimeType: 'application/pdf')],
-      subject: 'Pedido Coliseu Sales - ${order.customerName}',
+      subject: 'Pedido Coliseu Speed - ${order.customerName}',
       text: 'Segue o comprovante do pedido para ${order.customerName}.',
       sharePositionOrigin: const Rect.fromLTWH(0, 0, 10, 10),
     );
@@ -204,7 +204,7 @@ class OrderPdfService {
       } catch (_) {}
     }
 
-    final pdf = pw.Document(title: 'Recibo - ${order.customerName}', author: 'Coliseu Sales');
+    final pdf = pw.Document(title: 'Recibo - ${order.customerName}', author: 'Coliseu Speed');
 
     // Largura 58mm = 58 * PdfPageFormat.mm (~164.4 points).
     // Roll (bobina) indica página infinita para baixo.
@@ -871,7 +871,7 @@ class OrderPdfService {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            'Coliseu Sales | Desenvolvido pela Coliseu Sistemas (67) 3423-2227 | www.coliseusistemas.com.br',
+            'Coliseu Speed | Desenvolvido pela Coliseu Sistemas (67) 3423-2227 | www.coliseusistemas.com.br',
             style: pw.TextStyle(
               fontSize: 8,
               color: _textMid,

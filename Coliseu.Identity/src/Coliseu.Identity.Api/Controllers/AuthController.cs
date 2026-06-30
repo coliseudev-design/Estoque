@@ -81,7 +81,7 @@ public sealed class AuthController : ControllerBase
     {
         var tenantIdClaim = User.FindFirst("tenantId")?.Value;
         var deviceIdClaim = User.FindFirst("deviceId")?.Value;
-        var moduleSlug = User.FindFirst("module")?.Value ?? "coliseu-sales";
+        var moduleSlug = User.FindFirst("module")?.Value ?? "coliseu-speed";
 
         if (!Guid.TryParse(tenantIdClaim, out var companyId) || !Guid.TryParse(deviceIdClaim, out var deviceId))
             return Unauthorized(new { error = "Token inválido ou sem identificação de dispositivo." });

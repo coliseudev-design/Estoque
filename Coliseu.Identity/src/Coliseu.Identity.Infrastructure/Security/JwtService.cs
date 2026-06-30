@@ -37,7 +37,7 @@ public sealed class JwtOptions
 /// <summary>
 /// Implementação do serviço JWT com chaves separadas para Device e Admin.
 ///
-/// Device JWT: issuer=coliseu-identity-device, audience=coliseu-sales-api
+/// Device JWT: issuer=coliseu-identity-device, audience=coliseu-speed-api
 /// Admin JWT:  issuer=coliseu-identity-admin,  audience=coliseu-identity-api
 /// </summary>
 public sealed class JwtService : IJwtService
@@ -57,7 +57,7 @@ public sealed class JwtService : IJwtService
     /// <inheritdoc />
     public (string Token, int ExpiresInSeconds) GenerateDeviceToken(
         Guid tenantId, Guid deviceId, string companyName,
-        string moduleSlug = "coliseu-sales")
+        string moduleSlug = "coliseu-speed")
     {
         var claims = new[]
         {
@@ -72,14 +72,14 @@ public sealed class JwtService : IJwtService
             claims,
             _options.DeviceSigningKey,
             "coliseu-identity-device",
-            "coliseu-sales-api",
+            "coliseu-speed-api",
             _options.DeviceExpirationMinutes);
     }
 
     /// <inheritdoc />
     public (string Token, int ExpiresInSeconds) GenerateDeviceTokenWithBranch(
         Guid tenantId, Guid deviceId, string companyName,
-        Guid branchId, int erpEmpresaId, string moduleSlug = "coliseu-sales")
+        Guid branchId, int erpEmpresaId, string moduleSlug = "coliseu-speed")
     {
         var claims = new[]
         {
@@ -96,7 +96,7 @@ public sealed class JwtService : IJwtService
             claims,
             _options.DeviceSigningKey,
             "coliseu-identity-device",
-            "coliseu-sales-api",
+            "coliseu-speed-api",
             _options.DeviceExpirationMinutes);
     }
 

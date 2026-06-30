@@ -1,5 +1,5 @@
 /**
- * ecosystem.config.js — Configuração PM2 para o middleware Coliseu Sales.
+ * ecosystem.config.js — Configuração PM2 para o middleware Coliseu Speed.
  *
  * Deploy na VPS:
  *   pm2 start ecosystem.config.js --env production

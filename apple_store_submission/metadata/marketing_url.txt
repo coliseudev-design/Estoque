@@ -3,4 +3,4 @@
 # Limite máximo: Link válido (URL).
 # Opcional: Sim.
 # ==============================================================================
-https://coliseusistemas.com.br/coliseu-sales
+https://coliseusistemas.com.br/coliseu-speed

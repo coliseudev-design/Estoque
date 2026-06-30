@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace ColiseuSales.Shared.Dtos;
+namespace ColiseuSpeed.Shared.Dtos;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PUSH: Worker → API  (dados do ERP para a VPS)

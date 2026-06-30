@@ -1,9 +1,9 @@
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Jobs;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Jobs;
+using ColiseuSpeed.Worker.Services;
 using Microsoft.Extensions.Options;
 
-namespace ColiseuSales.Worker;
+namespace ColiseuSpeed.Worker;
 
 /// <summary>
 /// WorkerService — Host principal do Windows Service.
@@ -126,7 +126,7 @@ public sealed class WorkerService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation(
-            "[Worker] Coliseu Sales Worker iniciado. Host={Host} | " +
+            "[Worker] Coliseu Speed Worker iniciado. Host={Host} | " +
             "CatalogInterval={Catalog}min | OrderInterval={Order}s | HealthInterval={Health}min",
             Environment.MachineName,
             _opts.CatalogSyncIntervalMinutes,

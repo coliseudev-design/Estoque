@@ -1,7 +1,7 @@
 version: '3.9'
 
 # =============================================================================
-# docker-compose.yml — Coliseu Sales Middleware (Desenvolvimento Local)
+# docker-compose.yml — Coliseu Speed Middleware (Desenvolvimento Local)
 #
 # Sobe: PostgreSQL 16, Redis 7, Node.js Middleware
 #
@@ -21,7 +21,7 @@ services:
     container_name: coliseu_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: coliseu_sales
+      POSTGRES_DB: coliseu_speed
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${PG_PASSWORD:-dev_password_change_in_prod}
     ports:
@@ -30,7 +30,7 @@ services:
       - pg_data_v2:/var/lib/postgresql/data
       - ./sql:/docker-entrypoint-initdb.d # Migrations executadas no primeiro boot
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d coliseu_sales" ]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d coliseu_speed" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -75,7 +75,7 @@ services:
       # PostgreSQL
       PG_HOST: postgres
       PG_PORT: 5432
-      PG_DATABASE: coliseu_sales
+      PG_DATABASE: coliseu_speed
       PG_USER: postgres
       PG_PASSWORD: ${PG_PASSWORD:-dev_password_change_in_prod}
       PG_SSL: "false"

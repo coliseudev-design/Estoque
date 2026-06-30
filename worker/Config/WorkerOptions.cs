@@ -1,4 +1,4 @@
-namespace ColiseuSales.Worker.Config;
+namespace ColiseuSpeed.Worker.Config;
 
 /// <summary>
 /// Configurações de conexão com a VPS API (que serve o app Flutter).

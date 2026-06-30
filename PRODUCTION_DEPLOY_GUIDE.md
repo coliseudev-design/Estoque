@@ -1,4 +1,4 @@
-# Guia de Deploy em Produção — Coliseu Sales
+# Guia de Deploy em Produção — Coliseu Speed
 
 Este guia descreve os passos para migrar do ambiente de teste local para a VPS de produção.
 
@@ -38,16 +38,16 @@ O Middleware utiliza o PostgreSQL para filas e multi-tenancy.
 ### Passos
 1. **Publicação:**
    ```powershell
-   dotnet publish worker/ColiseuSales.Worker.csproj -c Release -o ./publish
+   dotnet publish worker/ColiseuSpeed.Worker.csproj -c Release -o ./publish
    ```
 2. **Instalação como Serviço Windows:**
    ```powershell
    # No Powershell como Admin
-   New-Service -Name "ColiseuSalesWorker" `
-               -BinaryPathName "C:\Caminho\publish\ColiseuSales.Worker.exe" `
-               -DisplayName "Coliseu Sales Worker" `
+   New-Service -Name "ColiseuSpeedWorker" `
+               -BinaryPathName "C:\Caminho\publish\ColiseuSpeed.Worker.exe" `
+               -DisplayName "Coliseu Speed Worker" `
                -StartupType Automatic
-   Start-Service "ColiseuSalesWorker"
+   Start-Service "ColiseuSpeedWorker"
    ```
 3. **Monitoramento:** Checar logs no Visualizador de Eventos (Event Viewer).
 
@@ -102,5 +102,5 @@ O Google Play Console exige o formato **Android App Bundle (.aab)** para novos e
    - App (Flutter)
    - Middleware (Node.js)
    - Worker (.NET)
-2. **Backups:** Automatizar o backup do SQLite da VPS (`coliseu_sales.db`).
+2. **Backups:** Automatizar o backup do SQLite da VPS (`coliseu_speed.db`).
 3. **Firewall:** Bloquear o porto 3000 externo da VPS, permitindo apenas acesso via Nginx (localhost).

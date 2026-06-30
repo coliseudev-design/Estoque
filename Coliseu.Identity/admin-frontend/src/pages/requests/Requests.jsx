@@ -34,7 +34,7 @@ const C = {
 };
 
 const MODULE_META = {
-    'coliseu-sales': { label: 'Coliseu Sales', icon: '🏪', color: '#2196f3' },
+    'coliseu-speed': { label: 'Coliseu Speed', icon: '🏪', color: '#2196f3' },
     'autocenter':    { label: 'Auto Center', icon: '🔧', color: '#ff9800' },
     'coliseu-dash':  { label: 'Coliseu Dash', icon: '📈', color: '#10b981' },
     'controle-garantias': { label: 'Controle de Garantias', icon: '🛡️', color: '#0a58ca' },
@@ -393,7 +393,7 @@ export default function Requests() {
     const [reqAllowNegativeStock, setReqAllowNegativeStock] = useState(false);
 
     // Grid dinâmico de módulos
-    const [reqModules, setReqModules] = useState([{ moduleSlug: 'coliseu-sales', quantity: 1 }]);
+    const [reqModules, setReqModules] = useState([{ moduleSlug: 'coliseu-speed', quantity: 1 }]);
 
     const [savingRequest, setSavingRequest] = useState(false);
 
@@ -753,7 +753,7 @@ export default function Requests() {
             setReqCompanies([{ id: '1', cnpj: '', costCenter: '', dept: '' }]);
             setReqPriceTableMode('none');
             setReqAllowNegativeStock(false);
-            setReqModules([{ moduleSlug: 'coliseu-sales', quantity: 1 }]);
+            setReqModules([{ moduleSlug: 'coliseu-speed', quantity: 1 }]);
 
             setTab('list');
             await loadData();

@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:coliseu_sales/core/config/app_config_service.dart';
+import 'package:coliseu_speed/core/config/app_config_service.dart';
 
 void main() {
   setUp(() {

@@ -73,14 +73,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build middleware
-        run: docker build -t colisespeed-middleware:${{ github.sha }} ./middleware
+        run: docker build -t coliseuspeed-middleware:${{ github.sha }} ./middleware
 
       - name: Build nginx
-        run: docker build -t colisespeed-nginx:${{ github.sha }} ./nginx
+        run: docker build -t coliseuspeed-nginx:${{ github.sha }} ./nginx
 
       - name: Verificar imagens
         run: |
-          docker images | grep colisespeed
+          docker images | grep coliseuspeed
           echo "✅ Imagens construídas com sucesso"
 
   # ──────────────────────────────────────

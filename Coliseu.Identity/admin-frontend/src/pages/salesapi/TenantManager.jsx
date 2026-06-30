@@ -77,7 +77,7 @@ export default function TenantManager() {
                         Gestão de Empresas
                     </h2>
                     <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                        Tenants do sistema multi-tenant Coliseu Sales
+                        Tenants do sistema multi-tenant Coliseu Speed
                     </p>
                 </div>
                 <button onClick={fetchCompanies} disabled={loading} className="btn-outline hover-lift"

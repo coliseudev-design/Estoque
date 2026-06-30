@@ -1,7 +1,7 @@
 # SPEC 04: Frontend Mobile (Flutter) & Admin (React)
 
 ## 1. Visão Geral
-Este documento cobre a interface do usuário (UI) e a experiência de usuário (UX) necessárias para gerir, selecionar e navegar entre o ambiente Multi-Filial do Coliseu Sales, exigindo alterações severas no fluxo de login e painel gerencial.
+Este documento cobre a interface do usuário (UI) e a experiência de usuário (UX) necessárias para gerir, selecionar e navegar entre o ambiente Multi-Filial do Coliseu Speed, exigindo alterações severas no fluxo de login e painel gerencial.
 
 ## 2. Painel Adminstrativo (React)
 

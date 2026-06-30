@@ -41,7 +41,7 @@ Para garantir que seu app passe sem problemas pela revisão da Apple:
 
 2. Configuração de Bundle ID:
    O arquivo de configuração do Fastlane (Appfile) já foi pré-configurado 
-   automaticamente com o Bundle ID real do seu app: com.kleber.coliseusalesdev.
+   automaticamente com o Bundle ID real do seu app: com.kleber.coliseuspeeddev.
 
 ------------------------------------------------------------------------------
 3. PASSO A PASSO PARA SUBIR O APLICATIVO

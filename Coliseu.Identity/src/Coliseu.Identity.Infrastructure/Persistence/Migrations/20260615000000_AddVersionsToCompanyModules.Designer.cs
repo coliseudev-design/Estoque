@@ -342,7 +342,7 @@ namespace Coliseu.Identity.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
                         .HasColumnType("TEXT")
-                        .HasDefaultValue("coliseu-sales");
+                        .HasDefaultValue("coliseu-speed");
 
                     b.Property<string>("Name")
                         .HasMaxLength(150)

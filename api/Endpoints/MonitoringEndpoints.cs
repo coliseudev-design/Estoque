@@ -1,7 +1,7 @@
-using ColiseuSales.Api.Data;
+using ColiseuSpeed.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace ColiseuSales.Api.Endpoints;
+namespace ColiseuSpeed.Api.Endpoints;
 
 /// <summary>
 /// Endpoint de monitoramento por empresa para o painel admin.

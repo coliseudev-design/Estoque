@@ -1,4 +1,4 @@
-/// MaterialTheme — Design system Coliseu Sales Force v3 (Coliseu Blue).
+/// MaterialTheme — Design system Coliseu Speed Force v3 (Coliseu Blue).
 ///
 /// Light e Dark mode completos usando os tokens de AppColors e AppTypography.
 /// Todos os widgets M3 (NavigationBar, Card, Input, Button, etc.) estilizados.

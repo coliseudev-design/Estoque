@@ -261,7 +261,7 @@ export default function Login() {
                         Do controle central à segurança extrema. Sem fricção.
                     </h3>
                     <p style={{ fontSize: '1.125rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                        Gerencie centenas de licenças, monitore o ecossistema Coliseu Sales e ative integrações em tempo real através do Identity Vault.
+                        Gerencie centenas de licenças, monitore o ecossistema Coliseu Speed e ative integrações em tempo real através do Identity Vault.
                     </p>
 
                     {/* Feature Cards */}

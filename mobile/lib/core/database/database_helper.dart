@@ -14,7 +14,7 @@ import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
 
 class DatabaseHelper {
-  static const String _dbName    = 'coliseu_sales.db';
+  static const String _dbName    = 'coliseu_speed.db';
   // v38: Adiciona erp_empresa_id na tabela sellers para restrição de login
   static const int    _dbVersion = 38;
 

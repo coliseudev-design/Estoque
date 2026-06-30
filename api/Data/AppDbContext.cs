@@ -1,8 +1,8 @@
-using ColiseuSales.Api.Auth;
-using ColiseuSales.Api.Data.Entities;
+using ColiseuSpeed.Api.Auth;
+using ColiseuSpeed.Api.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace ColiseuSales.Api.Data;
+namespace ColiseuSpeed.Api.Data;
 
 /// <summary>
 /// DbContext SQLite — banco buffer da VPS entre Worker e Flutter.

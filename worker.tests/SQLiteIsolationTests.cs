@@ -3,10 +3,10 @@ using FluentAssertions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Services;
 
-namespace ColiseuSales.Worker.Tests;
+namespace ColiseuSpeed.Worker.Tests;
 
 public class SQLiteIsolationTests
 {

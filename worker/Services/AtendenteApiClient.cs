@@ -1,11 +1,11 @@
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using ColiseuSales.Shared.Dtos;
-using ColiseuSales.Worker.Config;
+using ColiseuSpeed.Shared.Dtos;
+using ColiseuSpeed.Worker.Config;
 using Microsoft.Extensions.Options;
 
-namespace ColiseuSales.Worker.Services;
+namespace ColiseuSpeed.Worker.Services;
 
 /// <summary>
 /// Cliente HTTP para comunicação com o backend do Atendente do Futuro.
@@ -156,7 +156,7 @@ public sealed class AtendenteApiClient
         }
         catch (Exception ex)
         {
-            // Falhas do Atendente não devem derrubar o sync do Coliseu Sales
+            // Falhas do Atendente não devem derrubar o sync do Coliseu Speed
             _logger.LogWarning("[AtendenteApi] Erro em {Path}: {Error}", path, ex.Message);
             return false;
         }

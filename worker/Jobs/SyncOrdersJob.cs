@@ -1,11 +1,11 @@
 using FirebirdSql.Data.FirebirdClient;
-using ColiseuSales.Shared.Dtos;
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Shared.Dtos;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Services;
 using Microsoft.Extensions.Options;
 
 
-namespace ColiseuSales.Worker.Jobs;
+namespace ColiseuSpeed.Worker.Jobs;
 
 /// <summary>
 /// SyncOrdersJob — Busca pedidos pendentes na VPS e os insere no Firebird.

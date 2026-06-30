@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# scripts/pg_backup.sh — Backup automático do PostgreSQL (Coliseu Sales)
+# scripts/pg_backup.sh — Backup automático do PostgreSQL (Coliseu Speed)
 #
 # Requisitos:
 #   - pg_dump instalado (pacote postgresql-client)
@@ -20,7 +20,7 @@ set -euo pipefail
 # ── Configuração ──────────────────────────────────────────────────────────────
 PG_HOST="${PG_HOST:-localhost}"
 PG_PORT="${PG_PORT:-5432}"
-PG_DATABASE="${PG_DATABASE:-coliseu_sales}"
+PG_DATABASE="${PG_DATABASE:-coliseu_speed}"
 PG_USER="${PG_USER:-postgres}"
 BACKUP_DIR="${BACKUP_DIR:-/backups/coliseu}"
 RETENTION_DAYS="${RETENTION_DAYS:-7}"

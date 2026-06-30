@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace ColiseuSales.Worker.Services;
+namespace ColiseuSpeed.Worker.Services;
 
 /// <summary>
 /// MonitoringServer — Mini servidor HTTP local (porta 9001) usando HttpListener.

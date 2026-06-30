@@ -1,4 +1,4 @@
-namespace ColiseuSales.Worker.Config;
+namespace ColiseuSpeed.Worker.Config;
 
 /// <summary>
 /// Configurações de conexão com o banco Firebird do ERP.

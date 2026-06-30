@@ -18,20 +18,20 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:coliseu_sales/core/cart/cart_notifier.dart';
-import 'package:coliseu_sales/core/database/database_helper.dart';
-import 'package:coliseu_sales/core/network/connectivity_service.dart';
-import 'package:coliseu_sales/core/repositories/models/models.dart';
-import 'package:coliseu_sales/core/repositories/order_repository.dart';
-import 'package:coliseu_sales/core/repositories/product_repository.dart';
-import 'package:coliseu_sales/core/repositories/customer_repository.dart';
-import 'package:coliseu_sales/core/services/company_settings_service.dart';
-import 'package:coliseu_sales/core/services/discount_service.dart';
-import 'package:coliseu_sales/core/services/price_service.dart';
-import 'package:coliseu_sales/core/sync/sync_service.dart';
-import 'package:coliseu_sales/core/config/app_config_service.dart';
-import 'package:coliseu_sales/core/session/session_service.dart';
-import 'package:coliseu_sales/core/session/session_model.dart';
+import 'package:coliseu_speed/core/cart/cart_notifier.dart';
+import 'package:coliseu_speed/core/database/database_helper.dart';
+import 'package:coliseu_speed/core/network/connectivity_service.dart';
+import 'package:coliseu_speed/core/repositories/models/models.dart';
+import 'package:coliseu_speed/core/repositories/order_repository.dart';
+import 'package:coliseu_speed/core/repositories/product_repository.dart';
+import 'package:coliseu_speed/core/repositories/customer_repository.dart';
+import 'package:coliseu_speed/core/services/company_settings_service.dart';
+import 'package:coliseu_speed/core/services/discount_service.dart';
+import 'package:coliseu_speed/core/services/price_service.dart';
+import 'package:coliseu_speed/core/sync/sync_service.dart';
+import 'package:coliseu_speed/core/config/app_config_service.dart';
+import 'package:coliseu_speed/core/session/session_service.dart';
+import 'package:coliseu_speed/core/session/session_model.dart';
 import 'package:get_it/get_it.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────

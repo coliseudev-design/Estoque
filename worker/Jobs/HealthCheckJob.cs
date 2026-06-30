@@ -1,8 +1,8 @@
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Services;
 using Microsoft.Extensions.Options;
 
-namespace ColiseuSales.Worker.Jobs;
+namespace ColiseuSpeed.Worker.Jobs;
 
 /// <summary>
 /// HealthCheckJob — Verifica a saúde de todas as dependências do Worker.

@@ -1,7 +1,0 @@
-﻿  Determinando os projetos a serem restaurados...
-  Todos os projetos est├úo atualizados para restaura├º├úo.
-  ColiseuSales.Shared -> C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\shared\bin\Release\net8.0\ColiseuSales.Shared.dll
-C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\Jobs\SyncCustomerCreationJob.cs(83,55): warning CS8604: Poss├¡vel argumento de refer├¬ncia nula para o par├ómetro 'pendingId' em 'Task<bool> VpsApiClient.ReportCustomerErrorAsync(string pendingId, string errorMessage, CancellationToken ct = default(CancellationToken))'. [C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\ColiseuSales.Worker.csproj]
-C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\Jobs\SyncCustomerCreationJob.cs(89,37): warning CS8604: Poss├¡vel argumento de refer├¬ncia nula para o par├ómetro 'pendingId' em 'Task SyncCustomerCreationJob.ConfirmWithRetryAsync(string pendingId, string erpCustomerId, CancellationToken ct)'. [C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\ColiseuSales.Worker.csproj]
-  ColiseuSales.Worker -> C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\bin\Release\net8.0-windows\win-x64\ColiseuSales.Worker.dll
-  ColiseuSales.Worker -> C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\publish\

@@ -12,7 +12,7 @@
 --   3. Adiciona política BYPASSRLS para o role 'admin_user' (migrations)
 --
 -- IMPORTANTE: aplique manualmente no primeiro deploy com:
---   psql -h HOST -U postgres coliseu_sales -f 005_rls_hardening.sql
+--   psql -h HOST -U postgres coliseu_speed -f 005_rls_hardening.sql
 -- ============================================================================
 
 -- ── 1. RLS na tabela companies ───────────────────────────────────────────────

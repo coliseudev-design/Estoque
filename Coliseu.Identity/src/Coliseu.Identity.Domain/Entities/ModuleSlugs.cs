@@ -7,7 +7,7 @@ namespace Coliseu.Identity.Domain.Entities;
 public static class ModuleSlugs
 {
     /// <summary>App de força de vendas (Flutter mobile + Middleware Sales).</summary>
-    public const string ColiseuSales = "coliseu-sales";
+    public const string ColiseuSpeed = "coliseu-speed";
 
     /// <summary>App de pré-atendimento de oficina (Flutter mobile + Middleware AutoCenter).</summary>
     public const string AutoCenter = "autocenter";
@@ -25,12 +25,12 @@ public static class ModuleSlugs
     public const string Vision = "vision";
 
     /// <summary>Módulo ColiseSpeed — sincronização de tabelas dedicadas via Worker.</summary>
-    public const string ColiseSpeed = "colisespeed";
+    public const string ColiseSpeed = "coliseuspeed";
 
     /// <summary>Valida se o slug é conhecido pelo sistema.</summary>
     public static bool IsValid(string slug) =>
-        slug is ColiseuSales or AutoCenter or ColiseuDash or ControleGarantias or Nexus or Vision or ColiseSpeed;
+        slug is ColiseuSpeed or AutoCenter or ColiseuDash or ControleGarantias or Nexus or Vision or ColiseSpeed;
 
     /// <summary>Lista todos os slugs registrados.</summary>
-    public static readonly IReadOnlyList<string> All = [ColiseuSales, AutoCenter, ColiseuDash, ControleGarantias, Nexus, Vision, ColiseSpeed];
+    public static readonly IReadOnlyList<string> All = [ColiseuSpeed, AutoCenter, ColiseuDash, ControleGarantias, Nexus, Vision, ColiseSpeed];
 }

@@ -3,7 +3,7 @@ using System.Threading.Channels;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace ColiseuSales.Worker.Services;
+namespace ColiseuSpeed.Worker.Services;
 
 /// <summary>
 /// Resultado da última sincronização de uma entidade.

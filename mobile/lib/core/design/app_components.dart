@@ -1,4 +1,4 @@
-/// Componentes compartilhados — Coliseu Sales Force v2.
+/// Componentes compartilhados — Coliseu Speed Force v2.
 ///
 /// Widgets reutilizáveis que formam o vocabulário visual do app.
 /// Todos usam tokens de design (AppColors, AppTypography, AppSpacing).

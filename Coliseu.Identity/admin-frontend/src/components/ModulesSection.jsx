@@ -5,8 +5,8 @@ import { requestService } from '../services/requestService';
 
 // ── Slugs conhecidos ─────────────────────────────────────────────────────────
 const MODULE_META = {
-  'coliseu-sales': {
-    label: 'Coliseu Sales',
+  'coliseu-speed': {
+    label: 'Coliseu Speed',
     icon: '🏪',
     desc: 'App de força de vendas (Flutter mobile)',
     color: '#2196f3',

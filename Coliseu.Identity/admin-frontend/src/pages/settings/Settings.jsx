@@ -91,7 +91,7 @@ export default function Settings() {
                         Configurações Globais
                     </h1>
                     <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                        Informações da plataforma Coliseu Sales Force
+                        Informações da plataforma Coliseu Speed Force
                     </p>
                 </div>
             </div>

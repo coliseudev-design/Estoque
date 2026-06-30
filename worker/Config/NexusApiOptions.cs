@@ -1,4 +1,4 @@
-namespace ColiseuSales.Worker.Config;
+namespace ColiseuSpeed.Worker.Config;
 
 public class NexusApiOptions
 {

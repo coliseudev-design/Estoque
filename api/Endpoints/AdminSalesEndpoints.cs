@@ -1,9 +1,9 @@
-using ColiseuSales.Api.Auth;
-using ColiseuSales.Api.Data;
-using ColiseuSales.Api.Logging;
+using ColiseuSpeed.Api.Auth;
+using ColiseuSpeed.Api.Data;
+using ColiseuSpeed.Api.Logging;
 using Microsoft.EntityFrameworkCore;
 
-namespace ColiseuSales.Api.Endpoints;
+namespace ColiseuSpeed.Api.Endpoints;
 
 /// <summary>
 /// Endpoints de administração do Sales API.

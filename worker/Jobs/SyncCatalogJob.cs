@@ -1,8 +1,8 @@
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Services;
 using Microsoft.Extensions.Options;
 
-namespace ColiseuSales.Worker.Jobs;
+namespace ColiseuSpeed.Worker.Jobs;
 
 /// <summary>
 /// SyncCatalogJob — Sincroniza dados do Firebird → VPS API.
@@ -1020,7 +1020,7 @@ END";
 
     /// <summary>
     /// Executa push para o Atendente do Futuro com isolamento total de erros.
-    /// Se o Atendente falhar, apenas loga um warning — o sync do Coliseu Sales não é afetado.
+    /// Se o Atendente falhar, apenas loga um warning — o sync do Coliseu Speed não é afetado.
     /// </summary>
     private async Task SafePushAtendente(string entity, Func<Task> pushAction)
     {
@@ -1033,7 +1033,7 @@ END";
         }
         catch (Exception ex)
         {
-            // Falha no Atendente não deve afetar o Coliseu Sales
+            // Falha no Atendente não deve afetar o Coliseu Speed
             _logger.LogWarning(
                 "[CatalogSync/Atendente] Falha ao sincronizar {Entity}: {Error}",
                 entity, ex.Message);

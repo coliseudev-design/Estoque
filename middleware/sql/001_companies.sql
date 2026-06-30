@@ -1,5 +1,5 @@
 -- ============================================================================
--- 001_companies.sql — Tabela de empresas (tenants) do sistema Coliseu Sales.
+-- 001_companies.sql — Tabela de empresas (tenants) do sistema Coliseu Speed.
 --
 -- Cada empresa tem:
 --   id         — UUID gerado automaticamente (PK)

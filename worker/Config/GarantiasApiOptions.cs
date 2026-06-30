@@ -1,4 +1,4 @@
-namespace ColiseuSales.Worker.Config;
+namespace ColiseuSpeed.Worker.Config;
 
 /// <summary>
 /// Opções de configuração para o módulo Controle de Garantias.

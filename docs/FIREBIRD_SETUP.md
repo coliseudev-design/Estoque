@@ -1,6 +1,6 @@
-# Coliseu Sales — Guia de Setup e Operação
+# Coliseu Speed — Guia de Setup e Operação
 
-Guia completo para configurar o ambiente de produção do sistema Coliseu Sales Force.
+Guia completo para configurar o ambiente de produção do sistema Coliseu Speed Force.
 
 ---
 
@@ -12,7 +12,7 @@ Guia completo para configurar o ambiente de produção do sistema Coliseu Sales 
         │  lê dados
         ▼
 [Worker .NET 8]  ──── push via HTTP ───▶  [VPS Node.js API]
- ColiseuSales.Worker                       middleware/
+ ColiseuSpeed.Worker                       middleware/
                                                 │
                                            recebe push de catálogo,
                                            pedidos e confirmações
@@ -93,7 +93,7 @@ FB_WIRE_CRYPT=true
 
 # ── Middleware ──────────────────────────────────────────────────────────────
 PORT=3000
-API_KEY=coliseu-sales-prod-key-aqui   # Mesma chave em VpsApi:ApiKey do Worker!
+API_KEY=coliseu-speed-prod-key-aqui   # Mesma chave em VpsApi:ApiKey do Worker!
 NODE_ENV=production
 ```
 
@@ -182,10 +182,10 @@ Procure por:
 ## Comandos de Administração do Worker
 
 ```powershell
-Get-Service ColiseuSalesWorker | Format-List   # Status detalhado
-Stop-Service ColiseuSalesWorker                # Parar
-Start-Service ColiseuSalesWorker               # Iniciar
-Restart-Service ColiseuSalesWorker             # Reiniciar
+Get-Service ColiseuSpeedWorker | Format-List   # Status detalhado
+Stop-Service ColiseuSpeedWorker                # Parar
+Start-Service ColiseuSpeedWorker               # Iniciar
+Restart-Service ColiseuSpeedWorker             # Reiniciar
 .\install_service.ps1 -Remove                  # Desinstalar
 .\install_service.ps1 -ForceBuild              # Reinstalar com rebuild
 ```

@@ -12,7 +12,7 @@ library;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get_it/get_it.dart';
-import 'package:coliseu_sales/core/config/app_config_service.dart';
+import 'package:coliseu_speed/core/config/app_config_service.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../core/cart/cart_notifier.dart';

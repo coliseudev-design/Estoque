@@ -186,7 +186,7 @@ public sealed record CompanyModuleDto(
 /// <summary>Request para adicionar um módulo a uma empresa.</summary>
 public sealed class AddModuleRequest
 {
-    /// <summary>Slug do módulo. Ex: "coliseu-sales" | "autocenter"</summary>
+    /// <summary>Slug do módulo. Ex: "coliseu-speed" | "autocenter"</summary>
     public string ModuleSlug { get; set; } = string.Empty;
     public int DeviceLimit { get; set; } = 5;
     public string? MiddlewareBaseUrl { get; set; }

@@ -1,12 +1,12 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Services;
 using FirebirdSql.Data.FirebirdClient;
 using Microsoft.Extensions.Options;
 using System.Net.Http.Json;
 
-namespace ColiseuSales.Worker.Jobs;
+namespace ColiseuSpeed.Worker.Jobs;
 
 /// <summary>
 /// DTO provisório para mapeamento dos orçamentos vindos do AutoCenter (Middleware).
@@ -37,7 +37,7 @@ public record AutoCenterQuoteItemDto(
 /// <summary>
 /// SyncAutoCenterQuotesJob — Busca orçamentos mecânicos AUTORIZADOS na VPS e insere na tabela central de pedidos do Firebird.
 /// Conforme alinhamento: "mesma tabela, todos usam a mesma". 
-/// Portanto usamos as mesmas SPs do Coliseu Sales (MOB_CADASTRAR_PEDIDO e MOB_CADASTRAR_PEDIDO_ITEM).
+/// Portanto usamos as mesmas SPs do Coliseu Speed (MOB_CADASTRAR_PEDIDO e MOB_CADASTRAR_PEDIDO_ITEM).
 /// </summary>
 public sealed class SyncAutoCenterQuotesJob
 {
@@ -135,7 +135,7 @@ public sealed class SyncAutoCenterQuotesJob
         int erpOrderId = 0;
         try
         {
-            // Reutiliza o conceito atômico já provado no Coliseu Sales
+            // Reutiliza o conceito atômico já provado no Coliseu Speed
             await _firebird.TransactionAsync(async (cmd, innerCt) =>
             {
                 var now = DateTime.Now;

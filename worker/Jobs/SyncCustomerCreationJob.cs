@@ -1,7 +1,7 @@
 using FirebirdSql.Data.FirebirdClient;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker.Services;
 
-namespace ColiseuSales.Worker.Jobs;
+namespace ColiseuSpeed.Worker.Jobs;
 
 /// <summary>
 /// SyncCustomerCreationJob — Busca clientes pendentes na VPS e os cadastra no Firebird.

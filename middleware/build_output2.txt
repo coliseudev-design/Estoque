@@ -1,4 +1,0 @@
-﻿  Determinando os projetos a serem restaurados...
-  Todos os projetos est├úo atualizados para restaura├º├úo.
-  ColiseuSales.Shared -> C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\shared\bin\Release\net8.0\ColiseuSales.Shared.dll
-C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\Jobs\SyncAtendenteOrdersJob.cs(154,88): error CS1061: ÔÇÿOrderItemDtoÔÇÖ n├úo cont├®m uma defini├º├úo para "Notes" e n├úo foi poss├¡vel encontrar nenhum m├®todo de extens├úo "Notes" que aceite um primeiro argumento do tipo ÔÇÿOrderItemDtoÔÇÖ (voc├¬ est├í se esquecendo de usar uma diretiva ou uma refer├¬ncia de assembly?) [C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\ColiseuSales.Worker.csproj]

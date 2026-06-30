@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ColiseuSales.Api.Data.Entities;
+namespace ColiseuSpeed.Api.Data.Entities;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Entidades do banco SQLite local da VPS (buffer entre Worker e Flutter)

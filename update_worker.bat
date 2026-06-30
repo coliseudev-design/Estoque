@@ -1,9 +1,9 @@
 @echo off  
 echo Parando o servico...  
-sc.exe stop " ColiseuSales "Worker  
+sc.exe stop " ColiseuSpeed "Worker  
 timeout /t 3  
 echo Copiando arquivos...  
 xcopy /Y /E /I C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\bin\Release\net8.0-windows\win-x64\publish\* C:\Sales\  
 echo Iniciando o servico...  
-sc.exe start ColiseuSales" "Worker  
+sc.exe start ColiseuSpeed" "Worker  
 pause 

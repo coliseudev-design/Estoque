@@ -1,8 +1,8 @@
-using ColiseuSales.Api.Auth;
-using ColiseuSales.Api.Data;
-using ColiseuSales.Api.Endpoints;
-using ColiseuSales.Api.Logging;
-using ColiseuSales.Api.Middleware;
+using ColiseuSpeed.Api.Auth;
+using ColiseuSpeed.Api.Data;
+using ColiseuSpeed.Api.Endpoints;
+using ColiseuSpeed.Api.Logging;
+using ColiseuSpeed.Api.Middleware;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
@@ -19,7 +19,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("[Startup] Coliseu Sales API iniciando...");
+    Log.Information("[Startup] Coliseu Speed API iniciando...");
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -55,7 +55,7 @@ try
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(c =>
     {
-        c.SwaggerDoc("v1", new OpenApiInfo { Title = "Coliseu Sales API", Version = "v1" });
+        c.SwaggerDoc("v1", new OpenApiInfo { Title = "Coliseu Speed API", Version = "v1" });
         c.AddSecurityDefinition("ApiKey", new OpenApiSecurityScheme
         {
             Name         = "API-Key",
@@ -81,7 +81,7 @@ try
                 ValidateIssuer = true,
                 ValidIssuer = "coliseu-identity-device",
                 ValidateAudience = true,
-                ValidAudience = "coliseu-sales-api",
+                ValidAudience = "coliseu-speed-api",
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(key)),
@@ -160,7 +160,7 @@ try
     app.MapGet("/health", (AppDbContext db) => new
     {
         status  = "ok",
-        service = "Coliseu Sales API",
+        service = "Coliseu Speed API",
         db      = db.Database.CanConnect() ? "ok" : "unavailable",
         time    = DateTime.UtcNow.ToString("O"),
     }).WithTags("Health").AllowAnonymous();
@@ -171,7 +171,7 @@ try
         app.UseSwagger();
         app.UseSwaggerUI(c =>
         {
-            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Coliseu Sales API v1");
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "Coliseu Speed API v1");
             c.RoutePrefix = "swagger";
         });
         Log.Information("[Startup] Swagger UI disponível em: /swagger");

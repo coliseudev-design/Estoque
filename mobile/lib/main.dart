@@ -61,15 +61,15 @@ Future<void> main() async {
     }
 
     debugPrint('[MAIN] App initialization finished, running App');
-    runApp(const ColiseuSalesApp());
+    runApp(const ColiseuSpeedApp());
   }, (error, stack) {
     debugPrint('[MAIN] UNHANDLED ERROR: $error');
     debugPrint(stack.toString());
   });
 }
 
-class ColiseuSalesApp extends StatelessWidget {
-  const ColiseuSalesApp({super.key});
+class ColiseuSpeedApp extends StatelessWidget {
+  const ColiseuSpeedApp({super.key});
 
   @override
   Widget build(BuildContext context) {

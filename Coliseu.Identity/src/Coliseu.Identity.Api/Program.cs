@@ -117,7 +117,7 @@ try
                 ValidateIssuer = true,
                 ValidIssuer = "coliseu-identity-device",
                 ValidateAudience = true,
-                ValidAudience = "coliseu-sales-api",
+                ValidAudience = "coliseu-speed-api",
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(
@@ -343,11 +343,11 @@ try
         }
         catch (Exception ex) { }
 
-        // ── ModuleSlug column in devices (backward compat: default coliseu-sales) ──
+        // ── ModuleSlug column in devices (backward compat: default coliseu-speed) ──
         try
         {
             await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE devices ADD COLUMN IF NOT EXISTS \"ModuleSlug\" VARCHAR(50) NOT NULL DEFAULT 'coliseu-sales'");
+                "ALTER TABLE devices ADD COLUMN IF NOT EXISTS \"ModuleSlug\" VARCHAR(50) NOT NULL DEFAULT 'coliseu-speed'");
             Log.Information("[Startup] Migration: devices.ModuleSlug column ensured.");
         }
         catch (Exception ex)

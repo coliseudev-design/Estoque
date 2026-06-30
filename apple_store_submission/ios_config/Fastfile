@@ -44,7 +44,7 @@ platform :ios do
       workspace: "Runner.xcworkspace",
       clean: true,
       output_directory: "./build",
-      output_name: "ColiseuSales.ipa",
+      output_name: "ColiseuSpeed.ipa",
       export_method: "app-store"
     )
 
@@ -68,7 +68,7 @@ platform :ios do
       workspace: "Runner.xcworkspace",
       clean: true,
       output_directory: "./build",
-      output_name: "ColiseuSales.ipa",
+      output_name: "ColiseuSpeed.ipa",
       export_method: "app-store"
     )
 

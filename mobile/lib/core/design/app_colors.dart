@@ -1,4 +1,4 @@
-/// Tokens de cor do sistema de design — Coliseu Sales Force v3.
+/// Tokens de cor do sistema de design — Coliseu Speed Force v3.
 ///
 /// Paleta principal: **Coliseu Blue** (#1E5EFF).
 /// Superfícies: Slate neutros com fundo levemente azulado (#F5F7FB).

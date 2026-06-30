@@ -1,14 +1,14 @@
-namespace ColiseuSales.Worker.Config;
+namespace ColiseuSpeed.Worker.Config;
 
 /// <summary>
 /// Configuração de conexão com o backend do Atendente do Futuro.
 /// Seção "AtendenteApi" no appsettings.json.
 ///
 /// Quando habilitado (Enabled=true), o Worker sincroniza dados do Firebird
-/// para AMBOS os backends: Coliseu Sales (VPS) E Atendente do Futuro.
+/// para AMBOS os backends: Coliseu Speed (VPS) E Atendente do Futuro.
 ///
 /// Isso permite que pedidos do WhatsApp sejam inseridos no Firebird
-/// usando a mesma conexão e stored procedures do Coliseu Sales.
+/// usando a mesma conexão e stored procedures do Coliseu Speed.
 /// </summary>
 public sealed class AtendenteApiOptions
 {

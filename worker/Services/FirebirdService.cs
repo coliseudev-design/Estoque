@@ -1,9 +1,9 @@
 using System.Data;
 using FirebirdSql.Data.FirebirdClient;
-using ColiseuSales.Worker.Config;
+using ColiseuSpeed.Worker.Config;
 using Microsoft.Extensions.Options;
 
-namespace ColiseuSales.Worker.Services;
+namespace ColiseuSpeed.Worker.Services;
 
 /// <summary>
 /// Serviço de acesso ao banco Firebird do ERP local.

@@ -1,12 +1,12 @@
 using FirebirdSql.Data.FirebirdClient;
-using ColiseuSales.Shared.Dtos;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Shared.Dtos;
+using ColiseuSpeed.Worker.Services;
 
-namespace ColiseuSales.Worker.Jobs;
+namespace ColiseuSpeed.Worker.Jobs;
 
 /// <summary>
 /// SyncAtendenteOrdersJob — Busca pedidos do WhatsApp (Atendente do Futuro)
-/// e os insere no Firebird usando as mesmas stored procedures do Coliseu Sales.
+/// e os insere no Firebird usando as mesmas stored procedures do Coliseu Speed.
 ///
 /// Fluxo:
 /// 1. GET /api/sync/orders/pending → pedidos criados pelo AI Agent do WhatsApp
@@ -94,7 +94,7 @@ public sealed class SyncAtendenteOrdersJob
 
     /// <summary>
     /// Insere o pedido no Firebird via MOB_CADASTRAR_PEDIDO + MOB_CADASTRAR_PEDIDO_ITEM.
-    /// Usa exatamente as mesmas stored procedures do Coliseu Sales.
+    /// Usa exatamente as mesmas stored procedures do Coliseu Speed.
     /// </summary>
     private async Task<int> InsertOrderInFirebird(PendingOrderDto order, CancellationToken ct)
     {

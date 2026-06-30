@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using Dapper;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
-using ColiseuSales.Worker.Config;
+using ColiseuSpeed.Worker.Config;
 
-namespace ColiseuSales.Worker.Services;
+namespace ColiseuSpeed.Worker.Services;
 
 public sealed class DeltaCacheService
 {
@@ -23,7 +23,7 @@ public sealed class DeltaCacheService
         var sanitizedSuffix = SanitizeSuffix(suffix);
         var folderName = string.IsNullOrEmpty(sanitizedSuffix) ? "Worker" : $"Worker_{sanitizedSuffix}";
 
-        var dir = Path.Combine(appData, "ColiseuSales", folderName);
+        var dir = Path.Combine(appData, "ColiseuSpeed", folderName);
         if (!Directory.Exists(dir))
         {
             Directory.CreateDirectory(dir);

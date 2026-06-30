@@ -1,7 +1,7 @@
 # SPEC 02: Identity Server (.NET) Backend
 
 ## 1. Visão Geral
-Esta documentação cobre as mudanças na camada da Identity API (C# .NET 8) do Coliseu Sales para dar suporte à autenticação, cadastro e controle de filiais (Branches). Sendo o guardião central de acesso do sistema (o *SSOT* das licenças), é aqui onde o login inicial do usuário acontece e autorizações são emitidas via JWT tokens.
+Esta documentação cobre as mudanças na camada da Identity API (C# .NET 8) do Coliseu Speed para dar suporte à autenticação, cadastro e controle de filiais (Branches). Sendo o guardião central de acesso do sistema (o *SSOT* das licenças), é aqui onde o login inicial do usuário acontece e autorizações são emitidas via JWT tokens.
 
 ## 2. Entidade de Domínio
 

@@ -7,12 +7,12 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace ColiseuSales.Worker.Jobs
+namespace ColiseuSpeed.Worker.Jobs
 {
     public record AutoCenterCustomerDto(
         [property: JsonPropertyName("erpId")] int ErpId,

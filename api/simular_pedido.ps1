@@ -2,7 +2,7 @@
 # Script para simular o envio de um pedido do App Flutter para a API .NET
 
 $ApiUrl = "http://localhost:5000/api/sync/orders"
-$ApiKey = "dev-coliseu-sales-2026-secure-key-xyz"
+$ApiKey = "dev-coliseu-speed-2026-secure-key-xyz"
 
 # Dados do Pedido
 $OrderId = "TEST-" + (Get-Date -Format "yyyyMMdd-HHmmss")

@@ -1,5 +1,5 @@
 -- ============================================================
--- Coliseu Sales Force — Schema Base Firebird 3.0
+-- Coliseu Speed Force — Schema Base Firebird 3.0
 -- Script: 001_create_base_tables.sql
 -- Executar com: isql -user SYSDBA -password masterkey
 -- ============================================================

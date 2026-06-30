@@ -9,8 +9,8 @@ public sealed record DeviceLoginRequest(
     string? OS,
     string? AppVersion,
     /// <summary>
-    /// Slug do módulo/produto. Ex: "coliseu-sales" | "autocenter".
-    /// Campo opcional — ausência ou null assume "coliseu-sales" (backward compatible).
+    /// Slug do módulo/produto. Ex: "coliseu-speed" | "autocenter".
+    /// Campo opcional — ausência ou null assume "coliseu-speed" (backward compatible).
     /// </summary>
     string? ModuleSlug = null);
 

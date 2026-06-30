@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace ColiseuSales.Api.Auth;
+namespace ColiseuSpeed.Api.Auth;
 
 /// <summary>
 /// Middleware de Multi-Tenant — extrai o CompanyId de cada requisição.

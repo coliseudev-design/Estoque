@@ -11,7 +11,7 @@ namespace Coliseu.Identity.Application.Auth.Handlers;
 /// Handler para login de dispositivo via CompanyKey + DeviceUUID ou ActivationKey.
 ///
 /// Fluxo:
-/// 1. Determina o módulo solicitado (padrão: "coliseu-sales" para backward compat)
+/// 1. Determina o módulo solicitado (padrão: "coliseu-speed" para backward compat)
 /// 2. Hash da CompanyKey → busca empresa / ou busca por ActivationKey
 /// 3. Valida status da empresa (ativa?)
 /// 4. Valida se o módulo está ativo para a empresa
@@ -32,7 +32,7 @@ public sealed class DeviceLoginHandler
     private readonly ICompanyKeyGenerator _keyGen;
 
     /// <summary>
-    /// URL de fallback para o módulo coliseu-sales quando não há CompanyModule configurado.
+    /// URL de fallback para o módulo coliseu-speed quando não há CompanyModule configurado.
     /// Garante backward compatibility com devices existentes.
     /// </summary>
     private readonly string _salesApiBaseUrl;
@@ -70,9 +70,9 @@ public sealed class DeviceLoginHandler
         string? userAgent,
         CancellationToken ct = default)
     {
-        // Determina o módulo: se não informado, assume coliseu-sales (backward compat)
+        // Determina o módulo: se não informado, assume coliseu-speed (backward compat)
         var moduleSlug = string.IsNullOrWhiteSpace(request.ModuleSlug)
-            ? ModuleSlugs.ColiseuSales
+            ? ModuleSlugs.ColiseuSpeed
             : request.ModuleSlug.Trim().ToLowerInvariant();
 
         Device? device = null;
@@ -207,7 +207,7 @@ public sealed class DeviceLoginHandler
         }
 
         // 4. Valida módulo e obtém URL do middleware correspondente
-        // Se o repositório de módulos não estiver disponível (legacy) ou o módulo for coliseu-sales
+        // Se o repositório de módulos não estiver disponível (legacy) ou o módulo for coliseu-speed
         // e não houver registro de CompanyModule, usa o _salesApiBaseUrl como fallback.
         string middlewareUrl = _salesApiBaseUrl;
         if (_moduleRepo is not null)
@@ -216,9 +216,9 @@ public sealed class DeviceLoginHandler
 
             if (companyModule is null)
             {
-                // Módulo não está habilitado para esta empresa — exceto para coliseu-sales sem CompanyModules
+                // Módulo não está habilitado para esta empresa — exceto para coliseu-speed sem CompanyModules
                 // (empresas migradas do sistema legado ainda não têm registros em company_modules)
-                if (moduleSlug != ModuleSlugs.ColiseuSales)
+                if (moduleSlug != ModuleSlugs.ColiseuSpeed)
                 {
                     await AuditAsync("device_login_failed", companyId: company.Id,
                         deviceId: device.Id, ipAddress: ipAddress, userAgent: userAgent,
@@ -227,7 +227,7 @@ public sealed class DeviceLoginHandler
                         $"O módulo '{moduleSlug}' não está habilitado para esta empresa. " +
                         "Contate o administrador.");
                 }
-                // coliseu-sales sem CompanyModule: usa URL de fallback (backward compat)
+                // coliseu-speed sem CompanyModule: usa URL de fallback (backward compat)
             }
             else
             {

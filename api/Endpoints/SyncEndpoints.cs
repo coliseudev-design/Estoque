@@ -1,10 +1,10 @@
-using ColiseuSales.Api.Auth;
-using ColiseuSales.Api.Data;
-using ColiseuSales.Api.Data.Entities;
-using ColiseuSales.Shared.Dtos;
+using ColiseuSpeed.Api.Auth;
+using ColiseuSpeed.Api.Data;
+using ColiseuSpeed.Api.Data.Entities;
+using ColiseuSpeed.Shared.Dtos;
 using Microsoft.EntityFrameworkCore;
 
-namespace ColiseuSales.Api.Endpoints;
+namespace ColiseuSpeed.Api.Endpoints;
 
 /// <summary>
 /// Endpoints de sincronização do catálogo.
@@ -562,5 +562,5 @@ public static class SyncEndpoints
     }
 }
 
-// Nota: PushRequest records foram movidos para ColiseuSales.Shared.Dtos.SyncDtos.cs
-// Este arquivo usa os tipos do Shared via ColiseuSales.Shared.Dtos namespace
+// Nota: PushRequest records foram movidos para ColiseuSpeed.Shared.Dtos.SyncDtos.cs
+// Este arquivo usa os tipos do Shared via ColiseuSpeed.Shared.Dtos namespace

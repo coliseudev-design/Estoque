@@ -6,7 +6,7 @@
     Regra: HTTPS obrigatório para todos os hosts de produção.
            HTTP permitido APENAS para redes locais (LAN do cliente — IP privado).
 
-    Contexto: O Coliseu Sales conecta ao middleware VPS (HTTPS) e
+    Contexto: O Coliseu Speed conecta ao middleware VPS (HTTPS) e
     opcionalmente ao middleware local na rede da empresa (HTTP para testes).
     Em produção o servidor VPS sempre usa HTTPS.
 -->
@@ -14,8 +14,8 @@
 
     <!-- Domínio de produção — HTTPS obrigatório, sem exceção -->
     <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="true">coliseusales.com.br</domain>
-        <domain includeSubdomains="true">api.coliseusales.com.br</domain>
+        <domain includeSubdomains="true">speed.coliseusistemas.com.br</domain>
+        <domain includeSubdomains="true">licencas.coliseusistemas.com.br</domain>
     </domain-config>
 
     <!-- IPs privados — HTTP permitido para middleware local (rede da empresa) -->

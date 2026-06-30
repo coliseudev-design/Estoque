@@ -1,7 +1,7 @@
 # SPEC 01: DBA PostgreSQL (Estratégia de Banco e Isolamento)
 
 ## 1. Visão Geral
-Esta especificação define as mudanças necessárias no banco de dados PostgreSQL (`ColiseuSales` / Identity) para suportar múltiplas filiais (Branches) sob um único Tenant (Company), garantindo a imposição de regras rígidas de segurança em nível de linha (RLS - Row Level Security).
+Esta especificação define as mudanças necessárias no banco de dados PostgreSQL (`ColiseuSpeed` / Identity) para suportar múltiplas filiais (Branches) sob um único Tenant (Company), garantindo a imposição de regras rígidas de segurança em nível de linha (RLS - Row Level Security).
 
 ## 2. Entidades & Schema
 

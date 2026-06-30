@@ -1,6 +1,6 @@
 @echo off
 echo ============================================================
-echo  Coliseu Sales -- Ambiente Local Completo
+echo  Coliseu Speed -- Ambiente Local Completo
 echo ============================================================
 echo.
 
@@ -16,7 +16,7 @@ echo [3/5] Admin Frontend React/Vite (porta 3100)...
 start "Admin Frontend" cmd /k "cd /d "%~dp0Coliseu.Identity\admin-frontend" && npm run dev -- --port 3100"
 timeout /t 3 /nobreak > nul
 
-echo [4/5] ColiseuSales.Worker (Sincronizador Firebird)...
+echo [4/5] ColiseuSpeed.Worker (Sincronizador Firebird)...
 start "Worker" cmd /k "cd /d "%~dp0worker" && dotnet run --environment Development"
 timeout /t 3 /nobreak > nul
 

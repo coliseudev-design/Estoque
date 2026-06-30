@@ -1,8 +1,8 @@
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Services;
 using Microsoft.Extensions.Options;
 
-namespace ColiseuSales.Worker.Jobs;
+namespace ColiseuSpeed.Worker.Jobs;
 
 /// <summary>
 /// SyncSalesRankingsJob — Sincroniza rankings de vendas do ERP (Firebird → VPS).
@@ -29,7 +29,7 @@ public sealed class SyncSalesRankingsJob
         FirebirdService                 firebird,
         VpsApiClient                    vps,
         StatusStore                     status,
-        IOptions<ColiseuSales.Worker.Config.VpsApiOptions> vpsOpts,
+        IOptions<ColiseuSpeed.Worker.Config.VpsApiOptions> vpsOpts,
         IdentityApiClient               identity,
         ILogger<SyncSalesRankingsJob>   logger,
         ChangeTrackerService            changeTracker)

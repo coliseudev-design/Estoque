@@ -10,12 +10,12 @@ Como parte da revisão de conformidade com as diretrizes da Apple (App Store Rev
 
 1.  **Ignorar Conformidade de Criptografia Externa (ITSAppUsesNonExemptEncryption):**
     *   *Risco de Rejeição/Atraso:* Por padrão, ao subir novos builds para o TestFlight, o App Store Connect bloqueia a liberação para testes exibindo o status "Conformidade ausente" (Missing Compliance), exigindo que você responda manualmente se o app usa criptografia.
-    *   *Solução Aplicada:* Adicionei a chave `<key>ITSAppUsesNonExemptEncryption</key><false/>` diretamente no seu arquivo [Info.plist](file:///Users/kleber/Documents/GitHub/ColiseuSales/mobile/ios/Runner/Info.plist). Isso informa a Apple que o app utiliza apenas conexões HTTPS padrão, liberando o TestFlight **instantaneamente** após o processamento da Apple.
+    *   *Solução Aplicada:* Adicionei a chave `<key>ITSAppUsesNonExemptEncryption</key><false/>` diretamente no seu arquivo [Info.plist](file:///Users/kleber/Documents/GitHub/ColiseuSpeed/mobile/ios/Runner/Info.plist). Isso informa a Apple que o app utiliza apenas conexões HTTPS padrão, liberando o TestFlight **instantaneamente** após o processamento da Apple.
 2.  **Estruturação de Metadados por Idioma (pt-BR):**
     *   *Erro de Automação:* O Fastlane Deliver exige que os arquivos de metadados fiquem em pastas com os códigos de idioma (ex: `pt-BR`). Se deixados na raiz da pasta de metadados, o Fastlane não os envia.
     *   *Solução Aplicada:* Estruturei a pasta de metadados dentro de `metadata/pt-BR/` e configurei os arquivos `Fastfile` com o parâmetro `metadata_path` apontando diretamente para esta pasta.
 3.  **Configuração de Bundle ID:**
-    *   *Solução Aplicada:* O arquivo `Appfile` do Fastlane foi configurado de forma nativa com o Bundle ID correto do seu app: `com.kleber.coliseusalesdev`.
+    *   *Solução Aplicada:* O arquivo `Appfile` do Fastlane foi configurado de forma nativa com o Bundle ID correto do seu app: `com.kleber.coliseuspeeddev`.
 
 ---
 
@@ -63,8 +63,8 @@ O script `generate_icons.py` gera automaticamente todas as resoluções exigidas
 ## 3. 🛡️ Snippets de Privacidade (`Info.plist`)
 
 A Apple exige justificativas claras para permissões.
-*   O arquivo [Info.plist](file:///Users/kleber/Documents/GitHub/ColiseuSales/mobile/ios/Runner/Info.plist) do app **já possui a permissão de câmera configurada** para o scanner de código de barras.
-*   Caso queira adicionar novas permissões no futuro (como geolocalização ou galeria de fotos), copie as chaves correspondentes do arquivo [Info_privacy_snippets.plist](file:///Users/kleber/Documents/GitHub/ColiseuSales/apple_store_submission/ios_config/Info_privacy_snippets.plist) e cole dentro do `<dict>` do seu `Info.plist`.
+*   O arquivo [Info.plist](file:///Users/kleber/Documents/GitHub/ColiseuSpeed/mobile/ios/Runner/Info.plist) do app **já possui a permissão de câmera configurada** para o scanner de código de barras.
+*   Caso queira adicionar novas permissões no futuro (como geolocalização ou galeria de fotos), copie as chaves correspondentes do arquivo [Info_privacy_snippets.plist](file:///Users/kleber/Documents/GitHub/ColiseuSpeed/apple_store_submission/ios_config/Info_privacy_snippets.plist) e cole dentro do `<dict>` do seu `Info.plist`.
 
 ---
 
@@ -79,8 +79,8 @@ brew install fastlane
 ```
 
 ### 4.2 Arquivos de Configuração no Projeto
-Os arquivos de configuração já estão criados e integrados na pasta oficial do projeto em [mobile/ios/fastlane/](file:///Users/kleber/Documents/GitHub/ColiseuSales/mobile/ios/fastlane/).
-*   **Ajuste Obrigatório no Appfile:** Abra o arquivo [Appfile](file:///Users/kleber/Documents/GitHub/ColiseuSales/mobile/ios/fastlane/Appfile) e preencha o seu e-mail da Apple em `apple_id` e o Team ID da Apple em `team_id`.
+Os arquivos de configuração já estão criados e integrados na pasta oficial do projeto em [mobile/ios/fastlane/](file:///Users/kleber/Documents/GitHub/ColiseuSpeed/mobile/ios/fastlane/).
+*   **Ajuste Obrigatório no Appfile:** Abra o arquivo [Appfile](file:///Users/kleber/Documents/GitHub/ColiseuSpeed/mobile/ios/fastlane/Appfile) e preencha o seu e-mail da Apple em `apple_id` e o Team ID da Apple em `team_id`.
 
 ### 4.3 Executando os Comandos de Envio
 

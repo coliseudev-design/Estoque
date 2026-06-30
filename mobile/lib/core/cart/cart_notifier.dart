@@ -22,7 +22,7 @@ import '../services/price_service.dart';
 import '../services/company_settings_service.dart';
 import '../session/session_service.dart';
 import 'package:get_it/get_it.dart';
-import 'package:coliseu_sales/core/config/app_config_service.dart';
+import 'package:coliseu_speed/core/config/app_config_service.dart';
 
 class CartNotifier extends ChangeNotifier {
   final OrderRepository _repo;

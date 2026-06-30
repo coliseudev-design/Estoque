@@ -1,5 +1,0 @@
-﻿  Determinando os projetos a serem restaurados...
-  Todos os projetos est├úo atualizados para restaura├º├úo.
-  ColiseuSales.Shared -> C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\shared\bin\Release\net8.0\ColiseuSales.Shared.dll
-  ColiseuSales.Worker -> C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\bin\Release\net8.0-windows\win-x64\ColiseuSales.Worker.dll
-  ColiseuSales.Worker -> C:\Users\rober\.gemini\antigravity\scratch\Coliseu_Sales\worker\publish\

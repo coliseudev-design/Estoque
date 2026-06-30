@@ -1,4 +1,4 @@
-/// Escala tipográfica — Coliseu Sales Force v2.
+/// Escala tipográfica — Coliseu Speed Force v2.
 ///
 /// Fonte primária: Inter (via google_fonts, cache offline).
 /// Numérica: JetBrains Mono para preços e quantidades.

@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace ColiseuSales.Api.Auth;
+namespace ColiseuSpeed.Api.Auth;
 
 /// <summary>
 /// Middleware de autenticação por API Key.

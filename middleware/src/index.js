@@ -1,5 +1,5 @@
 /**
- * Entry point da aplicação — Coliseu Sales Force Middleware.
+ * Entry point da aplicação — Coliseu Speed Force Middleware.
  *
  * Responsabilidades:
  * - Inicializar pool Firebird
@@ -57,7 +57,7 @@ let server;
 
 async function start() {
     try {
-        logger.info('[App] Iniciando Coliseu Sales Middleware...');
+        logger.info('[App] Iniciando Coliseu Speed Middleware...');
         logger.info('[App] Ambiente:', { env: config.nodeEnv });
 
         // Inicializa pool Firebird antes de aceitar requisições

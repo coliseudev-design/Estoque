@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 
-namespace ColiseuSales.Worker.Services;
+namespace ColiseuSpeed.Worker.Services;
 
 /// <summary>
 /// Cliente HTTP para a comunicação com a API de Identidade (Coliseu.Identity).

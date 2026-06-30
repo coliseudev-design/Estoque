@@ -1,4 +1,4 @@
-# Coliseu Sales — Documentação de Deploy
+# Coliseu Speed — Documentação de Deploy
 
 Sistema multi-tenant de integração ERP (Firebird) ↔ Mobile (Flutter) via middleware Node.js.
 
@@ -13,7 +13,7 @@ Flutter App ──── HTTP ────► Node.js Middleware ────►
 
 ## ⚠️ Regras de Desenvolvimento (Views e Banco de Dados)
 
-> **MANDATORY / OBRIGATÓRIO**: A partir de agora, **toda e qualquer nova View ou Procedure** que for criada para uso do Dash ou Mobile **DEVE** ser inserida no dicionário `RequiredViews` ou `RequiredProcedures` dentro de `ColiseuSales.Configurator/FirebirdBootstrapper.cs`.
+> **MANDATORY / OBRIGATÓRIO**: A partir de agora, **toda e qualquer nova View ou Procedure** que for criada para uso do Dash ou Mobile **DEVE** ser inserida no dicionário `RequiredViews` ou `RequiredProcedures` dentro de `ColiseuSpeed.Configurator/FirebirdBootstrapper.cs`.
 > Nunca crie queries literais longas diretamente no código do Worker. Encapsule em Views no FirebirdBootstrapper e use queries simples no Worker (`SELECT * FROM VIEW`). O Configurator é a **única fonte de verdade** para preparar a estrutura de bancos de dados dos clientes.
 
 ## ⚠️ Regras de Compilação (Configurator & Worker)
@@ -28,12 +28,12 @@ Flutter App ──── HTTP ────► Node.js Middleware ────►
    ```
 2. **Depois compile o Configurator em Arquivo Único (com o Worker encapsulado)**:
    ```bash
-   cd ../ColiseuSales.Configurator
+   cd ../ColiseuSpeed.Configurator
    dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
    ```
 
 O executável final estará disponível em:
-`ColiseuSales.Configurator/bin/Release/net8.0-windows/win-x64/publish/ColiseuSales.Configurator.exe`
+`ColiseuSpeed.Configurator/bin/Release/net8.0-windows/win-x64/publish/ColiseuSpeed.Configurator.exe`
 
 ## Início Rápido (Docker)
 

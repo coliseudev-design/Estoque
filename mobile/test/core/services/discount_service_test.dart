@@ -7,9 +7,9 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:coliseu_sales/core/repositories/models/models.dart';
-import 'package:coliseu_sales/core/repositories/models/seller.dart';
-import 'package:coliseu_sales/core/services/discount_service.dart';
+import 'package:coliseu_speed/core/repositories/models/models.dart';
+import 'package:coliseu_speed/core/repositories/models/seller.dart';
+import 'package:coliseu_speed/core/services/discount_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixtures reutilizáveis

@@ -30,7 +30,7 @@ const C = {
 };
 
 const MODULE_META = {
-    'coliseu-sales': { label: 'Coliseu Sales', icon: '🏪', color: '#2196f3' },
+    'coliseu-speed': { label: 'Coliseu Speed', icon: '🏪', color: '#2196f3' },
     'autocenter':    { label: 'Auto Center', icon: '🔧', color: '#ff9800' },
     'coliseu-dash':  { label: 'Coliseu Dash', icon: '📈', color: '#10b981' },
     'controle-garantias': { label: 'Controle de Garantias', icon: '🛡️', color: '#0a58ca' },

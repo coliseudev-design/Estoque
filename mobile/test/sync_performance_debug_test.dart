@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:dio/dio.dart';
-import 'package:coliseu_sales/core/database/database_helper.dart';
-import 'package:coliseu_sales/core/repositories/performance_repository.dart';
+import 'package:coliseu_speed/core/database/database_helper.dart';
+import 'package:coliseu_speed/core/repositories/performance_repository.dart';
 
 void main() {
   // Initialize ffi for testing database on desktop/test runner

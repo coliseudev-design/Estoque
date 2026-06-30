@@ -6,10 +6,10 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Services;
 
-namespace ColiseuSales.Worker.Services;
+namespace ColiseuSpeed.Worker.Services;
 
 /// <summary>
 /// Serviço de rastreamento de alterações (Change Tracking)
@@ -33,7 +33,7 @@ public sealed class ChangeTrackerService
         var sanitizedSuffix = SanitizeSuffix(suffix);
         var folderName = string.IsNullOrEmpty(sanitizedSuffix) ? "Worker" : $"Worker_{sanitizedSuffix}";
         
-        var dir = Path.Combine(appData, "ColiseuSales", folderName);
+        var dir = Path.Combine(appData, "ColiseuSpeed", folderName);
         if (!Directory.Exists(dir))
         {
             Directory.CreateDirectory(dir);

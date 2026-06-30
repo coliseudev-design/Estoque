@@ -3,7 +3,7 @@ namespace Coliseu.Identity.Domain.Entities;
 /// <summary>
 /// Módulo ativo para uma empresa (tenant) no ecossistema Coliseu.
 ///
-/// Cada módulo é um produto independente (ex: "coliseu-sales", "autocenter")
+/// Cada módulo é um produto independente (ex: "coliseu-speed", "autocenter")
 /// com sua própria API Key, limite de dispositivos e URL de middleware.
 ///
 /// Rule-03 (Multi-Tenant): o isolamento se dá por (company_id + module_slug).
@@ -14,7 +14,7 @@ public sealed class CompanyModule
     public Guid Id { get; private set; }
     public Guid CompanyId { get; private set; }
 
-    /// <summary>Identificador do produto. Exemplos: "coliseu-sales", "autocenter".</summary>
+    /// <summary>Identificador do produto. Exemplos: "coliseu-speed", "autocenter".</summary>
     public string ModuleSlug { get; private set; } = null!;
 
     /// <summary>Hash SHA-256 da API Key do módulo (nunca armazenada em texto plano).</summary>

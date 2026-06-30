@@ -23,7 +23,7 @@ A Stored Procedure que gera o ID local `MOB_CADASTRAR_PEDIDO` recebe novos parâ
 > **COMPORTAMENTO DO FIREBIRD ADO.NET:** 
 > O provedor `FirebirdSql.Data.FirebirdClient` ao executar comandos com `CommandType = CommandType.Text` e `EXECUTE PROCEDURE`, **Mapeia os parâmetros por POSIÇÃO (ordem de declaração na string SQL)**, e não pelos nomes passados no `AddWithValue`. 
 > 
-> Durante a implementação multi-tenant, o `ColiseuSales.Configurator` sobrescreveu a SP original alterando a ordem e tipos dos parâmetros (ex: `TIPO_OPERACAO` trocou de posição com `TOTAL_PEDIDO`). Isso causou uma falha silenciosa onde o valor da venda (`1273.75`) foi inserido como Natureza da Operação (`1274`), e a operação (`7`) foi gravada como Valor do Pedido (`7.00`), resultando em pedidos ocultos no ERP. 
+> Durante a implementação multi-tenant, o `ColiseuSpeed.Configurator` sobrescreveu a SP original alterando a ordem e tipos dos parâmetros (ex: `TIPO_OPERACAO` trocou de posição com `TOTAL_PEDIDO`). Isso causou uma falha silenciosa onde o valor da venda (`1273.75`) foi inserido como Natureza da Operação (`1274`), e a operação (`7`) foi gravada como Valor do Pedido (`7.00`), resultando em pedidos ocultos no ERP. 
 >
 > **Correção:** A assinatura original da `MOB_CADASTRAR_PEDIDO` foi restaurada no `FirebirdBootstrapper.cs` (v2.4.6.5) mantendo a seguinte ordem estrita: `USUARIO`, `CLIENTE`, `DATA`, `HORA`, `OBSERVACAO`, `PRAZO_PEDIDO`, `TIPO_OPERACAO`, `PAGAMENTO`, `VALOR_DESCONTO`, `TOTAL_PEDIDO`, `CONDICAO_PAGAMENTO`, `DEPTO`, `EMPRESA`. Além disso, o UPDATE manual (`Fase 3`) que era feito pelo Worker foi removido, pois o `DEPTO` já é inserido nativamente pela Procedure.
 

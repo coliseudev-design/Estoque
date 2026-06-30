@@ -7,7 +7,7 @@
  * Variáveis de ambiente necessárias:
  *   PG_HOST      (default: localhost)
  *   PG_PORT      (default: 5432)
- *   PG_DATABASE  (default: coliseu_sales)
+ *   PG_DATABASE  (default: coliseu_speed)
  *   PG_USER      (default: postgres)
  *   PG_PASSWORD  (obrigatório em produção)
  *   PG_SSL       (default: false — use true em produção)
@@ -22,7 +22,7 @@ const logger = require('../config/logger');
 const pool = new Pool({
     host: process.env.PG_HOST || 'localhost',
     port: Number(process.env.PG_PORT || 5432),
-    database: process.env.PG_DATABASE || 'coliseu_sales',
+    database: process.env.PG_DATABASE || 'coliseu_speed',
     user: process.env.PG_USER || 'postgres',
     password: process.env.PG_PASSWORD || '',
     ssl: process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : false,
@@ -43,7 +43,7 @@ const maskedPgPass = pgPass.length > 0
 logger.info('[PostgreSQL] Config', {
     host: process.env.PG_HOST || 'localhost',
     port: process.env.PG_PORT || '5432',
-    database: process.env.PG_DATABASE || 'coliseu_sales',
+    database: process.env.PG_DATABASE || 'coliseu_speed',
     user: process.env.PG_USER || 'postgres',
     password: maskedPgPass,
 });

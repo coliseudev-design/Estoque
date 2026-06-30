@@ -1,7 +1,7 @@
-using ColiseuSales.Api.Logging;
+using ColiseuSpeed.Api.Logging;
 using System.Diagnostics;
 
-namespace ColiseuSales.Api.Middleware;
+namespace ColiseuSpeed.Api.Middleware;
 
 /// <summary>
 /// Middleware que captura métricas de cada request (método, path, status, tempo)

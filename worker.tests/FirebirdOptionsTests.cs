@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
-namespace ColiseuSales.Worker.Tests;
+namespace ColiseuSpeed.Worker.Tests;
 
 /// <summary>
 /// Testes unitários para validação de FirebirdOptions.BuildConnectionString (rule-10).

@@ -195,7 +195,7 @@ class _ServerConfigScreenState extends State<ServerConfigScreen> {
                         obscureText:  !_showKey,
                         autocorrect:  false,
                         decoration: _inputDecoration(
-                          hint: 'dev-coliseu-sales-...',
+                          hint: 'dev-coliseu-speed-...',
                           icon: Icons.vpn_key_rounded,
                           suffix: IconButton(
                             icon: Icon(

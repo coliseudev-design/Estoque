@@ -11,7 +11,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get_it/get_it.dart';
-import 'package:coliseu_sales/core/config/app_config_service.dart';
+import 'package:coliseu_speed/core/config/app_config_service.dart';
 import 'package:intl/intl.dart';
 import '../../../core/cart/cart_notifier.dart';
 import '../../../core/design/app_colors.dart';

@@ -3,7 +3,7 @@
 # ==============================================================================
 
 # O identificador único do seu aplicativo iOS (Bundle ID)
-app_identifier("com.kleber.coliseusalesdev")
+app_identifier("com.kleber.coliseuspeeddev")
 
 # O seu Apple ID (e-mail da conta de desenvolvedor Apple)
 apple_id("<SEU_EMAIL_APPLE_ID>") # Ex: dev@coliseu.com.br

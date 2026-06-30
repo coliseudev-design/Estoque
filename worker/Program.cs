@@ -1,7 +1,7 @@
-using ColiseuSales.Worker;
-using ColiseuSales.Worker.Config;
-using ColiseuSales.Worker.Jobs;
-using ColiseuSales.Worker.Services;
+using ColiseuSpeed.Worker;
+using ColiseuSpeed.Worker.Config;
+using ColiseuSpeed.Worker.Jobs;
+using ColiseuSpeed.Worker.Services;
 using Serilog;
 
 // Registra provider de CodePages para suportar Charset=WIN1252 do Firebird
@@ -18,14 +18,14 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("[Startup] Coliseu Sales Worker iniciando...");
+    Log.Information("[Startup] Coliseu Speed Worker iniciando...");
 
     var builder = Host.CreateApplicationBuilder(args);
 
     // ── Windows Service ──────────────────────────────────────────────────────
     builder.Services.AddWindowsService(options =>
     {
-        options.ServiceName = "Coliseu Sales Worker";
+        options.ServiceName = "Coliseu Speed Worker";
     });
 
     // ── Serilog ──────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ try
                 path: "logs/worker-.log",
                 rollingInterval: Serilog.RollingInterval.Day,
                 retainedFileCountLimit: 30)
-            .WriteTo.Sink(new ColiseuSales.Worker.Services.StatusStoreSink(statusStore));
+            .WriteTo.Sink(new ColiseuSpeed.Worker.Services.StatusStoreSink(statusStore));
     });
 
     // ── Configurações tipadas ────────────────────────────────────────────────
