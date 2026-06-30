@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard Admin{% endblock %}
+{% block header_title %}Painel Executivo{% endblock %}
+{% block header_subtitle %}Visão geral do ecossistema ColiseuSpeed SaaS{% endblock %}
+
+{% block content %}
+<!-- Statistics Cards Row -->
+<div class="dashboard-grid">
+    <!-- Active Companies -->
+    <div class="glass-card stats-card">
+        <div class="stats-info">
+            <h3>Empresas Ativas</h3>
+            <div class="value">{{ stats.active_companies }}</div>
+        </div>
+        <div class="stats-icon">
+            <i data-lucide="building-2"></i>
+        </div>
+    </div>
+    
+    <!-- Active Licenses -->
+    <div class="glass-card stats-card">
+        <div class="stats-info">
+            <h3>Licenças Ativas</h3>
+            <div class="value">{{ stats.active_licenses }}</div>
+        </div>
+        <div class="stats-icon" style="color: var(--success);">
+            <i data-lucide="shield-check"></i>
+        </div>
+    </div>
+
+    <!-- Expired Licenses -->
+    <div class="glass-card stats-card">
+        <div class="stats-info">
+            <h3>Licenças Expiradas</h3>
+            <div class="value">{{ stats.expired_licenses }}</div>
+        </div>
+        <div class="stats-icon" style="color: var(--warning);">
+            <i data-lucide="shield-alert"></i>
+        </div>
+    </div>
+
+    <!-- Online Instances -->
+    <div class="glass-card stats-card">
+        <div class="stats-info">
+            <h3>Instâncias Online</h3>
+            <div class="value">{{ stats.online_instances }}</div>
+        </div>
+        <div class="stats-icon" style="color: var(--accent);">
+            <i data-lucide="activity"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Companies and Activity Panel -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px; margin-top: 10px;">
+    <!-- Recent Companies Table -->
+    <div class="glass-panel data-panel">
+        <div class="panel-header">
+            <div class="panel-title">Empresas Cadastradas Recentemente</div>
+            <a href="/adm/companies" class="btn btn-secondary btn-sm">Ver Todas</a>
+        </div>
+
+        <div class="data-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Empresa</th>
+                        <th>CNPJ</th>
+                        <th>Tipo App</th>
+                        <th>Status</th>
+                        <th>Cadastrado Em</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company in recent_companies %}
+                    <tr>
+                        <td>
+                            <a href="/companies/{{ company.id }}" style="color: #fff; text-decoration: none; font-weight: 500;">
+                                {{ company.name }}
+                            </a>
+                        </td>
+                        <td>{{ company.cnpj }}</td>
+                        <td>
+                            <span class="badge" style="background: rgba(33,150,243,0.1); color: var(--accent); border: 1px solid rgba(33,150,243,0.2);">
+                                {{ company.app_type }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-{{ company.status }}">
+                                {{ company.status }}
+                            </span>
+                        </td>
+                        <td>{{ company.created_at.strftime('%d/%m/%Y') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-muted);">Nenhuma empresa cadastrada.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- System Audits / Status Panel -->
+    <div class="glass-panel data-panel">
+        <div class="panel-header">
+            <div class="panel-title">Notificações / Alertas</div>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 10px;">
+            <!-- Expiring Licenses Alert -->
+            {% if expiring_licenses %}
+                {% for lic in expiring_licenses %}
+                <div class="glass-card" style="padding: 14px; border-left: 4px solid var(--warning); background: rgba(245, 158, 11, 0.05);">
+                    <div style="font-weight: 600; font-size: 0.85rem; color: var(--warning);">Expiração Próxima</div>
+                    <div style="font-size: 0.8rem; margin-top: 4px;">A licença da empresa <strong>{{ lic.company.name }}</strong> expira em {{ lic.expiration_date.strftime('%d/%m/%Y') }}.</div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.85rem;">
+                    Nenhum alerta de expiração ativo no momento.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

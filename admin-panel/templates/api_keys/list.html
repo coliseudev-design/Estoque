@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Chaves de Acesso — ColiseuSpeed{% endblock %}
+{% block header_title %}Chaves de Acesso API{% endblock %}
+{% block header_subtitle %}Monitore e revogue chaves de acesso (API Keys) utilizadas para autenticação no ColiseuSpeed{% endblock %}
+
+{% block content %}
+<div class="glass-panel data-panel">
+    <div class="panel-header" style="flex-wrap: wrap; gap: 16px;">
+        <div class="panel-title">Chaves Ativas no Sistema</div>
+        
+        <!-- Formulário rápido para gerar chave -->
+        <form action="/adm/api-keys/generate" method="POST" style="display: flex; gap: 10px; align-items: center;">
+            <select name="company_id" class="form-control form-select btn-sm" style="width: 240px; padding: 6px 12px;" required>
+                <option value="">-- Gerar para empresa --</option>
+                {% for company in companies %}
+                <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="key_name" class="form-control btn-sm" style="width: 140px; padding: 6px 12px;" placeholder="Nome da Chave" required>
+            <button type="submit" class="btn btn-primary btn-sm">
+                <i data-lucide="plus"></i>
+                <span>Gerar</span>
+            </button>
+        </form>
+    </div>
+
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Empresa</th>
+                    <th>Identificador da Chave</th>
+                    <th>API Key (Início/Fim)</th>
+                    <th>API Secret</th>
+                    <th>Criado Em</th>
+                    <th>Último Uso</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key in api_keys %}
+                <tr>
+                    <td>
+                        <a href="/companies/{{ key.company.id }}" style="font-weight: 600; color: #fff; text-decoration: none;">
+                            {{ key.company.name }}
+                        </a>
+                    </td>
+                    <td>{{ key.name }}</td>
+                    <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                        {{ key.key[:6] }}...{{ key.key[-6:] if key.key|length > 6 else '' }}
+                    </td>
+                    <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                        {{ key.secret[:6] }}...{{ key.secret[-6:] if key.secret|length > 6 else '' }}
+                    </td>
+                    <td>{{ key.created_at.strftime('%d/%m/%Y') }}</td>
+                    <td>{{ key.last_used_at.strftime('%d/%m/%Y %H:%M') if key.last_used_at else 'Nunca' }}</td>
+                    <td>
+                        <span class="badge {% if key.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                            {% if key.is_active %}Ativo{% else %}Inativo{% endif %}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        {% if key.is_active %}
+                        <button onclick="revokeApiKey({{ key.company_id }}, {{ key.id }})" class="btn btn-danger btn-sm" style="padding: 4px 8px;">
+                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                        Nenhuma chave de acesso ativa gerada.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

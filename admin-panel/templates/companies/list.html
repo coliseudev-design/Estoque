@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Empresas — ColiseuSpeed{% endblock %}
+{% block header_title %}Empresas Clientes{% endblock %}
+{% block header_subtitle %}Cadastre e gerencie a base de clientes do ecossistema ColiseuSpeed{% endblock %}
+
+{% block header_actions %}
+<a href="/companies/new" class="btn btn-primary">
+    <i data-lucide="plus"></i>
+    <span>Nova Empresa</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="glass-panel data-panel">
+    <div class="panel-header">
+        <div class="panel-title">Lista de Clientes Cadastrados</div>
+    </div>
+
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nome / Razão Social</th>
+                    <th>CNPJ</th>
+                    <th>E-mail de Contato</th>
+                    <th>Telefone</th>
+                    <th>Tipo Aplicativo</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for company in companies %}
+                <tr>
+                    <td>
+                        <div style="font-weight: 600; color: #fff;">{{ company.name }}</div>
+                        {% if company.fantasy_name %}
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">{{ company.fantasy_name }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ company.cnpj }}</td>
+                    <td>{{ company.email }}</td>
+                    <td>{{ company.phone or '-' }}</td>
+                    <td>
+                        <span class="badge" style="background: rgba(33,150,243,0.1); color: var(--accent); border: 1px solid rgba(33,150,243,0.2);">
+                            {{ company.app_type }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ company.status }}">
+                            {{ company.status }}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <div style="display: inline-flex; gap: 8px;">
+                            <a href="/companies/{{ company.id }}" class="btn btn-secondary btn-sm" title="Visualizar Detalhes">
+                                <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                            </a>
+                            <a href="/companies/{{ company.id }}/edit" class="btn btn-secondary btn-sm" title="Editar Informações">
+                                <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                        Nenhuma empresa cadastrada no momento. Clique em "Nova Empresa" para iniciar.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

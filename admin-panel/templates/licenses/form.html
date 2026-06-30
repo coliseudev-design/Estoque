@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Ativar Licença — ColiseuSpeed{% endblock %}
+{% block header_title %}Ativar Nova Licença{% endblock %}
+{% block header_subtitle %}Insira uma chave de licença gerada no sistema de vendas para associar à empresa cliente{% endblock %}
+
+{% block content %}
+<div class="glass-panel data-panel" style="max-width: 600px; margin: 0 auto;">
+    <form action="/adm/licenses/new" method="POST" style="display: flex; flex-direction: column; gap: 20px;">
+        
+        <div class="form-group">
+            <label for="company_id" class="form-label">Selecione a Empresa *</label>
+            <select id="company_id" name="company_id" class="form-control form-select" required>
+                <option value="">-- Escolha uma empresa --</option>
+                {% for company in companies %}
+                <option value="{{ company.id }}" {% if selected_company_id == company.id %}selected{% endif %}>
+                    {{ company.name }} (CNPJ: {{ company.cnpj }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="license_key" class="form-label">Chave de Licença (Sales License Key) *</label>
+            <input type="text" id="license_key" name="license_key" class="form-control" placeholder="MOCK-SPEED-XXXX or Real Key" required>
+            <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+                Dica: chaves começando com "MOCK-" serão auto-validadas localmente para testes.
+            </span>
+        </div>
+
+        <div class="form-group">
+            <label for="product_type" class="form-label">Tipo do Produto *</label>
+            <select id="product_type" name="product_type" class="form-control form-select">
+                <option value="coliseu_speed">Coliseu Speed Force (Sales & Sync)</option>
+                <option value="coliseu_crm">Coliseu CRM (Customers Relationship)</option>
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <a href="/adm/licenses" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Ativar & Validar Licença</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

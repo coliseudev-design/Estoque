@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Administrador — ColiseuSpeed</title>
+    <link rel="stylesheet" href="/adm/static/css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body style="justify-content: center; align-items: center;">
+
+    <div class="login-container">
+        <div class="login-card glass-panel">
+            <div class="login-header">
+                <div class="brand-logo login-logo">CS</div>
+                <h2 style="font-weight: 700; font-size: 1.5rem; margin-top: 10px;">Painel Administrativo</h2>
+                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 4px;">Faça login com sua conta administradora SaaS</p>
+            </div>
+
+            {% if error_message %}
+                <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: var(--danger); padding: 12px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 20px; text-align: center;">
+                    {{ error_message }}
+                </div>
+            {% endif %}
+
+            <form action="/adm/auth/login" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="email" class="form-label">Endereço de E-mail</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="admin@coliseusistemas.com.br" required>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label for="password" class="form-label">Senha</label>
+                        <a href="/adm/forgot-password" style="font-size: 0.8rem; color: var(--primary); text-decoration: none;">Esqueceu a senha?</a>
+                    </div>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="justify-content: center; width: 100%; margin-top: 10px;">
+                    <span>Entrar no Painel</span>
+                    <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

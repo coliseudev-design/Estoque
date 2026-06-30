@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes de {{ company.name }} — ColiseuSpeed{% endblock %}
+{% block header_title %}{{ company.name }}{% endblock %}
+{% block header_subtitle %}Ficha cadastral completa e gerenciamento de licenças SaaS{% endblock %}
+
+{% block header_actions %}
+<a href="/adm/companies" class="btn btn-secondary">
+    <i data-lucide="arrow-left"></i>
+    <span>Voltar</span>
+</a>
+<a href="/companies/{{ company.id }}/edit" class="btn btn-secondary">
+    <i data-lucide="edit-2"></i>
+    <span>Editar Dados</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Layout: Sidebar de Status + Conteúdo Principal -->
+<div style="display: grid; grid-template-columns: 1fr 3fr; gap: 30px; align-items: start;">
+    
+    <!-- Sidebar Status & Quick actions -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <div class="glass-panel data-panel" style="padding: 20px; text-align: center;">
+            <div style="width: 80px; height: 80px; border-radius: 20px; background: rgba(0, 188, 212, 0.1); border: 2px solid var(--primary); display: flex; align-items: center; justify-content: center; font-size: 2.2rem; font-weight: 700; margin: 0 auto 16px;">
+                {{ company.name[:2].upper() }}
+            </div>
+            <h2 style="font-size: 1.15rem; font-weight: 600; color: #fff;">{{ company.name }}</h2>
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">CNPJ: {{ company.cnpj }}</p>
+            
+            <div style="margin-top: 20px;">
+                <span class="badge badge-{{ company.status }}" style="font-size: 0.85rem; padding: 6px 14px;">
+                    {{ company.status }}
+                </span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+                <button onclick="toggleCompanyStatus({{ company.id }}, 'active')" class="btn btn-secondary btn-sm" style="justify-content: center;">
+                    <i data-lucide="check-circle" style="width: 14px; height: 14px; color: var(--success);"></i>
+                    <span>Ativar Empresa</span>
+                </button>
+                <button onclick="toggleCompanyStatus({{ company.id }}, 'inactive')" class="btn btn-secondary btn-sm" style="justify-content: center;">
+                    <i data-lucide="minus-circle" style="width: 14px; height: 14px; color: var(--text-secondary);"></i>
+                    <span>Desativar Empresa</span>
+                </button>
+                <button onclick="toggleCompanyStatus({{ company.id }}, 'suspended')" class="btn btn-secondary btn-sm" style="justify-content: center;">
+                    <i data-lucide="alert-triangle" style="width: 14px; height: 14px; color: var(--danger);"></i>
+                    <span>Suspender Empresa</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteúdo Principal com Abas/Seções -->
+    <div style="display: flex; flex-direction: column; gap: 30px;">
+        
+        <!-- Ficha Cadastral e Dados Tributários -->
+        <div class="glass-panel data-panel">
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="file-text"></i>
+                <span>Ficha Cadastral & Configurações Fiscais</span>
+            </h3>
+            
+            <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="glass-card" style="padding: 14px;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">E-mail</div>
+                    <div style="font-size: 0.9rem; font-weight: 500; margin-top: 4px;">{{ company.email }}</div>
+                </div>
+                <div class="glass-card" style="padding: 14px;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Telefone</div>
+                    <div style="font-size: 0.9rem; font-weight: 500; margin-top: 4px;">{{ company.phone or '-' }}</div>
+                </div>
+                <div class="glass-card" style="padding: 14px;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Tipo de Aplicativo</div>
+                    <div style="font-size: 0.9rem; font-weight: 500; margin-top: 4px;">
+                        <span class="badge" style="background: rgba(33,150,243,0.1); color: var(--accent);">
+                            {{ company.app_type }}
+                        </span>
+                    </div>
+                </div>
+                {% if company.details %}
+                <div class="glass-card" style="padding: 14px;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Inscrição Estadual (I.E.)</div>
+                    <div style="font-size: 0.9rem; font-weight: 500; margin-top: 4px;">{{ company.details.state_registration or '-' }}</div>
+                </div>
+                <div class="glass-card" style="padding: 14px;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Regime Tributário</div>
+                    <div style="font-size: 0.9rem; font-weight: 500; margin-top: 4px; text-transform: uppercase;">{{ company.details.tax_regime }}</div>
+                </div>
+                <div class="glass-card" style="padding: 14px;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Tipo de Negócio</div>
+                    <div style="font-size: 0.9rem; font-weight: 500; margin-top: 4px; text-transform: capitalize;">{{ company.details.business_type }}</div>
+                </div>
+                <div class="glass-card" style="padding: 14px; grid-column: span 3;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Endereço Completo</div>
+                    <div style="font-size: 0.9rem; font-weight: 500; margin-top: 4px;">
+                        {{ company.details.address or '' }} - {{ company.details.city or '' }} ({{ company.details.state or '' }}) - {{ company.details.zip_code or '' }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Licenças Ativas -->
+        <div class="glass-panel data-panel">
+            <div class="panel-header">
+                <h3 class="panel-title" style="display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="key" style="color: var(--success);"></i>
+                    <span>Licenças Associadas</span>
+                </h3>
+                <a href="/licenses/new?company_id={{ company.id }}" class="btn btn-primary btn-sm">
+                    <i data-lucide="plus"></i>
+                    <span>Ativar Licença</span>
+                </a>
+            </div>
+
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Chave da Licença (Sales Key)</th>
+                            <th>Produto</th>
+                            <th>Usuários Máx.</th>
+                            <th>Filiais Máx.</th>
+                            <th>Data Ativação</th>
+                            <th>Vencimento</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for lic in company.licenses %}
+                        <tr>
+                            <td style="font-family: monospace; font-weight: 600; color: #fff;">{{ lic.license_key }}</td>
+                            <td>{{ lic.product_type }}</td>
+                            <td>{{ lic.max_users }}</td>
+                            <td>{{ lic.max_branches }}</td>
+                            <td>{{ lic.activation_date.strftime('%d/%m/%Y') if lic.activation_date else '-' }}</td>
+                            <td>{{ lic.expiration_date.strftime('%d/%m/%Y') if lic.expiration_date else '-' }}</td>
+                            <td>
+                                <span class="badge badge-{{ lic.status }}">{{ lic.status }}</span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                                Nenhuma licença ativa encontrada. Clique em "Ativar Licença" para configurar.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Integrações de APIs -->
+        <div class="glass-panel data-panel">
+            <div class="panel-header">
+                <h3 class="panel-title" style="display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="blocks" style="color: var(--accent);"></i>
+                    <span>Integrações de APIs Externas</span>
+                </h3>
+                <a href="/integrations/new?company_id={{ company.id }}" class="btn btn-secondary btn-sm">
+                    <i data-lucide="plus"></i>
+                    <span>Configurar Integração</span>
+                </a>
+            </div>
+
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>API</th>
+                            <th>Webhook URL</th>
+                            <th>Último Teste</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for integration in company.integrations %}
+                        <tr>
+                            <td>
+                                <div style="font-weight: 600; color: #fff; text-transform: uppercase;">{{ integration.api_type }}</div>
+                            </td>
+                            <td>
+                                <span style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                                    {{ integration.webhook_url or 'Nenhum configurado' }}
+                                </span>
+                            </td>
+                            <td>
+                                {{ integration.last_tested_at.strftime('%d/%m/%Y %H:%M') if integration.last_tested_at else 'Nunca' }}
+                            </td>
+                            <td>
+                                <span class="badge {% if integration.is_active %}badge-online{% else %}badge-offline{% endif %}">
+                                    {% if integration.is_active %}Ativo{% else %}Inativo{% endif %}
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <button onclick="testIntegration({{ company.id }}, {{ integration.id }})" class="btn btn-secondary btn-sm" title="Testar Integração">
+                                    <i data-lucide="play" style="width: 14px; height: 14px; color: var(--primary);"></i>
+                                    <span>Testar</span>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                                Nenhuma integração configurada.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Instâncias (Web & Mobile Status) -->
+        <div class="glass-panel data-panel">
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="server"></i>
+                <span>Status de Instâncias Ativas</span>
+            </h3>
+
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nome da Instância</th>
+                            <th>Plataforma</th>
+                            <th>Versão</th>
+                            <th>Último Sync</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for instance in company.instances %}
+                        <tr>
+                            <td><span style="font-weight: 500; color: #fff;">{{ instance.instance_name }}</span></td>
+                            <td>
+                                <span class="badge" style="background: rgba(255, 255, 255, 0.05); color: #fff;">
+                                    {{ instance.instance_type }}
+                                </span>
+                            </td>
+                            <td>v{{ instance.version }}</td>
+                            <td>{{ instance.last_sync.strftime('%d/%m/%Y %H:%M') if instance.last_sync else 'Nunca' }}</td>
+                            <td>
+                                <span class="badge badge-{{ instance.status }}">{{ instance.status }}</span>
+                            </td>
+                            <td style="text-align: right;">
+                                <button onclick="forceInstanceSync({{ company.id }}, {{ instance.id }})" class="btn btn-secondary btn-sm">
+                                    <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                                    <span>Sincronizar</span>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                                Nenhuma instância registrada. Elas serão exibidas quando o aplicativo ou site se conectar à API.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Chaves de Acesso API Keys -->
+        <div class="glass-panel data-panel">
+            <div class="panel-header">
+                <h3 class="panel-title" style="display: flex; align-items: center; gap: 10px;">
+                    <i data-lucide="key-round" style="color: var(--warning);"></i>
+                    <span>Chaves de Acesso (API Keys)</span>
+                </h3>
+                <button onclick="rotateApiKey({{ company.id }})" class="btn btn-primary btn-sm">
+                    <i data-lucide="rotate-cw"></i>
+                    <span>Gerar Nova Chave</span>
+                </button>
+            </div>
+
+            <div class="data-table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>API Key</th>
+                            <th>API Secret</th>
+                            <th>Gerado Em</th>
+                            <th>Último Uso</th>
+                            <th>Status</th>
+                            <th style="text-align: right;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key in company.api_keys %}
+                        <tr>
+                            <td>{{ key.name }}</td>
+                            <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                                {{ key.key[:6] }}...{{ key.key[-6:] if key.key|length > 6 else '' }}
+                            </td>
+                            <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                                {{ key.secret[:6] }}...{{ key.secret[-6:] if key.secret|length > 6 else '' }}
+                            </td>
+                            <td>{{ key.created_at.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ key.last_used_at.strftime('%d/%m/%Y %H:%M') if key.last_used_at else 'Nunca' }}</td>
+                            <td>
+                                <span class="badge {% if key.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                                    {% if key.is_active %}Ativo{% else %}Inativo{% endif %}
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                {% if key.is_active %}
+                                <button onclick="revokeApiKey({{ company.id }}, {{ key.id }})" class="btn btn-danger btn-sm" style="padding: 4px 8px;">
+                                    <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                                Nenhuma chave gerada. Clique em "Gerar Nova Chave" para habilitar acesso via API.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

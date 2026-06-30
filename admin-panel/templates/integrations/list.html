@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Integrações — ColiseuSpeed{% endblock %}
+{% block header_title %}Integrações de APIs{% endblock %}
+{% block header_subtitle %}Gerencie conexões com WhatsApp, APIs fiscais de faturamento e contratos externos{% endblock %}
+
+{% block header_actions %}
+<a href="/integrations/new" class="btn btn-primary">
+    <i data-lucide="plus"></i>
+    <span>Nova Integração</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="glass-panel data-panel">
+    <div class="panel-header">
+        <div class="panel-title">Integrações de APIs SaaS</div>
+    </div>
+
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Empresa</th>
+                    <th>Tipo API</th>
+                    <th>Webhook Endpoint</th>
+                    <th>Último Teste</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for integration in integrations %}
+                <tr>
+                    <td>
+                        <a href="/companies/{{ integration.company.id }}" style="font-weight: 600; color: #fff; text-decoration: none;">
+                            {{ integration.company.name }}
+                        </a>
+                    </td>
+                    <td><span style="font-weight: 600; text-transform: uppercase; color: var(--primary);">{{ integration.api_type }}</span></td>
+                    <td style="font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                        {{ integration.webhook_url or 'Nenhum' }}
+                    </td>
+                    <td>{{ integration.last_tested_at.strftime('%d/%m/%Y %H:%M') if integration.last_tested_at else 'Nunca' }}</td>
+                    <td>
+                        <span class="badge {% if integration.is_active %}badge-online{% else %}badge-offline{% endif %}">
+                            {% if integration.is_active %}Ativo{% else %}Inativo{% endif %}
+                        </span>
+                    </td>
+                    <td style="text-align: right;">
+                        <button onclick="testIntegration({{ integration.company.id }}, {{ integration.id }})" class="btn btn-secondary btn-sm">
+                            <i data-lucide="play" style="width: 14px; height: 14px; color: var(--primary);"></i>
+                            <span>Testar</span>
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                        Nenhuma integração de API configurada.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Configurar Integração — ColiseuSpeed{% endblock %}
+{% block header_title %}Nova Configuração de API{% endblock %}
+{% block header_subtitle %}Conecte e salve as chaves de acesso externas da empresa cliente{% endblock %}
+
+{% block content %}
+<div class="glass-panel data-panel" style="max-width: 600px; margin: 0 auto;">
+    <form action="/adm/integrations/new" method="POST" style="display: flex; flex-direction: column; gap: 20px;">
+        
+        <div class="form-group">
+            <label for="company_id" class="form-label">Selecione a Empresa *</label>
+            <select id="company_id" name="company_id" class="form-control form-select" required>
+                <option value="">-- Escolha uma empresa --</option>
+                {% for company in companies %}
+                <option value="{{ company.id }}" {% if selected_company_id == company.id %}selected{% endif %}>
+                    {{ company.name }} (CNPJ: {{ company.cnpj }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="api_type" class="form-label">Tipo de Integração *</label>
+            <select id="api_type" name="api_type" class="form-control form-select" required>
+                <option value="whatsapp">Disparos de WhatsApp (Mensageria)</option>
+                <option value="fiscal">API Fiscal (NFe / Faturamento)</option>
+                <option value="contract">API de Contratos (Assinaturas)</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="api_key" class="form-label">API Key / Token de Acesso *</label>
+            <input type="text" id="api_key" name="api_key" class="form-control" placeholder="Chave pública ou token de identificação" required>
+        </div>
+
+        <div class="form-group">
+            <label for="api_secret" class="form-label">API Secret / Senha de Integração</label>
+            <input type="password" id="api_secret" name="api_secret" class="form-control" placeholder="Deixe em branco se não for necessário">
+        </div>
+
+        <div class="form-group">
+            <label for="webhook_url" class="form-label">Webhook URL (Opcional)</label>
+            <input type="url" id="webhook_url" name="webhook_url" class="form-control" placeholder="https://api.empresa.com.br/webhooks">
+        </div>
+
+        <div class="form-actions">
+            <a href="/adm/integrations" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Salvar Configurações</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

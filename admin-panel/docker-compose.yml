@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: coliseuspeed-admin-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: coliseuspeed_admin
+      POSTGRES_USER: admin_user
+      POSTGRES_PASSWORD: admin_password_change_me
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_admin_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin_user -d coliseuspeed_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: coliseuspeed-admin-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  admin-panel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coliseuspeed-admin-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://admin_user:admin_password_change_me@postgres:5432/coliseuspeed_admin
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=747a7da7a7b9317b9c6a7880abcdef1234567890abcdef1234567890abcdef12
+      - SALES_API_URL=https://licencas.coliseusistemas.com.br
+      - SEED_ADMIN_EMAIL=admin@coliseusistemas.com.br
+      - SEED_ADMIN_PASSWORD=admin123
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  pg_admin_data:

@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{% if company %}Editar{% else %}Nova{% endif %} Empresa — ColiseuSpeed{% endblock %}
+{% block header_title %}{% if company %}Editar Empresa{% else %}Nova Empresa{% endif %}{% endblock %}
+{% block header_subtitle %}{% if company %}Atualize as informações cadastrais e tributárias de {{ company.name }}{% else %}Cadastre uma nova empresa cliente no ecossistema SaaS{% endif %}{% endblock %}
+
+{% block content %}
+<div class="glass-panel data-panel">
+    <form action="{% if company %}/adm/companies/{{ company.id }}/edit{% else %}/adm/companies/new{% endif %}" method="POST">
+        
+        <!-- Seção 1: Dados Básicos -->
+        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--primary);">1. Dados Cadastrais</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="name" class="form-label">Razão Social *</label>
+                <input type="text" id="name" name="name" class="form-control" value="{{ company.name if company else '' }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="fantasy_name" class="form-label">Nome Fantasia</label>
+                <input type="text" id="fantasy_name" name="fantasy_name" class="form-control" value="{{ company.fantasy_name if company else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="cnpj" class="form-label">CNPJ *</label>
+                <input type="text" id="cnpj" name="cnpj" class="form-control" placeholder="Apenas números ou formato CNPJ" value="{{ company.cnpj if company else '' }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="email" class="form-label">E-mail Principal *</label>
+                <input type="email" id="email" name="email" class="form-control" value="{{ company.email if company else '' }}" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="phone" class="form-label">Telefone de Contato</label>
+                <input type="text" id="phone" name="phone" class="form-control" placeholder="(00) 00000-0000" value="{{ company.phone if company else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="app_type" class="form-label">Plataforma do Aplicativo *</label>
+                <select id="app_type" name="app_type" class="form-control form-select">
+                    <option value="both" {% if company and company.app_type == 'both' %}selected{% endif %}>Ambos (Mobile e Web)</option>
+                    <option value="mobile" {% if company and company.app_type == 'mobile' %}selected{% endif %}>Apenas Mobile</option>
+                    <option value="web" {% if company and company.app_type == 'web' %}selected{% endif %}>Apenas Web</option>
+                </select>
+            </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 30px 0;">
+
+        <!-- Seção 2: Dados Fiscais e Endereço -->
+        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--primary);">2. Dados Fiscais & Endereço</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="state_registration" class="form-label">Inscrição Estadual (I.E.)</label>
+                <input type="text" id="state_registration" name="state_registration" class="form-control" value="{{ details.state_registration if details else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="municipal_registration" class="form-label">Inscrição Municipal (I.M.)</label>
+                <input type="text" id="municipal_registration" name="municipal_registration" class="form-control" value="{{ details.municipal_registration if details else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label for="tax_regime" class="form-label">Regime Tributário</label>
+                <select id="tax_regime" name="tax_regime" class="form-control form-select">
+                    <option value="simples" {% if details and details.tax_regime == 'simples' %}selected{% endif %}>Simples Nacional</option>
+                    <option value="lucro_presumido" {% if details and details.tax_regime == 'lucro_presumido' %}selected{% endif %}>Lucro Presumido</option>
+                    <option value="lucro_real" {% if details and details.tax_regime == 'lucro_real' %}selected{% endif %}>Lucro Real</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="business_type" class="form-label">Tipo de Negócio</label>
+                <select id="business_type" name="business_type" class="form-control form-select">
+                    <option value="retail" {% if details and details.business_type == 'retail' %}selected{% endif %}>Varejo</option>
+                    <option value="wholesale" {% if details and details.business_type == 'wholesale' %}selected{% endif %}>Atacado</option>
+                    <option value="service" {% if details and details.business_type == 'service' %}selected{% endif %}>Prestação de Serviço</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="grid-column: span 2;">
+                <label for="address" class="form-label">Endereço Completo</label>
+                <input type="text" id="address" name="address" class="form-control" value="{{ details.address if details else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="city" class="form-label">Cidade</label>
+                <input type="text" id="city" name="city" class="form-control" value="{{ details.city if details else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="state" class="form-label">Estado (UF)</label>
+                <input type="text" id="state" name="state" class="form-control" placeholder="Ex: SP, RJ" value="{{ details.state if details else '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="zip_code" class="form-label">CEP</label>
+                <input type="text" id="zip_code" name="zip_code" class="form-control" placeholder="00000-000" value="{{ details.zip_code if details else '' }}">
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <a href="/adm/companies" class="btn btn-secondary">Cancelar</a>
+            <button type="submit" class="btn btn-primary">Salvar Empresa</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

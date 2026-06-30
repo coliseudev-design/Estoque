@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Instâncias — ColiseuSpeed{% endblock %}
+{% block header_title %}Instâncias Ativas{% endblock %}
+{% block header_subtitle %}Monitore em tempo real o status operacional dos aplicativos mobile e plataformas web dos clientes{% endblock %}
+
+{% block content %}
+<div class="glass-panel data-panel">
+    <div class="panel-header">
+        <div class="panel-title">Instâncias Conectadas</div>
+    </div>
+
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Empresa</th>
+                    <th>Nome Instância</th>
+                    <th>Tipo</th>
+                    <th>Versão App</th>
+                    <th>Última Sincronização</th>
+                    <th>Status</th>
+                    <th style="text-align: right;">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for instance in instances %}
+                <tr>
+                    <td>
+                        <a href="/companies/{{ instance.company.id }}" style="font-weight: 600; color: #fff; text-decoration: none;">
+                            {{ instance.company.name }}
+                        </a>
+                    </td>
+                    <td><span style="font-weight: 500; color: #fff;">{{ instance.instance_name }}</span></td>
+                    <td>
+                        <span class="badge" style="background: rgba(255, 255, 255, 0.05); color: #fff;">
+                            {{ instance.instance_type }}
+                        </span>
+                    </td>
+                    <td>v{{ instance.version }}</td>
+                    <td>{{ instance.last_sync.strftime('%d/%m/%Y %H:%M:%S') if instance.last_sync else 'Nunca' }}</td>
+                    <td>
+                        <span class="badge badge-{{ instance.status }}">{{ instance.status }}</span>
+                    </td>
+                    <td style="text-align: right;">
+                        <button onclick="forceInstanceSync({{ instance.company.id }}, {{ instance.id }})" class="btn btn-secondary btn-sm">
+                            <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i>
+                            <span>Forçar Sync</span>
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                        Nenhuma instância de aplicativo conectada ao painel.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

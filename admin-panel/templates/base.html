@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Painel Admin{% endblock %} — ColiseuSpeed</title>
+    <link rel="stylesheet" href="/adm/static/css/style.css">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar glass-panel">
+        <div class="sidebar-brand">
+            <div class="brand-logo">CS</div>
+            <div class="brand-name">ColiseuSpeed</div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li class="sidebar-item {% if active_page == 'dashboard' %}active{% endif %}">
+                <a href="/adm/">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'companies' %}active{% endif %}">
+                <a href="/adm/companies">
+                    <i data-lucide="building-2"></i>
+                    <span>Empresas</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'licenses' %}active{% endif %}">
+                <a href="/adm/licenses">
+                    <i data-lucide="key"></i>
+                    <span>Licenças</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'integrations' %}active{% endif %}">
+                <a href="/adm/integrations">
+                    <i data-lucide="blocks"></i>
+                    <span>Integrações</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'instances' %}active{% endif %}">
+                <a href="/adm/instances">
+                    <i data-lucide="server"></i>
+                    <span>Instâncias</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'api_keys' %}active{% endif %}">
+                <a href="/adm/api-keys">
+                    <i data-lucide="key-round"></i>
+                    <span>Chaves de Acesso</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="user-avatar"></div>
+                <div class="user-info">
+                    <div class="user-name">{{ current_user.full_name }}</div>
+                    <div class="user-role">Administrador</div>
+                </div>
+            </div>
+            <a href="/adm/auth/logout" class="btn-logout" title="Sair do Painel">
+                <i data-lucide="log-out"></i>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        <header class="top-header">
+            <div class="page-title">
+                <h1>{% block header_title %}Painel Principal{% endblock %}</h1>
+                <p>{% block header_subtitle %}Monitore e gerencie clientes e licenças SaaS{% endblock %}</p>
+            </div>
+            <div class="header-actions">
+                {% block header_actions %}{% endblock %}
+            </div>
+        </header>
+
+        <!-- Dynamic Content -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/adm/static/js/main.js"></script>
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Flash Messages handler (passed from backend template session redirects)
+        {% if flash_message %}
+            showToast("{{ flash_message }}", "{{ flash_type or 'success' }}");
+        {% endif %}
+    </script>
+</body>
+</html>

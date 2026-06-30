@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Licenças — ColiseuSpeed{% endblock %}
+{% block header_title %}Licenças Ativas{% endblock %}
+{% block header_subtitle %}Monitore e ative chaves de licenças para as instâncias clientes{% endblock %}
+
+{% block header_actions %}
+<a href="/licenses/new" class="btn btn-primary">
+    <i data-lucide="plus"></i>
+    <span>Ativar Licença</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="glass-panel data-panel">
+    <div class="panel-header">
+        <div class="panel-title">Fila de Licenças SaaS</div>
+    </div>
+
+    <div class="data-table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Empresa</th>
+                    <th>Chave de Ativação</th>
+                    <th>Produto</th>
+                    <th>Usuários Máx.</th>
+                    <th>Filiais Máx.</th>
+                    <th>Ativação</th>
+                    <th>Expiração</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lic in licenses %}
+                <tr>
+                    <td>
+                        <a href="/companies/{{ lic.company.id }}" style="font-weight: 600; color: #fff; text-decoration: none;">
+                            {{ lic.company.name }}
+                        </a>
+                    </td>
+                    <td style="font-family: monospace; font-weight: 500;">{{ lic.license_key }}</td>
+                    <td style="text-transform: capitalize;">{{ lic.product_type.replace('_', ' ') }}</td>
+                    <td>{{ lic.max_users }}</td>
+                    <td>{{ lic.max_branches }}</td>
+                    <td>{{ lic.activation_date.strftime('%d/%m/%Y') if lic.activation_date else '-' }}</td>
+                    <td>{{ lic.expiration_date.strftime('%d/%m/%Y') if lic.expiration_date else '-' }}</td>
+                    <td>
+                        <span class="badge badge-{{ lic.status }}">{{ lic.status }}</span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                        Nenhuma licença cadastrada no momento.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
