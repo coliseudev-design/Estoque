@@ -69,7 +69,7 @@ def seed_admin_user():
                 password_hash=get_password_hash(admin_password),
                 full_name="Coliseu Admin",
                 is_active=True,
-                is_superuser=True
+                role=0
             )
             db.add(admin)
             db.commit()
