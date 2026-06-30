@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from config.database import get_db
 from config.security import get_current_user_web, get_current_user_api
-from modules.companies.models import Company
+from modules.companies.models import Company, CompanyModule
 from modules.integrations.models import ApiIntegration
 
 router = APIRouter()
@@ -28,11 +28,16 @@ def list_integrations(
 @router.get("/integrations/new", response_class=HTMLResponse)
 def new_integration_form(
     request: Request,
-    company_id: int = None,
+    company_id: str = None,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_web)
 ):
-    companies = db.query(Company).filter(Company.status == "active").all()
+    # Only show active companies with speed module
+    companies = db.query(Company)\
+        .join(CompanyModule, Company.id == CompanyModule.company_id)\
+        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
+        .all()
+
     return templates.TemplateResponse("integrations/form.html", {
         "request": request,
         "companies": companies,
@@ -44,7 +49,7 @@ def new_integration_form(
 @router.post("/integrations/new")
 def create_integration(
     request: Request,
-    company_id: int = Form(...),
+    company_id: str = Form(...),
     api_type: str = Form(...),
     api_key: str = Form(...),
     api_secret: str = Form(None),
@@ -86,7 +91,7 @@ def create_integration(
 
 @router.patch("/api/companies/{company_id}/integrations/{integration_id}/test")
 def test_integration(
-    company_id: int,
+    company_id: str,
     integration_id: int,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_api)
@@ -103,7 +108,7 @@ def test_integration(
     success = True
     message = "Conexão estabelecida com sucesso."
     
-    if "FAIL" in integration.api_key.upper():
+    if integration.api_key and "FAIL" in integration.api_key.upper():
         success = False
         message = "Rejeitado pelo servidor externo com erro 403 Forbidden."
     

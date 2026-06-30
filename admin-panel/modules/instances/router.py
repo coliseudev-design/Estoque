@@ -27,7 +27,7 @@ def list_instances(
 
 @router.post("/api/companies/{company_id}/instances/{instance_id}/sync")
 def force_instance_sync(
-    company_id: int,
+    company_id: str,
     instance_id: int,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_api)

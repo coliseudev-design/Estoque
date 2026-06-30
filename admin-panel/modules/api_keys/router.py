@@ -6,7 +6,7 @@ from datetime import datetime
 import secrets
 from config.database import get_db
 from config.security import get_current_user_web, get_current_user_api
-from modules.companies.models import Company
+from modules.companies.models import Company, CompanyModule
 from modules.api_keys.models import ApiKey
 
 router = APIRouter()
@@ -19,7 +19,13 @@ def list_api_keys(
     current_user = Depends(get_current_user_web)
 ):
     api_keys = db.query(ApiKey).join(Company).order_by(ApiKey.created_at.desc()).all()
-    companies = db.query(Company).filter(Company.status == "active").all()
+    
+    # Only active companies with coliseu-speed
+    companies = db.query(Company)\
+        .join(CompanyModule, Company.id == CompanyModule.company_id)\
+        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
+        .all()
+
     return templates.TemplateResponse("api_keys/list.html", {
         "request": request,
         "api_keys": api_keys,
@@ -31,7 +37,7 @@ def list_api_keys(
 # Quick form generation redirect
 @router.post("/api-keys/generate")
 def generate_api_key_redirect(
-    company_id: int = Form(...),
+    company_id: str = Form(...),
     key_name: str = Form(...),
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_web)
@@ -49,7 +55,7 @@ def generate_api_key_redirect(
 # AJAX endpoint to generate a new key
 @router.post("/api/companies/{company_id}/api-keys")
 def generate_api_key_api(
-    company_id: int,
+    company_id: str,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_api)
 ):
@@ -67,7 +73,7 @@ def generate_api_key_api(
 # AJAX endpoint to revoke key
 @router.delete("/api/companies/{company_id}/api-keys/{key_id}")
 def revoke_api_key_api(
-    company_id: int,
+    company_id: str,
     key_id: int,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_api)

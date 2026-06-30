@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime
+import uuid
 from config.database import get_db
 from config.security import get_current_user_web, get_current_user_api
 from utils.license_validator import validate_license_on_sales
@@ -18,7 +19,8 @@ def list_licenses(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_web)
 ):
-    licenses = db.query(License).join(Company).order_by(License.created_at.desc()).all()
+    # Retrieve devices joined with companies
+    licenses = db.query(License).join(Company).order_by(License.activation_date.desc()).all()
     return templates.TemplateResponse("licenses/list.html", {
         "request": request,
         "licenses": licenses,
@@ -29,11 +31,11 @@ def list_licenses(
 @router.get("/licenses/new", response_class=HTMLResponse)
 def new_license_form(
     request: Request,
-    company_id: int = None,
+    company_id: str = None,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_web)
 ):
-    companies = db.query(Company).filter(Company.status == "active").all()
+    companies = db.query(Company).filter(Company.status == 1).all() # 1=Active
     return templates.TemplateResponse("licenses/form.html", {
         "request": request,
         "companies": companies,
@@ -45,15 +47,15 @@ def new_license_form(
 @router.post("/licenses/new")
 async def create_license(
     request: Request,
-    company_id: int = Form(...),
+    company_id: str = Form(...),
     license_key: str = Form(...),
     product_type: str = Form("coliseu_speed"),
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_web)
 ):
-    companies = db.query(Company).filter(Company.status == "active").all()
+    companies = db.query(Company).filter(Company.status == 1).all()
     
-    # Check if this license key is already activated
+    # Check if this activation key is already listed
     existing = db.query(License).filter(License.license_key == license_key).first()
     if existing:
         return templates.TemplateResponse("licenses/form.html", {
@@ -66,7 +68,7 @@ async def create_license(
             "flash_type": "error"
         })
 
-    # Validate against central service
+    # Validate against central licensing service
     validation = await validate_license_on_sales(license_key)
     if not validation.get("valid", False):
         return templates.TemplateResponse("licenses/form.html", {
@@ -79,26 +81,16 @@ async def create_license(
             "flash_type": "error"
         })
 
-    # Create license
-    exp_date_str = validation.get("expiration_date")
-    expiration_date = None
-    if exp_date_str:
-        # standard ISO format parsing
-        try:
-            expiration_date = datetime.fromisoformat(exp_date_str.replace("Z", "+00:00"))
-        except:
-            expiration_date = datetime.utcnow() # fallback
-
+    # Insert a new device/license record linked to the company
     new_lic = License(
+        id=str(uuid.uuid4()),
         company_id=company_id,
         license_key=license_key,
-        product_type=validation.get("product_type", product_type),
-        status="active",
+        status=1, # 1 = Active
         activation_date=datetime.utcnow(),
-        expiration_date=expiration_date,
-        max_users=validation.get("max_users", 5),
-        max_branches=validation.get("max_branches", 1),
-        features=validation.get("features", [])
+        last_access=datetime.utcnow(),
+        model="Dispositivo Faturamento",
+        os="Web/Mobile"
     )
     db.add(new_lic)
     db.commit()
@@ -110,26 +102,22 @@ async def create_license(
 
 @router.get("/api/companies/{id}/licenses/{license_id}/validate")
 def api_validate_license(
-    id: int,
-    license_id: int,
+    id: str,
+    license_id: str,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_api)
 ):
+    # Fetch license from central devices table
     license = db.query(License).filter(License.id == license_id, License.company_id == id).first()
     if not license:
         return JSONResponse(status_code=404, content={"valid": False, "detail": "Licença não encontrada"})
         
-    # Check expiration date
-    is_valid = license.status == "active"
-    if license.expiration_date and license.expiration_date < datetime.utcnow():
-        is_valid = False
-        license.status = "expired"
-        db.commit()
+    is_valid = license.status_code == 1 # 1 = Active in legacy enum
 
     return {
         "valid": is_valid,
         "license_key": license.license_key,
-        "product_type": license.product_type,
-        "status": license.status,
-        "expiration_date": license.expiration_date
+        "product_type": "coliseu_speed",
+        "status": "active" if is_valid else "inactive",
+        "expiration_date": None
     }

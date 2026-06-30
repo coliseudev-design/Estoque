@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from config.database import get_db
 from config.security import get_current_user_web, get_current_user_api
-from modules.companies.models import Company
+from modules.companies.models import Company, CompanyModule
 from modules.licenses.models import License
 from modules.instances.models import Instance
 
@@ -13,12 +13,26 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 def get_stats_data(db: Session):
-    now = datetime.utcnow()
-    active_companies = db.query(Company).filter(Company.status == "active").count()
-    active_licenses = db.query(License).filter(License.status == "active").count()
-    expired_licenses = db.query(License).filter(
-        (License.status == "expired") | (License.expiration_date < now)
-    ).count()
+    # Only fetch companies that have the 'coliseu-speed' module activated and active (Status=1)
+    active_companies = db.query(Company)\
+        .join(CompanyModule, Company.id == CompanyModule.company_id)\
+        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, Company.status == 1)\
+        .count()
+        
+    # Active licenses (devices) for speed companies (Status=1)
+    active_licenses = db.query(License)\
+        .join(Company)\
+        .join(CompanyModule, Company.id == CompanyModule.company_id)\
+        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, License.status == 1)\
+        .count()
+        
+    # Revoked licenses (devices) (Status=2)
+    expired_licenses = db.query(License)\
+        .join(Company)\
+        .join(CompanyModule, Company.id == CompanyModule.company_id)\
+        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, License.status == 2)\
+        .count()
+        
     online_instances = db.query(Instance).filter(Instance.status == "online").count()
     
     return {
@@ -36,23 +50,28 @@ def get_dashboard(
 ):
     stats = get_stats_data(db)
     
-    # Fetch recent companies (last 5)
-    recent_companies = db.query(Company).order_by(Company.created_at.desc()).limit(5).all()
+    # Fetch recent companies (last 5) filtered by speed module
+    recent_companies = db.query(Company)\
+        .join(CompanyModule, Company.id == CompanyModule.company_id)\
+        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
+        .order_by(Company.created_at.desc())\
+        .limit(5)\
+        .all()
     
-    # Fetch expiring licenses (expiring in next 30 days)
-    now = datetime.utcnow()
-    thirty_days_later = now + timedelta(days=30)
-    expiring_licenses = db.query(License).filter(
-        License.status == "active",
-        License.expiration_date > now,
-        License.expiration_date <= thirty_days_later
-    ).order_by(License.expiration_date.asc()).limit(5).all()
+    # Fetch recently accessed licenses (devices)
+    recent_licenses = db.query(License)\
+        .join(Company)\
+        .join(CompanyModule, Company.id == CompanyModule.company_id)\
+        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
+        .order_by(License.last_access.desc())\
+        .limit(5)\
+        .all()
     
     return templates.TemplateResponse("dashboard/index.html", {
         "request": request,
         "stats": stats,
         "recent_companies": recent_companies,
-        "expiring_licenses": expiring_licenses,
+        "expiring_licenses": recent_licenses, # map to recently active devices in the dashboard
         "current_user": current_user,
         "active_page": "dashboard"
     })
