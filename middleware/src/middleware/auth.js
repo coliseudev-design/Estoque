@@ -78,23 +78,25 @@ async function findCompanyByKeyHash(keyHash) {
     }
 
     try {
-        // A tabela `companies` é gerenciada pela Coliseu.Identity API (EF Core).
-        // Colunas com aspas duplas são case-sensitive (PascalCase do EF).
-        // CompanyKeyHash = SHA-256(rawKey.Trim().ToUpperInvariant())
-        // Status: 0 = Ativa, 1 = Inativa.
+        // Busca a empresa validando o hash da API Key na tabela company_modules (módulo coliseuspeed).
+        // Colunas com aspas duplas são case-sensitive (PascalCase do EF Core).
         const { rows } = await pgQuerySafe(
             `SELECT
-                "Id"          AS id,
-                "Name"        AS name,
-                "FirebirdHost"         AS fb_host,
+                c."Id"          AS id,
+                c."Name"        AS name,
+                c."FirebirdHost"         AS fb_host,
                 3050                   AS fb_port,
-                "FirebirdDatabasePath" AS fb_database,
-                "FirebirdUser"         AS fb_user,
-                "FirebirdPasswordEncrypted" AS fb_password,
+                c."FirebirdDatabasePath" AS fb_database,
+                c."FirebirdUser"         AS fb_user,
+                c."FirebirdPasswordEncrypted" AS fb_password,
                 'WIN1252'              AS fb_charset,
                 TRUE                   AS fb_wire_crypt
-             FROM companies
-             WHERE "CompanyKeyHash" = $1 AND "Status" = 0
+             FROM company_modules m
+             JOIN companies c ON m."CompanyId" = c."Id"
+             WHERE m."ModuleSlug" = 'coliseuspeed'
+               AND m."ApiKeyHash" = $1
+               AND m."IsActive" = TRUE
+               AND c."Status" = 0
              LIMIT 1`,
             [keyHash],
             6_000  // timeout 6s
