@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     SALES_API_URL: str = os.getenv("SALES_API_URL", "https://licencas.coliseusistemas.com.br")
     
     # Default Admin Seed Credentials
-    SEED_ADMIN_EMAIL: str = os.getenv("SEED_ADMIN_EMAIL", "admin@coliseusistemas.com.br")
-    SEED_ADMIN_PASSWORD: str = os.getenv("SEED_ADMIN_PASSWORD", "admin123")
+    SEED_ADMIN_EMAIL: str = os.getenv("SEED_ADMIN_EMAIL", "admin@coliseu.com.br")
+    SEED_ADMIN_PASSWORD: str = os.getenv("SEED_ADMIN_PASSWORD", "98683818")
 
     class Config:
         case_sensitive = True

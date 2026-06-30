@@ -39,8 +39,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET=747a7da7a7b9317b9c6a7880abcdef1234567890abcdef1234567890abcdef12
       - SALES_API_URL=https://licencas.coliseusistemas.com.br
-      - SEED_ADMIN_EMAIL=admin@coliseusistemas.com.br
-      - SEED_ADMIN_PASSWORD=admin123
+      - SEED_ADMIN_EMAIL=admin@coliseu.com.br
+      - SEED_ADMIN_PASSWORD=98683818
     depends_on:
       postgres:
         condition: service_healthy

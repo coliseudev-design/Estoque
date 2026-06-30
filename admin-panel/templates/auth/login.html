@@ -1,52 +1,428 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Administrador — ColiseuSpeed</title>
-    <link rel="stylesheet" href="/adm/static/css/style.css">
-    <script src="https://unpkg.com/lucide@latest"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coliseu Speed — Login Administrador</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap');
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      background: #f0f4f8;
+      overflow: hidden;
+    }
+
+    /* ── Painel esquerdo ── */
+    .left-panel {
+      flex: 1;
+      background: linear-gradient(145deg, #0d3b6e 0%, #1a6fb5 45%, #3aabdf 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 50px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Círculos decorativos de fundo */
+    .left-panel::before {
+      content: '';
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      border: 60px solid rgba(255,255,255,0.06);
+      top: -150px;
+      left: -150px;
+    }
+    .left-panel::after {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      border: 50px solid rgba(255,255,255,0.06);
+      bottom: -120px;
+      right: -100px;
+    }
+
+    .left-panel .brand-logo {
+      width: 280px;
+      max-width: 80%;
+      margin-bottom: 40px;
+      filter: brightness(0) invert(1);
+      position: relative;
+      z-index: 1;
+    }
+
+    .left-panel .tagline {
+      color: rgba(255,255,255,0.92);
+      font-size: 1.35rem;
+      font-weight: 300;
+      text-align: center;
+      line-height: 1.6;
+      max-width: 340px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .left-panel .tagline strong {
+      color: #ffffff;
+      font-weight: 700;
+      display: block;
+      font-size: 1.6rem;
+      margin-bottom: 8px;
+    }
+
+    /* Ícones decorativos de velocidade */
+    .speed-lines {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      z-index: 1;
+    }
+    .speed-lines span {
+      display: block;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.35);
+    }
+    .speed-lines span:nth-child(1) { width: 40px; }
+    .speed-lines span:nth-child(2) { width: 70px; }
+    .speed-lines span:nth-child(3) { width: 50px; }
+    .speed-lines span:nth-child(4) { width: 30px; }
+
+    /* ── Painel direito (formulário) ── */
+    .right-panel {
+      width: 480px;
+      min-width: 380px;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 50px;
+      box-shadow: -8px 0 40px rgba(0,0,0,0.08);
+      position: relative;
+      z-index: 2;
+    }
+
+    .form-header {
+      width: 100%;
+      margin-bottom: 36px;
+    }
+
+    .form-header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #1e2d3d;
+      margin-bottom: 6px;
+    }
+
+    .form-header p {
+      font-size: 0.95rem;
+      color: #8a9ab0;
+      font-weight: 400;
+    }
+
+    /* Formulário */
+    .login-form {
+      width: 100%;
+    }
+
+    .form-group {
+      margin-bottom: 22px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #4d5358;
+      margin-bottom: 8px;
+      letter-spacing: 0.3px;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper .icon {
+      position: absolute;
+      left: 16px;
+      color: #b0bec5;
+      font-size: 1.1rem;
+      pointer-events: none;
+    }
+
+    .input-wrapper input {
+      width: 100%;
+      padding: 14px 16px 14px 46px;
+      border: 1.5px solid #e0e7ef;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-family: 'Nunito', sans-serif;
+      color: #1e2d3d;
+      background: #f8fafc;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      outline: none;
+    }
+
+    .input-wrapper input::placeholder {
+      color: #b0bec5;
+    }
+
+    .input-wrapper input:focus {
+      border-color: #1a7cc7;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(26, 124, 199, 0.12);
+    }
+
+    /* Toggle senha */
+    .toggle-password {
+      position: absolute;
+      right: 14px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #b0bec5;
+      font-size: 1rem;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+    .toggle-password:hover { color: #1a7cc7; }
+
+    /* Linha "Esqueceu a senha" */
+    .form-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      margin-top: -8px;
+    }
+
+    .remember-me {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .remember-me input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #1a7cc7;
+      cursor: pointer;
+    }
+
+    .remember-me span {
+      font-size: 0.85rem;
+      color: #6b7a8d;
+    }
+
+    .forgot-link {
+      font-size: 0.85rem;
+      color: #1a7cc7;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .forgot-link:hover { color: #0d3b6e; text-decoration: underline; }
+
+    /* Botão de login */
+    .btn-login {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #1a7cc7 0%, #3aabdf 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Nunito', sans-serif;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 18px rgba(26, 124, 199, 0.35);
+    }
+
+    .btn-login:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(26, 124, 199, 0.45);
+    }
+
+    .btn-login:active {
+      transform: translateY(0);
+    }
+
+    /* Footer */
+    .form-footer {
+      text-align: center;
+      font-size: 0.82rem;
+      color: #8a9ab0;
+      margin-top: 32px;
+    }
+
+    .form-footer a {
+      color: #1a7cc7;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* Versão mobile */
+    @media (max-width: 768px) {
+      body { flex-direction: column; overflow: auto; }
+      .left-panel {
+        padding: 40px 30px;
+        flex: none;
+        min-height: 220px;
+      }
+      .left-panel .brand-logo { width: 180px; margin-bottom: 16px; }
+      .left-panel .tagline { font-size: 1rem; }
+      .left-panel .tagline strong { font-size: 1.2rem; }
+      .right-panel {
+        width: 100%;
+        min-width: unset;
+        padding: 40px 28px;
+        box-shadow: none;
+      }
+    }
+  </style>
 </head>
-<body style="justify-content: center; align-items: center;">
+<body>
 
-    <div class="login-container">
-        <div class="login-card glass-panel">
-            <div class="login-header">
-                <div class="brand-logo login-logo">CS</div>
-                <h2 style="font-weight: 700; font-size: 1.5rem; margin-top: 10px;">Painel Administrativo</h2>
-                <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 4px;">Faça login com sua conta administradora SaaS</p>
-            </div>
+  <!-- ── Painel esquerdo ── -->
+  <div class="left-panel">
+    <img src="/adm/static/images/logo.png" onerror="this.outerHTML='<div class=\'brand-logo\' style=\'color:#fff;font-size:2.2rem;font-weight:800;margin-bottom:40px;position:relative;z-index:1;font-family:\\\'Nunito\\\',sans-serif;\'>Coliseu<span style=\'color:#3aabdf;\'>Speed</span></div>'" alt="Coliseu Speed" class="brand-logo" />
+    <p class="tagline">
+      <strong>Nunca foi tão rápido<br>fechar uma venda.</strong>
+      A plataforma de vendas mais ágil<br>do mercado, na palma da sua mão.
+    </p>
+    <div class="speed-lines">
+      <span></span><span></span><span></span><span></span>
+    </div>
+  </div>
 
-            {% if error_message %}
-                <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: var(--danger); padding: 12px; border-radius: 10px; font-size: 0.85rem; margin-bottom: 20px; text-align: center;">
-                    {{ error_message }}
-                </div>
-            {% endif %}
-
-            <form action="/adm/auth/login" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label for="email" class="form-label">Endereço de E-mail</label>
-                    <input type="email" id="email" name="email" class="form-control" placeholder="admin@coliseusistemas.com.br" required>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 0;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <label for="password" class="form-label">Senha</label>
-                        <a href="/adm/forgot-password" style="font-size: 0.8rem; color: var(--primary); text-decoration: none;">Esqueceu a senha?</a>
-                    </div>
-                    <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required>
-                </div>
-
-                <button type="submit" class="btn btn-primary" style="justify-content: center; width: 100%; margin-top: 10px;">
-                    <span>Entrar no Painel</span>
-                    <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-                </button>
-            </form>
-        </div>
+  <!-- ── Painel direito (formulário) ── -->
+  <div class="right-panel">
+    <div class="form-header">
+      <h1>Bem-vindo de volta 👋</h1>
+      <p>Faça login para acessar o Painel Admin</p>
     </div>
 
-    <script>
-        lucide.createIcons();
-    </script>
+    {% if error_message %}
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444; padding: 12px; border-radius: 10px; font-size: 0.85rem; width: 100%; margin-bottom: 20px; text-align: center;">
+            {{ error_message }}
+        </div>
+    {% endif %}
+
+    <form class="login-form" method="POST" action="/adm/auth/login">
+
+      <!-- Usuário / E-mail -->
+      <div class="form-group">
+        <label for="email">E-mail ou usuário</label>
+        <div class="input-wrapper">
+          <span class="icon">
+            <!-- ícone usuário SVG inline -->
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </span>
+          <input
+            type="text"
+            id="email"
+            name="email"
+            placeholder="seu@email.com"
+            autocomplete="username"
+            required
+          />
+        </div>
+      </div>
+
+      <!-- Senha -->
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <div class="input-wrapper">
+          <span class="icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </span>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+          <button type="button" class="toggle-password" onclick="togglePassword()" title="Mostrar/ocultar senha">
+            <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Opções -->
+      <div class="form-options">
+        <label class="remember-me">
+          <input type="checkbox" id="remember" />
+          <span>Lembrar de mim</span>
+        </label>
+        <a href="/adm/forgot-password" class="forgot-link">Esqueceu a senha?</a>
+      </div>
+
+      <!-- Botão -->
+      <button type="submit" class="btn-login">Entrar no sistema</button>
+
+    </form>
+
+    <div class="form-footer">
+      Não tem uma conta?
+      <a href="#">Solicite seu acesso</a>
+    </div>
+  </div>
+
+  <script>
+    function togglePassword() {
+      const input = document.getElementById('password');
+      const icon = document.getElementById('eye-icon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.innerHTML = `
+          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+          <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+          <line x1="1" y1="1" x2="23" y2="23"/>
+        `;
+      } else {
+        input.type = 'password';
+        icon.innerHTML = `
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        `;
+      }
+    }
+  </script>
+
 </body>
 </html>
