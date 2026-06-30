@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Catálogo — ColiseuSpeed Force{% endblock %}
+{% block header_title %}Catálogo de Produtos{% endblock %}
+{% block header_subtitle %}Consulte a lista de mercadorias e a disponibilidade de estoque{% endblock %}
+
+{% block content %}
+<div class="catalog-panel" style="height: auto;">
+    <!-- Catalog Query Filters -->
+    <div class="card" style="padding: 16px;">
+        <div class="catalog-search-bar">
+            <input 
+                type="text" 
+                id="search-input" 
+                class="form-control" 
+                placeholder="Busque por código, descrição ou marca do produto..." 
+                oninput="debounceSearch()"
+            >
+            <button onclick="searchProducts(document.getElementById('search-input').value)" class="btn btn-primary">
+                <i data-lucide="search"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div id="catalog-grid-container" class="catalog-grid" style="overflow-y: visible;">
+        {% for prod in products %}
+        <div class="product-card">
+            <div class="product-img">📦</div>
+            <div class="product-info">
+                <div class="product-code">{{ prod.code }}</div>
+                <div class="product-name">{{ prod.name }}</div>
+                <div class="product-stock {% if prod.stock > 0 %}stock-badge-green{% else %}stock-badge-red{% endif %}">
+                    Estoque: {{ prod.stock }}
+                </div>
+                <div class="product-price">R$ {{ "%.2f"|format(prod.price) }}</div>
+            </div>
+            <a href="/orders/new" class="btn btn-primary btn-sm" style="text-decoration: none;">
+                Lançar Pedido
+            </a>
+        </div>
+        {% else %}
+        <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">
+            Nenhum produto cadastrado.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

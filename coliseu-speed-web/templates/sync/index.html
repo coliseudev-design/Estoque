@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Sincronização ERP — ColiseuSpeed Force{% endblock %}
+{% block header_title %}Sincronização com ERP Firebird{% endblock %}
+{% block header_subtitle %}Acompanhe o status de integração de dados em tempo real{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+    
+    <!-- Sync Status Panel -->
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; padding: 24px;">
+        <div>
+            <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark);">Status de Integração</h3>
+            
+            <div style="margin-bottom: 16px;">
+                <span class="badge" style="background: rgba(16,185,129,0.1); color: var(--success); font-size: 0.85rem; padding: 6px 12px; border-radius: 12px; font-weight: 700;">
+                    CONECTADO AO ERP
+                </span>
+            </div>
+            
+            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5;">
+                Última sincronização de dados:<br>
+                <strong>{{ sync.last_sync }}</strong>
+            </div>
+
+            <div style="font-size: 0.9rem; color: var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 12px;">
+                Pedidos na fila local: <strong>{{ sync.queue_size }}</strong>
+            </div>
+        </div>
+
+        <button onclick="forceSync()" class="btn btn-primary btn-block" style="margin-top: 30px;">
+            <i data-lucide="refresh-cw"></i>
+            <span>Sincronizar Catálogo Agora</span>
+        </button>
+    </div>
+
+    <!-- Sync Logs Console -->
+    <div class="card" style="padding: 24px;">
+        <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 16px; color: var(--primary-dark);">Logs Operacionais Recentes</h3>
+        
+        <div style="background: #0f172a; border: 1.5px solid #1e293b; color: #a7f3d0; padding: 16px; border-radius: 10px; font-family: monospace; font-size: 0.82rem; height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+            {% for log in sync.logs %}
+            <div style="line-height: 1.4;">
+                <span style="color: #38bdf8;">{{ log[:10] }}</span>
+                <span>{{ log[10:] }}</span>
+            </div>
+            {% else %}
+            <div style="color: var(--text-muted); text-align: center; padding-top: 40px;">Sem registros de log.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

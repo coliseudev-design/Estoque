@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Pedidos — ColiseuSpeed Force{% endblock %}
+{% block header_title %}Histórico de Pedidos{% endblock %}
+{% block header_subtitle %}Monitore e consulte pedidos e orçamentos faturados pelo representante{% endblock %}
+
+{% block content %}
+<div class="card table-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 1.1rem; font-weight: 800;">Lista de Lançamentos</h2>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Nº Lançamento</th>
+                <th>Cliente</th>
+                <th>CNPJ</th>
+                <th>Valor Total</th>
+                <th>Tipo</th>
+                <th>Status ERP</th>
+                <th style="text-align: right;">Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td style="font-weight: 700;">#{{ order.id }}</td>
+                <td style="font-weight: 600; color: var(--text-primary);">{{ order.customer_name }}</td>
+                <td>{{ order.customer_cnpj }}</td>
+                <td style="font-weight: 700; color: var(--primary-color);">R$ {{ "%.2f"|format(order.total_amount) }}</td>
+                <td>
+                    <span class="badge" style="background: rgba(33,150,243,0.06); color: var(--primary-light); padding: 4px 8px; border-radius: 8px;">
+                        {{ 'Pedido' if order.status != 'budget' else 'Orçamento' }}
+                    </span>
+                </td>
+                <td>
+                    {% if order.erp_order_id %}
+                    <span class="badge" style="background: rgba(16,185,129,0.08); color: var(--success); padding: 4px 8px; border-radius: 8px;">
+                        Integrado ({{ order.erp_order_id }})
+                    </span>
+                    {% elif order.status == 'budget' %}
+                    <span class="badge" style="background: rgba(148,163,184,0.08); color: var(--text-secondary); padding: 4px 8px; border-radius: 8px;">
+                        Orçamento
+                    </span>
+                    {% else %}
+                    <span class="badge" style="background: rgba(245,158,11,0.08); color: var(--warning); padding: 4px 8px; border-radius: 8px;">
+                        Pendente Sync
+                    </span>
+                    {% endif %}
+                </td>
+                <td style="text-align: right;">
+                    <a href="/orders/{{ order.id }}" class="btn btn-secondary btn-sm" style="padding: 6px 10px;">
+                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
+                        <span>Ver Ficha</span>
+                    </a>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                    Nenhum pedido ou orçamento lançado.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

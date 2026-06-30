@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Detalhes do Pedido #{{ order.id }} — ColiseuSpeed Force{% endblock %}
+{% block header_title %}Pedido #{{ order.id }}{% endblock %}
+{% block header_subtitle %}Ficha de faturamento e canais de compartilhamento do pedido{% endblock %}
+
+{% block header_actions %}
+<a href="/orders" class="btn btn-secondary">
+    <i data-lucide="arrow-left"></i>
+    <span>Voltar</span>
+</a>
+{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start;">
+    
+    <!-- Left column: Order Data Details and invoice preview -->
+    <div style="display: flex; flex-direction: column; gap: 24px;">
+        <!-- Ficha Resumida -->
+        <div class="card" style="padding: 24px;">
+            <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark); display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="file-text"></i>
+                <span>Resumo da Operação</span>
+            </h3>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div style="padding: 12px; background: #f8fafc; border-radius: 8px;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700;">Cliente</div>
+                    <div style="font-size: 0.95rem; font-weight: 700; margin-top: 4px;">{{ order.customer_name }}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">CNPJ: {{ order.customer_cnpj }}</div>
+                </div>
+                <div style="padding: 12px; background: #f8fafc; border-radius: 8px;">
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 700;">Código ERP Ref</div>
+                    <div style="font-size: 0.95rem; font-weight: 700; margin-top: 4px; color: {% if order.erp_order_id %}var(--success){% else %}var(--text-primary){% endif %};">
+                        {{ order.erp_order_id or 'Aguardando Integração ERP' }}
+                    </div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">Emissão: {{ order.created_at }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoice Text Preview -->
+        <div class="card" style="padding: 24px;">
+            <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 16px; color: var(--primary-dark); display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="receipt"></i>
+                <span>Visualização do Recibo</span>
+            </h3>
+            
+            <pre style="background: #0f172a; color: #38bdf8; padding: 20px; border-radius: 10px; font-family: monospace; font-size: 0.85rem; overflow-x: auto; white-space: pre-wrap; line-height: 1.5; border: 1.5px solid #1e293b;">{{ invoice_text }}</pre>
+        </div>
+    </div>
+
+    <!-- Right column: Sharing panel based on active integrations -->
+    <div class="card" style="padding: 24px;">
+        <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark); display: flex; align-items: center; gap: 10px;">
+            <i data-lucide="share-2"></i>
+            <span>Compartilhar & Ações</span>
+        </h3>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <!-- Baixar PDF - Sempre habilitado -->
+            <a href="/orders/{{ order.id }}/pdf" class="btn btn-secondary btn-block" style="justify-content: flex-start; padding: 12px 16px;" target="_blank">
+                <i data-lucide="download" style="color: var(--text-secondary);"></i>
+                <span>Baixar PDF Fatura</span>
+            </a>
+
+            <!-- WhatsApp - condicional -->
+            {% if integrations.whatsapp.enabled %}
+            <button onclick="shareWhatsApp({{ order.id }})" class="btn btn-secondary btn-block" style="justify-content: flex-start; padding: 12px 16px;">
+                <i data-lucide="message-square" style="color: var(--success);"></i>
+                <span>Enviar via WhatsApp</span>
+            </button>
+            {% endif %}
+
+            <!-- E-mail - condicional -->
+            {% if integrations.email.enabled %}
+            <button onclick="shareEmail({{ order.id }})" class="btn btn-secondary btn-block" style="justify-content: flex-start; padding: 12px 16px;">
+                <i data-lucide="mail" style="color: var(--primary-color);"></i>
+                <span>Enviar por E-mail</span>
+            </button>
+            {% endif %}
+
+            <!-- Contrato - condicional -->
+            {% if integrations.contract.enabled %}
+            <a href="/orders/{{ order.id }}/share/contract" class="btn btn-secondary btn-block" style="justify-content: flex-start; padding: 12px 16px;" target="_blank">
+                <i data-lucide="file-signature" style="color: var(--warning);"></i>
+                <span>Gerar Contrato Venda</span>
+            </a>
+            {% endif %}
+
+            <!-- Fiscal - condicional -->
+            {% if integrations.fiscal.enabled %}
+            <a href="/orders/{{ order.id }}/share/fiscal" class="btn btn-success btn-block" style="justify-content: center; padding: 12px 16px; margin-top: 10px;" target="_blank">
+                <i data-lucide="file-check"></i>
+                <span>Transmitir NF-e</span>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

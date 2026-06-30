@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ColiseuSpeed Web{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/web_style.css">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; color: #fff;">CS</div>
+            <div class="sidebar-logo">Coliseu<span>Speed</span></div>
+        </div>
+
+        <ul class="sidebar-menu">
+            <li class="sidebar-item {% if active_page == 'dashboard' %}active{% endif %}">
+                <a href="/">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Painel KPIs</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'catalog' %}active{% endif %}">
+                <a href="/catalog">
+                    <i data-lucide="shopping-bag"></i>
+                    <span>Catálogo</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'new_order' %}active{% endif %}">
+                <a href="/orders/new">
+                    <i data-lucide="shopping-cart"></i>
+                    <span>Novo Pedido</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'orders' %}active{% endif %}">
+                <a href="/orders">
+                    <i data-lucide="history"></i>
+                    <span>Histórico Pedidos</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'customers' %}active{% endif %}">
+                <a href="/customers">
+                    <i data-lucide="users"></i>
+                    <span>Clientes</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'performance' %}active{% endif %}">
+                <a href="/performance">
+                    <i data-lucide="line-chart"></i>
+                    <span>Desempenho</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'sync' %}active{% endif %}">
+                <a href="/sync">
+                    <i data-lucide="refresh-cw"></i>
+                    <span>Sincronização</span>
+                </a>
+            </li>
+            <li class="sidebar-item {% if active_page == 'settings' %}active{% endif %}">
+                <a href="/settings">
+                    <i data-lucide="settings"></i>
+                    <span>Configurações</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            <div class="rep-info">
+                <div class="rep-name">{{ rep_name or 'Vendedor' }}</div>
+                <div class="rep-branch">{{ selected_branch_name or 'Sem filial selecionada' }}</div>
+            </div>
+            <a href="/auth/logout" style="color: rgba(255,255,255,0.5); padding: 6px; hover: color: #fff;" title="Sair do Sistema">
+                <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Wrapper -->
+    <div class="main-wrapper">
+        <header class="main-header">
+            <div class="header-title">
+                <h1>{% block header_title %}Painel de Vendas{% endblock %}</h1>
+                <p>{% block header_subtitle %}Acompanhamento diário e fechamento rápido{% endblock %}</p>
+            </div>
+            <div class="header-actions">
+                {% block header_actions %}{% endblock %}
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Toast alerts -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/static/js/web_main.js"></script>
+    <script>
+        lucide.createIcons();
+        
+        {% if flash_message %}
+            showToast("{{ flash_message }}", "{{ flash_type or 'success' }}");
+        {% endif %}
+    </script>
+</body>
+</html>

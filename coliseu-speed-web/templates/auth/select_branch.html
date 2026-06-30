@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Selecionar Filial — Coliseu Speed</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap');
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0f4f8;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #1e2d3d;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 0.9rem;
+      color: #64748b;
+      margin-bottom: 30px;
+    }
+
+    .branch-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .branch-btn {
+      width: 100%;
+      padding: 16px 20px;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e2d3d;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s;
+    }
+
+    .branch-btn:hover {
+      border-color: #1a7cc7;
+      background: rgba(26, 124, 199, 0.04);
+      color: #1a7cc7;
+    }
+
+    .branch-icon {
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="font-size: 2.2rem; margin-bottom: 16px;">🏢</div>
+    <h1>Selecione a Filial</h1>
+    <p>Escolha a filial na qual deseja lançar as vendas de hoje</p>
+
+    <form action="/auth/select-branch" method="POST" class="branch-list">
+      {% for branch in branches %}
+      <button type="submit" name="branch_id" value="{{ branch.id }}" class="branch-btn">
+        <span>{{ branch.name }}</span>
+        <span class="branch-icon">➔</span>
+      </button>
+      {% endfor %}
+    </form>
+  </div>
+</body>
+</html>

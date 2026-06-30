@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Painel KPIs — ColiseuSpeed Force{% endblock %}
+{% block header_title %}Painel de Desempenho{% endblock %}
+{% block header_subtitle %}Monitore seus resultados de vendas em tempo real{% endblock %}
+
+{% block content %}
+<!-- KPIs Row -->
+<div class="kpis-grid">
+    <!-- Total Vendido -->
+    <div class="card kpi-card">
+        <div class="kpi-info">
+            <h3>Total Vendido (Mês)</h3>
+            <div class="value">R$ {{ "%.2f"|format(kpis.total_sales) }}</div>
+        </div>
+        <div class="kpi-icon" style="color: var(--success); background: rgba(16,185,129,0.08);">
+            <i data-lucide="trending-up"></i>
+        </div>
+    </div>
+    
+    <!-- Meta -->
+    <div class="card kpi-card">
+        <div class="kpi-info">
+            <h3>Meta Mensal</h3>
+            <div class="value">R$ {{ "%.2f"|format(kpis.sales_target) }}</div>
+        </div>
+        <div class="kpi-icon">
+            <i data-lucide="target"></i>
+        </div>
+    </div>
+
+    <!-- % Atingimento -->
+    <div class="card kpi-card">
+        <div class="kpi-info">
+            <h3>Atingimento Meta</h3>
+            <div class="value">{{ kpis.achievement_rate }}%</div>
+        </div>
+        <div class="kpi-icon" style="color: var(--warning); background: rgba(245,158,11,0.08);">
+            <i data-lucide="award"></i>
+        </div>
+    </div>
+
+    <!-- Ticket Médio -->
+    <div class="card kpi-card">
+        <div class="kpi-info">
+            <h3>Ticket Médio</h3>
+            <div class="value">R$ {{ "%.2f"|format(kpis.average_ticket) }}</div>
+        </div>
+        <div class="kpi-icon" style="color: var(--primary-light); background: rgba(58,171,223,0.08);">
+            <i data-lucide="coins"></i>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions & Recent Orders Row -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-top: 10px;">
+    <!-- Recent Orders Table -->
+    <div class="card" style="padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="font-size: 1.1rem; font-weight: 800;">Últimos Pedidos Lançados</h2>
+            <a href="/orders/new" class="btn btn-primary btn-sm">
+                <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                <span>Novo Pedido</span>
+            </a>
+        </div>
+
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Nº Pedido</th>
+                        <th>Cliente</th>
+                        <th>ERP Código</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in recent_orders %}
+                    <tr>
+                        <td>
+                            <a href="/orders/{{ order.id }}" style="font-weight: 700; color: var(--primary-color); text-decoration: none;">
+                                #{{ order.id }}
+                            </a>
+                        </td>
+                        <td>{{ order.customer_name }}</td>
+                        <td>
+                            {% if order.erp_order_id %}
+                            <span style="font-family: monospace; font-weight: 600; color: var(--success);">
+                                {{ order.erp_order_id }}
+                            </span>
+                            {% else %}
+                            <span style="font-style: italic; color: var(--text-muted);">Processando...</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-weight: 700;">R$ {{ "%.2f"|format(order.total_amount) }}</td>
+                        <td>
+                            <span class="badge" style="background: {% if order.status == 'confirmed' %}rgba(16,185,129,0.1){% else %}rgba(245,158,11,0.1){% endif %}; color: {% if order.status == 'confirmed' %}var(--success){% else %}var(--warning){% endif %}; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem;">
+                                {{ order.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">Nenhum pedido lançado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sync Info Card -->
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; padding: 20px;">
+        <div>
+            <h2 style="font-size: 1.1rem; font-weight: 800; margin-bottom: 16px;">Sincronização ERP</h2>
+            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 12px;">
+                Última sincronização geral: <br><strong>{{ sync_status.last_sync }}</strong>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 12px;">
+                Fila de Pedidos pendentes: <strong>{{ sync_status.queue_size }}</strong>
+            </div>
+        </div>
+
+        <button onclick="forceSync()" class="btn btn-secondary btn-block" style="margin-top: 20px;">
+            <i data-lucide="refresh-cw" style="width: 16px; height: 16px;"></i>
+            <span>Sincronizar ERP Manual</span>
+        </button>
+    </div>
+</div>
+{% endblock %}

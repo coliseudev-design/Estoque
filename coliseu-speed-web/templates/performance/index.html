@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Desempenho — ColiseuSpeed Force{% endblock %}
+{% block header_title %}Meu Desempenho{% endblock %}
+{% block header_subtitle %}Análise visual de metas de faturamento e vendas por categoria{% endblock %}
+
+{% block content %}
+<!-- Goals Card -->
+<div class="card" style="padding: 24px;">
+    <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark);">Meta Mensal de Vendas</h3>
+    {% set pct = kpis.achievement_rate %}
+    <div style="width: 100%; height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; position: relative;">
+        <div style="width: {{ pct }}%; height: 100%; background: linear-gradient(90deg, var(--primary-color) 0%, var(--success) 100%); border-radius: 10px;"></div>
+    </div>
+    <div style="display: flex; justify-content: space-between; margin-top: 10px; font-weight: 700; font-size: 0.9rem;">
+        <span style="color: var(--text-secondary);">Realizado: R$ {{ "%.2f"|format(kpis.total_sales) }}</span>
+        <span style="color: var(--success);">{{ pct }}% Atingido</span>
+        <span style="color: var(--text-secondary);">Meta: R$ {{ "%.2f"|format(kpis.sales_target) }}</span>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 10px;">
+    
+    <!-- Sales by Category (Vertical Bars in HTML/CSS) -->
+    <div class="card" style="padding: 24px;">
+        <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark);">Vendas por Categoria</h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+            <!-- Category 1 -->
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px;">
+                    <span>Materiais Elétricos</span>
+                    <span>R$ 11.240,00</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                    <div style="width: 75%; height: 100%; background: var(--primary-color); border-radius: 4px;"></div>
+                </div>
+            </div>
+            
+            <!-- Category 2 -->
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px;">
+                    <span>Iluminação</span>
+                    <span>R$ 5.120,80</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                    <div style="width: 40%; height: 100%; background: var(--primary-light); border-radius: 4px;"></div>
+                </div>
+            </div>
+
+            <!-- Category 3 -->
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px;">
+                    <span>Ferramentas</span>
+                    <span>R$ 2.160,00</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                    <div style="width: 20%; height: 100%; background: var(--success); border-radius: 4px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Selling Products List -->
+    <div class="card" style="padding: 24px;">
+        <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark);">Top 3 Produtos mais Vendidos</h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-weight: 800; font-size: 1.1rem; color: var(--warning);">1º</span>
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.9rem;">Cabo Flexível Sil 2.5mm</div>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Categoria: Elétrica</span>
+                    </div>
+                </div>
+                <div style="font-weight: 800; font-size: 0.9rem; color: var(--primary-color);">62 Rolos</div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--border-color);">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-weight: 800; font-size: 1.1rem; color: var(--text-muted);">2º</span>
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.9rem;">Disjuntor Bipolar Din Siemens</div>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Categoria: Elétrica</span>
+                    </div>
+                </div>
+                <div style="font-weight: 800; font-size: 0.9rem; color: var(--primary-color);">45 Unidades</div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-weight: 800; font-size: 1.1rem; color: #b45309;">3º</span>
+                    <div>
+                        <div style="font-weight: 700; font-size: 0.9rem;">Lâmpada LED Taschibra 12W</div>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Categoria: Iluminação</span>
+                    </div>
+                </div>
+                <div style="font-weight: 800; font-size: 0.9rem; color: var(--primary-color);">38 Unidades</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

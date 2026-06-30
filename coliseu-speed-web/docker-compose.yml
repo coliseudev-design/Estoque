@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  web-client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coliseuspeed-web-app
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      - MIDDLEWARE_URL=http://speed-middleware:3000
+      - ADMIN_PANEL_URL=http://admin-panel:8000
+      - COMPANY_ID=a822a7e7-fdd4-4483-bbb5-26587a72739f
+      - JWT_SECRET=747a7da7a7b9317b9c6a7880abcdef1234567890abcdef1234567890abcdef12
+      - USE_MOCKS=True
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Clientes — ColiseuSpeed Force{% endblock %}
+{% block header_title %}Carteira de Clientes{% endblock %}
+{% block header_subtitle %}Consulte limites de crédito, inadimplências e status cadastrais{% endblock %}
+
+{% block content %}
+<div class="card table-container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="font-size: 1.1rem; font-weight: 800;">Clientes Associados</h2>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Cliente / Razão Social</th>
+                <th>CNPJ / CPF</th>
+                <th>Limite Total</th>
+                <th>Crédito Disponível</th>
+                <th>Consumo Limite</th>
+                <th>Situação ERP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cust in customers %}
+            <tr>
+                <td>
+                    <div style="font-weight: 700; color: var(--text-primary);">{{ cust.name }}</div>
+                </td>
+                <td>{{ cust.cnpj }}</td>
+                <td style="font-weight: 600;">R$ {{ "%.2f"|format(cust.credit_limit) }}</td>
+                <td style="font-weight: 700; color: var(--primary-color);">R$ {{ "%.2f"|format(cust.credit_available) }}</td>
+                <td>
+                    <!-- Credit available progress bar -->
+                    {% set consumed_pct = 100 - (cust.credit_available / cust.credit_limit * 100) if cust.credit_limit > 0 else 100 %}
+                    <div style="width: 100%; max-width: 160px; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; position: relative;">
+                        <div style="width: {{ consumed_pct }}%; height: 100%; background: {% if consumed_pct > 85 %}var(--danger){% else %}var(--primary-color){% endif %}; border-radius: 3px;"></div>
+                    </div>
+                    <span style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 4px; display: block;">
+                        {{ "%.1f"|format(consumed_pct) }}% Utilizado
+                    </span>
+                </td>
+                <td>
+                    <span class="badge" style="background: {% if cust.status == 'liberado' %}rgba(16,185,129,0.1){% else %}rgba(239,68,68,0.1){% endif %}; color: {% if cust.status == 'liberado' %}var(--success){% else %}var(--danger){% endif %}; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.75rem;">
+                        {{ cust.status|upper }}
+                    </span>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                    Nenhum cliente cadastrado no portfólio.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
