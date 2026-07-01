@@ -1,42 +1,42 @@
 {% extends "base.html" %}
 
-{% block title %}Lançamento de Pedidos — ColiseuSpeed Force{% endblock %}
+{% block title %}Registrar pedido — ColiseuSpeed Force{% endblock %}
 
 {% block content %}
 <style>
-    /* ── Coliseu Purple Design System for Wizard ── */
+    /* Stoqui Design Tokens */
     :root {
-        --purple-primary: #7C3AED;
-        --purple-light: #A78BFA;
-        --purple-dark: #6D28D9;
-        --purple-bg: #F5F3FF;
+        --stoqui-purple: #7C3AED;
+        --stoqui-purple-light: #A78BFA;
+        --stoqui-purple-dark: #6D28D9;
+        --stoqui-purple-bg: #F5F3FF;
+        --stoqui-gray-bg: #F8FAFC;
     }
 
-    /* Layout constraints */
-    .wizard-container {
-        max-width: 600px;
-        margin: 0 auto 80px auto;
+    /* Outer wrapper */
+    .stoqui-container {
+        max-width: 1200px;
+        margin: 0 auto;
         background: #ffffff;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
         border: 1px solid var(--border-color);
-        overflow: hidden;
+        min-height: 80vh;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
 
-    /* Compact Header Navigation with back arrow and progress bar */
-    .wizard-header {
-        padding: 16px 20px;
+    /* Stoqui Header Navigation bar */
+    .stoqui-header {
+        padding: 18px 24px;
         border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         gap: 16px;
-        position: relative;
-        background: #fafafa;
+        background: #ffffff;
     }
-
-    .back-btn {
+    .stoqui-header-btn {
         background: none;
         border: none;
         color: var(--text-primary);
@@ -44,282 +44,223 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         transition: var(--transition);
     }
-    .back-btn:hover {
-        background: rgba(0,0,0,0.05);
+    .stoqui-header-btn:hover {
+        background: var(--stoqui-purple-bg);
+        color: var(--stoqui-purple);
     }
-
-    .wizard-header-title {
-        flex: 1;
-    }
-    .wizard-header-title h2 {
-        font-size: 1.15rem;
+    .stoqui-header-title {
+        font-size: 1.2rem;
         font-weight: 800;
-        color: var(--text-primary);
-    }
-    .wizard-header-title span {
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        font-weight: 600;
+        color: #0f172a;
     }
 
-    .progress-bar-container {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: #e2e8f0;
-    }
-    .progress-bar {
-        height: 100%;
-        background: var(--purple-primary);
-        width: 14.2%;
-        transition: width 0.3s ease;
-    }
-
-    /* Wizard Content Area */
-    .wizard-body {
-        padding: 24px;
+    /* Split layout desktop pane */
+    .stoqui-split-layout {
+        display: grid;
+        grid-template-columns: 1fr;
         flex: 1;
     }
-
-    .step-container {
-        display: none;
+    @media (min-width: 768px) {
+        .stoqui-split-layout {
+            grid-template-columns: 1.3fr 0.7fr;
+        }
+        .stoqui-split-left {
+            border-right: 1px solid var(--border-color);
+        }
     }
-    .step-container.active {
-        display: block;
-    }
 
-    /* Step 1: Empty state placeholder */
-    .empty-cart-state {
+    .stoqui-split-left {
+        padding: 24px;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 60px 20px;
-        text-align: center;
-    }
-    .empty-cart-icon {
-        font-size: 4rem;
-        margin-bottom: 20px;
-        color: var(--purple-light);
+        gap: 20px;
+        background: var(--stoqui-gray-bg);
     }
 
-    /* Floating action buttons */
-    .float-add-btn {
-        position: fixed;
-        bottom: 85px;
-        right: 20px;
-        background: var(--purple-primary);
-        color: #ffffff;
-        border: none;
-        border-radius: 50%;
-        width: 56px;
-        height: 56px;
+    .stoqui-split-right {
+        padding: 24px;
         display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 15px rgba(124, 92, 246, 0.4);
-        cursor: pointer;
-        z-index: 99;
-        transition: var(--transition);
-    }
-    .float-add-btn:hover {
-        background: var(--purple-dark);
-        transform: scale(1.05);
+        flex-direction: column;
+        justify-content: space-between;
+        background: #ffffff;
     }
 
-    /* Big purple buttons */
-    .btn-purple {
-        background: linear-gradient(135deg, var(--purple-primary) 0%, var(--purple-light) 100%);
-        color: #ffffff;
-        box-shadow: 0 4px 14px rgba(124, 92, 246, 0.3);
-    }
-    .btn-purple:hover {
-        opacity: 0.95;
-    }
-
-    /* Item Card layout */
-    .product-list-card {
+    /* Product card item list */
+    .stoqui-product-card {
         background: #ffffff;
         border: 1px solid var(--border-color);
         border-radius: 12px;
         padding: 16px;
-        margin-bottom: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    }
-    .product-list-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    /* Customer Selection Card */
-    .customer-picker-card {
-        border: 1.5px solid var(--border-color);
-        border-radius: 12px;
-        padding: 16px;
         display: flex;
         align-items: center;
         justify-content: space-between;
         cursor: pointer;
         transition: var(--transition);
     }
-    .customer-picker-card:hover {
-        border-color: var(--purple-primary);
-        background: var(--purple-bg);
+    .stoqui-product-card:hover {
+        border-color: var(--stoqui-purple);
+        box-shadow: 0 4px 12px rgba(124, 92, 246, 0.06);
     }
-    .customer-avatar {
-        width: 44px;
-        height: 44px;
-        border-radius: 50%;
-        background: var(--purple-primary);
+
+    /* Inline cart edit view */
+    .cart-inline-edit {
+        background: var(--stoqui-gray-bg);
+        border: 1px dashed var(--stoqui-purple-light);
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Active Purple buttons */
+    .btn-stoqui {
+        background: var(--stoqui-purple);
         color: #ffffff;
+        font-weight: 700;
+        border-radius: 8px;
+        min-height: 48px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 700;
-        font-size: 1.1rem;
-    }
-
-    /* Delivery select styles */
-    .delivery-radio-card {
-        border: 1.5px solid var(--border-color);
-        border-radius: 12px;
-        padding: 16px;
-        display: flex;
-        align-items: center;
-        gap: 16px;
+        gap: 8px;
+        border: none;
+        width: 100%;
         cursor: pointer;
+        box-shadow: 0 4px 12px rgba(124, 92, 246, 0.2);
         transition: var(--transition);
-        margin-bottom: 12px;
     }
-    .delivery-radio-card:hover {
-        border-color: var(--purple-primary);
+    .btn-stoqui:hover {
+        background: var(--stoqui-purple-dark);
     }
-    .delivery-radio-card.selected {
-        border-color: var(--purple-primary);
-        background: var(--purple-bg);
-        color: var(--purple-dark);
+    .btn-stoqui:disabled {
+        background: #e2e8f0;
+        color: #94a3b8;
+        cursor: not-allowed;
+        box-shadow: none;
     }
 
-    /* Payment Methods Grid */
-    .payment-grid {
+    /* Single pane centered wizard stages */
+    .stoqui-wizard-body {
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 40px 24px;
+        width: 100%;
+    }
+
+    /* Keypad grid input */
+    .keypad-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 12px;
-        margin-top: 16px;
+        max-width: 360px;
+        margin: 20px auto;
     }
-    .payment-card {
-        border: 1.5px solid var(--border-color);
-        border-radius: 12px;
-        padding: 16px 8px;
-        text-align: center;
-        cursor: pointer;
-        transition: var(--transition);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
+    .keypad-key {
         background: #ffffff;
-    }
-    .payment-card:hover {
-        border-color: var(--purple-primary);
-        background: var(--purple-bg);
-    }
-    .payment-card i {
-        color: var(--purple-primary);
-    }
-    .payment-card span {
+        border: 1.5px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 1.4rem;
         font-weight: 700;
-        font-size: 0.8rem;
-        color: var(--text-primary);
+        padding: 14px;
+        cursor: pointer;
+        text-align: center;
+        transition: var(--transition);
+        color: #0f172a;
     }
-
-    /* Checkmark success anim */
-    .checkmark-circle {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        background: rgba(76, 175, 80, 0.1);
-        color: var(--success);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 24px auto;
-        font-size: 2.5rem;
+    .keypad-key:hover {
+        background: var(--stoqui-purple-bg);
+        border-color: var(--stoqui-purple);
+        color: var(--stoqui-purple);
     }
 </style>
 
-<div class="wizard-container">
+<div class="stoqui-container">
     
-    <!-- Wizard header navigation -->
-    <header class="wizard-header">
-        <button type="button" class="back-btn" id="back-button" onclick="navigateBack()">
-            <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
+    <!-- Header with Back navigation -->
+    <header class="stoqui-header">
+        <button type="button" class="stoqui-header-btn" id="header-back-btn" onclick="onHeaderBack()">
+            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
         </button>
-        <div class="wizard-header-title">
-            <h2 id="header-step-title">Novo pedido</h2>
-            <span id="header-step-subtitle">Etapa 1 de 7</span>
-        </div>
-        <div class="progress-bar-container">
-            <div id="wizard-progress-bar" class="progress-bar"></div>
-        </div>
+        <span class="stoqui-header-title" id="header-title">Registrar pedido</span>
     </header>
 
-    <div class="wizard-body">
-
-        <!-- ETAPA 1: PRODUTOS (Carrinho Vazio) -->
-        <section id="step-1" class="step-container active">
-            <div class="empty-cart-state" onclick="openModal('catalog-picker-modal')">
-                <div class="empty-cart-icon">🛒</div>
-                <h3 style="font-weight: 800; font-size: 1.15rem; margin-bottom: 6px;">Nenhum produto adicionado</h3>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">Clique para adicionar produtos ao pedido</p>
+    <!-- ETAPAS 1 & 2: REGISTRAR PEDIDO (Dual Pane Split) -->
+    <div id="pane-split-checkout" class="stoqui-split-layout">
+        
+        <!-- Left Panel: Product search and grid -->
+        <div class="stoqui-split-left">
+            <div class="input-wrapper" style="box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+                <span class="icon">🔍</span>
+                <input 
+                    type="text" 
+                    id="catalog-search-input" 
+                    class="form-control" 
+                    placeholder="Pesquise por nome, ou leia o código de barras..." 
+                    oninput="onCatalogSearch(this.value)"
+                    style="border-color: var(--stoqui-purple-light); font-size: 0.95rem; min-height: 48px; border-radius: 8px;"
+                >
             </div>
-        </section>
-
-        <!-- ETAPA 2: PRODUTOS (Com Itens no Carrinho) -->
-        <section id="step-2" class="step-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                <span id="step-2-summary-text" style="font-weight: 700; font-size: 0.9rem; color: var(--text-secondary);">1 item</span>
-                <button type="button" onclick="clearCart()" class="btn btn-secondary btn-sm" style="min-height: 32px; width: auto; color: var(--danger); background: rgba(244, 67, 54, 0.08);">
-                    Limpar
-                </button>
+            
+            <div id="catalog-products-list" style="display: flex; flex-direction: column; gap: 12px; max-height: 50vh; overflow-y: auto;">
+                <!-- Filled dynamically -->
             </div>
+        </div>
 
-            <!-- Items List -->
-            <div id="cart-items-list" style="margin-bottom: 24px;"></div>
-
-            <!-- Step 2 Footer summary -->
-            <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <span style="font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Total:</span>
-                    <span id="step-2-total-val" style="font-size: 1.4rem; font-weight: 800; color: var(--purple-primary);">R$ 0,00</span>
+        <!-- Right Panel: Fixed Shopping Cart -->
+        <div class="stoqui-split-right">
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                    <h3 id="cart-title-text" style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Carrinho (0 itens)</h3>
+                    <button type="button" onclick="clearCart()" id="btn-clear-cart" class="btn btn-secondary btn-sm" style="display: none; min-height: 32px; width: auto; color: var(--stoqui-purple); background: none; border: none; font-weight: 700;">
+                        <i data-lucide="trash" style="width: 14px; height: 14px; margin-right: 4px;"></i> Limpar
+                    </button>
                 </div>
-                <button type="button" onclick="advanceStep(3)" class="btn btn-purple">
+
+                <!-- Dynamic Cart rows list -->
+                <div id="cart-rows-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 45vh; overflow-y: auto;">
+                    <!-- Empty cart fallback -->
+                    <div id="cart-empty-placeholder" style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+                        <i data-lucide="shopping-cart" style="width: 48px; height: 48px; margin: 0 auto 12px auto; color: #94a3b8; stroke-width: 1.5;"></i>
+                        <h4 style="font-weight: 700; font-size: 0.95rem; color: #334155;">Carrinho vazio</h4>
+                        <p style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">Pesquise e adicione produtos ao lado para começar</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cart bottom totals and Continue trigger -->
+            <div style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <span style="font-size: 1.1rem; font-weight: 700; color: #334155;">Total</span>
+                    <span id="cart-total-val" style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">R$ 0</span>
+                </div>
+                
+                <button type="button" id="btn-continue-step3" onclick="advanceStep(3)" class="btn-stoqui" disabled>
                     <span>Continuar →</span>
                 </button>
             </div>
-        </section>
+        </div>
 
+    </div>
+
+    <!-- SINGLE PANEL WIZARD (Etapas 3 a 7) -->
+    <div id="pane-single-checkout" class="stoqui-wizard-body" style="display: none;">
+        
         <!-- ETAPA 3: CLIENTE + ENTREGA -->
         <section id="step-3" class="step-container">
-            <!-- Cliente Section -->
-            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="user" style="width: 16px; height: 16px;"></i> Cliente
             </h3>
             
-            <div class="customer-picker-card" onclick="openModal('select-customer-modal')">
+            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="border-radius: 8px; border: 1.5px solid var(--border-color); padding: 14px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <div id="sel-cust-avatar" class="customer-avatar">👤</div>
+                    <div id="sel-cust-avatar" class="customer-avatar" style="background: var(--stoqui-purple);">👤</div>
                     <div>
                         <h4 id="sel-cust-name" style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Outro</h4>
                         <span id="sel-cust-subtitle" style="font-size: 0.8rem; color: var(--text-secondary);">Selecione o cliente</span>
@@ -328,55 +269,40 @@
                 <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
             </div>
 
-            <!-- Entrega Section -->
-            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-top: 28px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-top: 28px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="truck" style="width: 16px; height: 16px;"></i> Entrega
             </h3>
 
-            <div class="delivery-radio-card selected" id="delivery-opt-pickup" onclick="setDeliveryType('pickup')">
-                <i data-lucide="store" style="width: 24px; height: 24px; color: var(--purple-primary);"></i>
+            <div class="delivery-radio-card selected" id="delivery-opt-pickup" onclick="setDeliveryType('pickup')" style="border-radius: 8px;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 700; font-size: 0.9rem;">🏪 Retirada no local</div>
+                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Retirada no local</div>
                     <span style="font-size: 0.78rem; color: var(--text-secondary);">Cliente retira na loja</span>
                 </div>
+                <i data-lucide="store" style="width: 24px; height: 24px; color: var(--stoqui-purple);"></i>
             </div>
 
-            <div class="delivery-radio-card" id="delivery-opt-ship" onclick="setDeliveryType('ship')">
-                <i data-lucide="truck" style="width: 24px; height: 24px; color: var(--purple-primary);"></i>
+            <div class="delivery-radio-card" id="delivery-opt-ship" onclick="setDeliveryType('ship')" style="border-radius: 8px;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 700; font-size: 0.9rem;">🚚 Entrega</div>
+                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Entrega</div>
                     <span style="font-size: 0.78rem; color: var(--text-secondary);">Entregamos no endereço</span>
                 </div>
+                <i data-lucide="truck" style="width: 24px; height: 24px; color: var(--stoqui-purple);"></i>
             </div>
 
-            <!-- Optional Delivery details picker -->
             <div id="delivery-details-panel" style="display: none; margin-top: 12px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
-                <div class="form-group" style="margin-bottom: 8px;">
-                    <label class="form-label" style="font-size: 0.75rem;">Transportadora</label>
-                    <select id="shipper-select" class="form-control" style="min-height: 36px; padding: 6px;">
-                        <option value="propria">Entrega Própria</option>
-                        <option value="correios">Correios (Sedex)</option>
-                        <option value="jadlog">JadLog Express</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" style="font-size: 0.75rem;">Endereço de Entrega</label>
-                    <input type="text" id="delivery-address-input" class="form-control" style="min-height: 36px; padding: 6px;" placeholder="Digite o logradouro completo para entrega">
-                </div>
+                <input type="text" id="delivery-address-input" class="form-control" style="min-height: 38px; padding: 6px;" placeholder="Digite o logradouro completo de entrega">
             </div>
 
-            <!-- Step 3 Footer -->
-            <button type="button" onclick="advanceStep(4)" class="btn btn-purple" style="margin-top: 30px;">
+            <button type="button" onclick="advanceStep(4)" class="btn-stoqui" style="margin-top: 30px;">
                 <span>Continuar para pagamento →</span>
             </button>
         </section>
 
         <!-- ETAPA 4: RESUMO DETALHADO -->
         <section id="step-4" class="step-container">
-            <!-- Client card summary -->
-            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="margin-bottom: 20px;">
+            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="margin-bottom: 20px; border-radius: 8px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <div id="sel-cust-avatar-step4" class="customer-avatar">👤</div>
+                    <div id="sel-cust-avatar-step4" class="customer-avatar" style="background: var(--stoqui-purple);">👤</div>
                     <div>
                         <h4 id="sel-cust-name-step4" style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Outro</h4>
                         <span style="font-size: 0.8rem; color: var(--text-secondary);">Alterar cliente</span>
@@ -385,167 +311,155 @@
                 <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
             </div>
 
-            <!-- Delivery option selected representation -->
             <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Entrega</h3>
             <div id="delivery-summary-box" style="font-size: 0.9rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;"></div>
 
-            <!-- Observations textarea -->
             <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
                 <i data-lucide="menu" style="width: 14px; height: 14px;"></i> Observações
             </h3>
-            <textarea id="order-notes" class="form-control" style="min-height: 80px; padding: 8px; font-size: 0.85rem; margin-bottom: 6px;" placeholder="Adicione observações sobre este pedido..." maxlength="500" oninput="onNotesInput()"></textarea>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <div style="display: flex; gap: 6px;">
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="appendNoteTemplate('Frágil')" style="min-height: 28px; padding: 2px 6px; font-size: 0.7rem;">Frágil</button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="appendNoteTemplate('Entregar após 14h')" style="min-height: 28px; padding: 2px 6px; font-size: 0.7rem;">Após 14h</button>
-                </div>
-                <span id="notes-char-counter" style="font-size: 0.72rem; color: var(--text-secondary);">0 / 500</span>
-            </div>
+            <textarea id="order-notes" class="form-control" style="min-height: 80px; padding: 8px; font-size: 0.85rem; margin-bottom: 20px; border-radius: 8px;" placeholder="Adicione observações sobre este pedido..." maxlength="500"></textarea>
 
-            <!-- Coupon dropdown -->
             <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
                 <i data-lucide="tag" style="width: 14px; height: 14px;"></i> Cupom
             </h3>
-            <select id="coupon-select" class="form-control" style="margin-bottom: 24px;" onchange="onCouponSelect(this.value)">
+            <select id="coupon-select" class="form-control" style="margin-bottom: 24px; border-radius: 8px;" onchange="onCouponSelect(this.value)">
                 <option value="none">Selecione um cupom</option>
-                <option value="COLISEU5">COLISEU5 (5% Desconto Geral)</option>
+                <option value="COLISEU5">COLISEU5 (5% Desconto)</option>
                 <option value="DESCONTO10">DESCONTO10 (R$ 10,00 Desconto)</option>
             </select>
 
-            <!-- Financial detailed override inputs -->
             <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Resumo do pedido:</h3>
-            <div id="financial-summary-list" style="margin-bottom: 24px;"></div>
+            <div id="financial-summary-list" style="margin-bottom: 24px; background: #fafafa; border-radius: 8px; padding: 16px; border: 1px solid var(--border-color);"></div>
 
-            <!-- Step 4 Footer -->
-            <button type="button" onclick="advanceStep(5)" class="btn btn-purple">
+            <button type="button" onclick="advanceStep(5)" class="btn-stoqui">
                 <span>Continuar para pagamento →</span>
             </button>
         </section>
 
-        <!-- ETAPA 5: PAGAMENTO (Seleção) -->
+        <!-- ETAPA 5: PAGAMENTOS (Múltiplas Formas e Saldo) -->
         <section id="step-5" class="step-container">
-            <div style="text-align: center; margin-bottom: 24px;">
-                <span style="font-size: 0.95rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Total a Pagar:</span>
-                <h1 id="step-5-total-val" style="font-size: 2.2rem; font-weight: 800; color: var(--purple-primary); margin-top: 4px;">R$ 0,00</h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+                <span style="font-size: 1.1rem; font-weight: 700; color: #334155;">TOTAL A PAGAR:</span>
+                <span id="step-5-total-val" style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">R$ 0,00</span>
             </div>
 
-            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-                Selecione o Método
-            </h3>
+            <!-- List of added split payments -->
+            <div id="split-payments-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;"></div>
 
+            <!-- Mid split payments selector trigger -->
+            <div id="split-payments-action-area"></div>
+        </section>
+
+        <!-- ETAPA 5.1: MÉTODOS DISPONÍVEIS LIST GRID -->
+        <section id="step-5-grid" class="step-container">
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 16px;">
+                Adicionar pagamento
+            </h3>
             <div class="payment-grid">
-                <div class="payment-card" onclick="selectPaymentMethod('Pix', 'qr-code')">
-                    <i data-lucide="qr-code" style="width: 28px; height: 28px;"></i>
+                <div class="payment-card" onclick="openPaymentKeypad('Pix', 'qr-code')">
+                    <i data-lucide="qr-code" style="width: 24px; height: 24px;"></i>
                     <span>Pix</span>
                 </div>
-                <div class="payment-card" onclick="selectPaymentMethod('Dinheiro', 'banknote')">
-                    <i data-lucide="banknote" style="width: 28px; height: 28px;"></i>
+                <div class="payment-card" onclick="openPaymentKeypad('Dinheiro', 'banknote')">
+                    <i data-lucide="banknote" style="width: 24px; height: 24px;"></i>
                     <span>Dinheiro</span>
                 </div>
-                <div class="payment-card" onclick="selectPaymentMethod('Mercado Pago', 'credit-card')">
-                    <i data-lucide="credit-card" style="width: 28px; height: 28px;"></i>
+                <div class="payment-card" onclick="openPaymentKeypad('Mercado Pago', 'credit-card')">
+                    <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
                     <span>Mercado Pago</span>
                 </div>
-                <div class="payment-card" onclick="selectPaymentMethod('Pagaleve', 'wallet')">
-                    <i data-lucide="wallet" style="width: 28px; height: 28px;"></i>
+                <div class="payment-card" onclick="openPaymentKeypad('Pagaleve', 'wallet')">
+                    <i data-lucide="wallet" style="width: 24px; height: 24px;"></i>
                     <span>Pagaleve</span>
                 </div>
-                <div class="payment-card" onclick="selectPaymentMethod('Cartão de Crédito', 'credit-card')">
-                    <i data-lucide="credit-card" style="width: 28px; height: 28px;"></i>
-                    <span>Cartão Crédito</span>
+                <div class="payment-card" onclick="openPaymentKeypad('Cartão de Crédito', 'credit-card')">
+                    <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
+                    <span>Cartão de Crédito</span>
                 </div>
-                <div class="payment-card" onclick="selectPaymentMethod('Parcelado (PRO)', 'layers')">
-                    <i data-lucide="layers" style="width: 28px; height: 28px;"></i>
-                    <span>Parcelado [PRO]</span>
-                </div>
-                <div class="payment-card" onclick="selectPaymentMethod('Fiado (PRO)', 'user-minus')">
-                    <i data-lucide="user-minus" style="width: 28px; height: 28px;"></i>
-                    <span>Fiado [PRO]</span>
-                </div>
-                <div class="payment-card" onclick="selectPaymentMethod('Cartão de Débito', 'credit-card')">
-                    <i data-lucide="credit-card" style="width: 28px; height: 28px;"></i>
-                    <span>Cartão Débito</span>
-                </div>
-                <div class="payment-card" onclick="showToast('Outras opções disponíveis no ERP corporativo.', 'info')">
-                    <i data-lucide="more-horizontal" style="width: 28px; height: 28px;"></i>
-                    <span>Mais opções</span>
+                <div class="payment-card" onclick="openPaymentKeypad('Cartão de Débito', 'credit-card')">
+                    <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
+                    <span>Cartão de Débito</span>
                 </div>
             </div>
         </section>
 
-        <!-- ETAPA 6: CONFIRMAÇÃO DE PAGAMENTO -->
-        <section id="step-6" class="step-container">
+        <!-- ETAPA 5.2: TECLADO DE VALOR RECEBIDO -->
+        <section id="step-5-keypad" class="step-container">
             <div style="text-align: center; margin-bottom: 24px;">
-                <span style="font-size: 0.95rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Total a Pagar:</span>
-                <h1 id="step-6-total-val" style="font-size: 2.2rem; font-weight: 800; color: var(--purple-primary); margin-top: 4px;">R$ 0,00</h1>
-            </div>
-
-            <div style="background: #fafafa; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="width: 44px; height: 44px; border-radius: 8px; background: rgba(124, 92, 246, 0.08); color: var(--purple-primary); display: flex; align-items: center; justify-content: center;">
-                        <i id="conf-payment-icon" data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
-                    </div>
-                    <div>
-                        <h4 id="conf-payment-name" style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">Cartão de Crédito</h4>
-                        <span id="conf-payment-value" style="font-size: 0.88rem; font-weight: 700; color: var(--purple-primary);">R$ 0,00</span>
-                    </div>
+                <span style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Valor Recebido</span>
+                <div style="font-size: 2.5rem; font-weight: 800; color: var(--stoqui-purple); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                    R$ <input type="number" id="edit-payment-amount-input" style="border: none; background: none; outline: none; font-size: 2.5rem; font-weight: 800; color: var(--stoqui-purple); max-width: 200px; text-align: center;" value="0.00" step="0.01">
                 </div>
-                <button type="button" onclick="deselectPaymentMethod()" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 8px;">
-                    <i data-lucide="x" style="width: 20px; height: 20px;"></i>
-                </button>
+                <div id="keypad-balance-text" style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 6px;"></div>
+                <div id="keypad-total-text" style="font-size: 0.82rem; color: var(--stoqui-purple-light); margin-top: 4px;"></div>
             </div>
 
-            <!-- Confirm Button -->
-            <button type="button" id="btn-submit-order" onclick="onConfirmOrderSubmit()" class="btn btn-purple">
-                <span id="btn-submit-text">Concluir R$ 0,00</span>
+            <!-- Stoqui Numeric Keypad -->
+            <div class="keypad-grid">
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('1')">1</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('2')">2</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('3')">3</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('4')">4</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('5')">5</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('6')">6</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('7')">7</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('8')">8</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('9')">9</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('0')">0</button>
+                <button type="button" class="keypad-key" onclick="onKeypadDigit('00')">00</button>
+                <button type="button" class="keypad-key" onclick="onKeypadBackspace()" style="color: var(--danger);"><i data-lucide="delete" style="width: 20px; height: 20px; display: inline;"></i></button>
+            </div>
+
+            <button type="button" onclick="confirmAddPaymentMethod()" class="btn-stoqui" style="margin-top: 20px;">
+                <span>Adicionar</span>
             </button>
         </section>
 
         <!-- ETAPA 7: SUCESSO -->
         <section id="step-7" class="step-container" style="text-align: center;">
-            <div class="checkmark-circle">✓</div>
+            <div class="checkmark-circle" style="background: rgba(34, 197, 94, 0.08); color: #22c55e;">✓</div>
             <h2 style="font-weight: 800; font-size: 1.5rem; color: var(--text-primary); margin-bottom: 6px;">Pagamento concluído!</h2>
             <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 30px;">O pagamento foi registrado com sucesso</p>
 
             <div style="background: #fafafa; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; text-align: left; margin-bottom: 30px;">
                 <h4 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Detalhes do pagamento</h4>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">
-                    <span id="success-payment-method">Cartão de Crédito</span>
-                    <span id="success-payment-val">R$ 0,00</span>
-                </div>
+                <div id="success-payments-details-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;"></div>
                 <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 12px; font-size: 0.9rem; font-weight: 800; color: var(--text-primary);">
                     <span>Total pago</span>
                     <span id="success-total-paid">R$ 0,00</span>
                 </div>
             </div>
 
-            <button type="button" onclick="finalizeSuccessFlow()" class="btn btn-purple">
-                <span>← Finalizar e ver pedido</span>
+            <button type="button" onclick="finalizeSuccessFlow()" class="btn-stoqui">
+                <span>Finalizar e ver pedido</span>
             </button>
         </section>
 
     </div>
 </div>
 
-<!-- Modal 1: Catálogo Picker -->
-<div id="catalog-picker-modal" class="modal-overlay">
+<!-- Modal 1: Selecionar Cliente Search -->
+<div id="select-customer-modal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-            <h3 style="font-weight: 800; font-size: 1.05rem;">📋 Catálogo de Produtos</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('catalog-picker-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
+            <h3 style="font-weight: 800; font-size: 1.05rem;">👤 Selecionar Cliente</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('select-customer-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
                 <span>Fechar</span>
             </button>
         </div>
         <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px;">
             <input 
                 type="text" 
-                id="catalog-modal-search" 
+                id="customer-modal-search" 
                 class="form-control" 
-                placeholder="Busque produto por nome ou SKU..." 
-                oninput="onModalCatalogSearch(this.value)"
+                placeholder="Busque por nome, CPF/CNPJ ou Telefone..." 
+                oninput="onModalCustomerSearch(this.value)"
             >
+            <button type="button" class="btn btn-secondary" onclick="openModal('new-customer-modal')" style="width: auto; min-height: 44px; padding: 0 12px; background: var(--stoqui-purple); color: #fff; border: none;">
+                <span>+ Novo</span>
+            </button>
         </div>
-        <div id="modal-catalog-grid" class="catalog-grid" style="padding: 16px; flex: 1;"></div>
+        <div id="modal-customer-list" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px;"></div>
     </div>
 </div>
 
@@ -585,39 +499,14 @@
                     <input type="text" id="new-cust-street" class="form-control" placeholder="Nome do logradouro">
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-purple" style="width: 100%; margin-top: 10px;">
+            <button type="submit" class="btn btn-primary btn-stoqui" style="width: 100%; margin-top: 10px;">
                 <span>+ Salvar e Selecionar</span>
             </button>
         </form>
     </div>
 </div>
 
-<!-- Modal 3: Selecionar Cliente Search -->
-<div id="select-customer-modal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-            <h3 style="font-weight: 800; font-size: 1.05rem;">👤 Selecionar Cliente</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('select-customer-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
-                <span>Fechar</span>
-            </button>
-        </div>
-        <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px;">
-            <input 
-                type="text" 
-                id="customer-modal-search" 
-                class="form-control" 
-                placeholder="Busque por nome, CPF/CNPJ ou Telefone..." 
-                oninput="onModalCustomerSearch(this.value)"
-            >
-            <button type="button" class="btn btn-secondary" onclick="openModal('new-customer-modal')" style="width: auto; min-height: 44px; padding: 0 12px;">
-                <span>+ Novo</span>
-            </button>
-        </div>
-        <div id="modal-customer-list" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px;"></div>
-    </div>
-</div>
-
-<!-- Modal 4: Edit Resumo values popover -->
+<!-- Modal 3: Edit Resumo values popover -->
 <div id="edit-values-modal" class="modal-overlay">
     <div class="modal-content" style="max-height: 60vh;">
         <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
@@ -632,20 +521,15 @@
                 <label id="edit-value-field-label" class="form-label" style="font-weight: 700;">Valor (R$)</label>
                 <input type="number" step="0.01" id="edit-value-input" class="form-control" required style="font-size: 1.2rem; font-weight: 700; text-align: center;">
             </div>
-            <button type="submit" class="btn btn-primary btn-purple" style="width: 100%;">
+            <button type="submit" class="btn btn-primary btn-stoqui" style="width: 100%;">
                 <span>Salvar Alteração</span>
             </button>
         </form>
     </div>
 </div>
 
-<!-- Floating '+' product picker shortcut -->
-<button type="button" class="float-add-btn" id="float-add-trigger" onclick="openModal('catalog-picker-modal')">
-    <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
-</button>
-
 <script>
-    // Inline data compiled from context
+    // Data structures compiled from JINJA
     const customers = [
         {% for cust in customers %}
         {
@@ -675,138 +559,153 @@
         {% endfor %}
     ];
 
-    // State Variables
-    let currentStep = 1;
+    // State properties
+    let currentStep = 1; // 1: catalog catalog, 3: cliente/entrega, 4: resumo, 5: pagamentos summary, 5.1: pagamentos grid selector, 5.2: keypad input
     let localCart = [];
     let selectedCustomer = null;
     let deliveryType = 'pickup';
-    let shipperName = 'propria';
     let deliveryAddress = '';
     
     // Financial components
     let discountAmount = 0;
     let freightAmount = 0;
-    let saleTaxAmount = 0; // Taxa de Venda
-    let selectedPaymentMethod = null;
-    let selectedPaymentIcon = 'credit-card';
+    let saleTaxAmount = 0;
 
-    // ── Wizard State Navigation ──
+    // Split Payments array
+    let paymentsList = [];
+    let currentSelectingPaymentMethod = null;
+    let currentSelectingPaymentIcon = 'credit-card';
+    let keypadTypedVal = "";
+
+    // Load initial configurations
+    window.addEventListener('DOMContentLoaded', () => {
+        // Pre-render catalog list initially
+        renderCatalogProducts(products);
+        setStep(1);
+    });
+
+    // ── Header back control ──
+    function onHeaderBack() {
+        if (currentStep === 1) {
+            window.location.href = '/orders';
+        } else if (currentStep === 2) {
+            setStep(1);
+        } else if (currentStep === 3) {
+            setStep(1);
+        } else if (currentStep === 4) {
+            setStep(3);
+        } else if (currentStep === 5) {
+            setStep(4);
+        } else if (currentStep === 5.1) {
+            setStep(5);
+        } else if (currentStep === 5.2) {
+            setStep(5.1);
+        }
+    }
+
     function setStep(step) {
-        // Validation checks per transition
-        if (step === 2 && localCart.length === 0) {
-            step = 1;
-        }
-        if (step === 4 && !selectedCustomer) {
-            showToast('Por favor, selecione um cliente para continuar.', 'error');
-            return;
-        }
-
         currentStep = step;
 
-        // Toggle container displays
-        for (let i = 1; i <= 7; i++) {
-            const container = document.getElementById('step-' + i);
-            if (container) {
-                container.classList.remove('active');
-            }
-        }
-        document.getElementById('step-' + step).classList.add('active');
+        const splitLayout = document.getElementById('pane-split-checkout');
+        const singleLayout = document.getElementById('pane-single-checkout');
+        const backBtn = document.getElementById('header-back-btn');
+        const backIcon = backBtn.querySelector('i');
+        const titleSpan = document.getElementById('header-title');
 
-        // Back button control visibility
-        const backBtn = document.getElementById('back-button');
-        if (step === 1 || step === 7) {
-            backBtn.style.visibility = 'hidden';
+        // Toggle back icon layout
+        if (step === 1) {
+            backIcon.setAttribute('data-lucide', 'x');
+            titleSpan.innerText = 'Registrar pedido';
         } else {
-            backBtn.style.visibility = 'visible';
+            backIcon.setAttribute('data-lucide', 'arrow-left');
         }
 
-        // Floating action '+' button control
-        const floatAdd = document.getElementById('float-add-trigger');
+        // Toggle dual vs single pane displays
         if (step === 1 || step === 2) {
-            floatAdd.style.display = 'flex';
+            splitLayout.style.display = 'grid';
+            singleLayout.style.display = 'none';
         } else {
-            floatAdd.style.display = 'none';
+            splitLayout.style.display = 'none';
+            singleLayout.style.display = 'block';
         }
 
-        // Header titles
-        const titles = {
-            1: { title: 'Novo pedido', subtitle: 'Etapa 1 de 7: Produtos' },
-            2: { title: 'Novo pedido', subtitle: `Etapa 2 de 7: Carrinho (${localCart.length} itens)` },
-            3: { title: 'Cliente + Entrega', subtitle: 'Etapa 3 de 7: Destinatário' },
-            4: { title: 'Resumo do pedido', subtitle: 'Etapa 4 de 7: Revisão detalhada' },
-            5: { title: 'Pagamento', subtitle: 'Etapa 5 de 7: Métodos' },
-            6: { title: 'Pagamento', subtitle: 'Etapa 6 de 7: Confirmação' },
-            7: { title: 'Pagamento concluído', subtitle: 'Finalização do Pedido' }
-        };
+        // Toggle active wizard sub-steps
+        document.querySelectorAll('.step-container').forEach(c => c.style.display = 'none');
 
-        document.getElementById('header-step-title').innerText = titles[step].title;
-        document.getElementById('header-step-subtitle').innerText = titles[step].subtitle;
-        
-        // Progress bar percentage
-        document.getElementById('wizard-progress-bar').style.width = `${(step / 7) * 100}%`;
+        if (step === 3) {
+            titleSpan.innerText = 'Novo pedido';
+            document.getElementById('step-3').style.display = 'block';
+        } else if (step === 4) {
+            titleSpan.innerText = 'Novo pedido';
+            document.getElementById('step-4').style.display = 'block';
+        } else if (step === 5) {
+            titleSpan.innerText = 'Pagamentos';
+            document.getElementById('step-5').style.display = 'block';
+        } else if (step === 5.1) {
+            titleSpan.innerText = 'Pagamentos';
+            document.getElementById('step-5-grid').style.display = 'block';
+        } else if (step === 5.2) {
+            titleSpan.innerText = `Pagamento: ${currentSelectingPaymentMethod}`;
+            document.getElementById('step-5-keypad').style.display = 'block';
+        } else if (step === 7) {
+            titleSpan.innerText = 'Pagamento concluído';
+            document.getElementById('step-7').style.display = 'block';
+        }
 
-        // Update layouts
         updateWizardDOMs();
-        saveDraftToLocalStorage();
+        lucide.createIcons();
     }
 
     function advanceStep(next) {
         setStep(next);
     }
 
-    function navigateBack() {
-        if (currentStep > 1 && currentStep < 7) {
-            if (currentStep === 6) {
-                deselectPaymentMethod();
-            } else {
-                setStep(currentStep - 1);
-            }
-        }
+    // ── Cart and products search ──
+    function onCatalogSearch(query) {
+        const filtered = products.filter(p => 
+            p.name.toLowerCase().includes(query.toLowerCase()) || 
+            p.code.toLowerCase().includes(query.toLowerCase())
+        );
+        renderCatalogProducts(filtered);
     }
 
-    // Initialize Page
-    window.addEventListener('DOMContentLoaded', () => {
-        const draft = localStorage.getItem('coliseuspeed_cart_draft');
-        if (draft) {
-            try {
-                const parsed = JSON.parse(draft);
-                localCart = parsed.items || [];
-                selectedCustomer = parsed.customer || null;
-                deliveryType = parsed.delivery_type || 'pickup';
-                discountAmount = parsed.discount || 0;
-                freightAmount = parsed.freight || 0;
-                saleTaxAmount = parsed.saleTax || 0;
-                document.getElementById('order-notes').value = parsed.notes || '';
-                
-                if (localCart.length > 0) {
-                    currentStep = 2;
-                }
-            } catch(e) {
-                console.error(e);
-            }
+    function renderCatalogProducts(items) {
+        const list = document.getElementById('catalog-products-list');
+        list.innerHTML = '';
+        if (items.length === 0) {
+            list.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">Nenhum produto cadastrado</div>';
+            return;
         }
-        setStep(currentStep);
-    });
 
-    // ── Cart State Handlers ──
-    function clearCart() {
-        if (confirm('Deseja esvaziar o carrinho de compras?')) {
-            localCart = [];
-            setStep(1);
-        }
+        items.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'stoqui-product-card';
+            card.onclick = () => addToCart(p);
+            card.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 1.5rem;">📦</span>
+                    <div>
+                        <h4 style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">${p.name}</h4>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Código: ${p.code} | Estoque: ${p.stock}</span>
+                    </div>
+                </div>
+                <div style="font-weight: 800; color: #0f172a; font-size: 1.05rem;">R$ ${p.price.toFixed(2)}</div>
+            `;
+            list.appendChild(card);
+        });
     }
 
-    function addItemToCart(prod) {
+    function addToCart(prod) {
         const existing = localCart.find(i => i.id === prod.id);
         if (existing) {
             if (existing.quantity >= prod.stock) {
-                showToast('Quantidade máxima em estoque excedida!', 'error');
+                showToast('Quantidade máxima esgotada!', 'error');
                 return;
             }
             existing.quantity += 1;
         } else {
             if (prod.stock <= 0) {
-                showToast('Produto sem saldo de estoque!', 'error');
+                showToast('Produto sem estoque!', 'error');
                 return;
             }
             localCart.push({
@@ -815,99 +714,69 @@
                 name: prod.name,
                 price: prod.price,
                 stock: prod.stock,
-                quantity: 1
+                quantity: 1,
+                isEditing: false
             });
         }
-        showToast('Produto adicionado ao carrinho!');
-        if (currentStep === 1) {
-            setStep(2);
-        } else {
-            updateWizardDOMs();
-        }
-        saveDraftToLocalStorage();
+        showToast('Produto adicionado ao carrinho.');
+        updateWizardDOMs();
     }
 
-    function onAdjustQty(id, delta) {
+    function clearCart() {
+        if (confirm('Deseja limpar todo o carrinho?')) {
+            localCart = [];
+            updateWizardDOMs();
+        }
+    }
+
+    // Toggle inline edit popover
+    function toggleInlineEdit(id) {
+        const item = localCart.find(i => i.id === id);
+        if (item) {
+            item.isEditing = !item.isEditing;
+            updateWizardDOMs();
+        }
+    }
+
+    function saveInlineEdit(id) {
         const item = localCart.find(i => i.id === id);
         if (!item) return;
 
-        item.quantity += delta;
-        if (item.quantity > item.stock) {
-            showToast('Quantidade em estoque excedida!', 'error');
-            item.quantity = item.stock;
-        }
-        if (item.quantity <= 0) {
-            localCart = localCart.filter(i => i.id !== id);
-            showToast('Item removido.');
-        }
+        const qtyInput = document.getElementById(`inline-qty-${id}`);
+        const priceInput = document.getElementById(`inline-price-${id}`);
 
-        if (localCart.length === 0) {
-            setStep(1);
-        } else {
-            updateWizardDOMs();
-        }
-        saveDraftToLocalStorage();
-    }
+        const newQty = parseInt(qtyInput.value) || 0;
+        const newPrice = parseFloat(priceInput.value) || 0;
 
-    // Modal Edit Catalog Search
-    function onModalCatalogSearch(query) {
-        const grid = document.getElementById('modal-catalog-grid');
-        const filtered = products.filter(p => 
-            p.name.toLowerCase().includes(query.toLowerCase()) || 
-            p.code.toLowerCase().includes(query.toLowerCase())
-        );
-        renderCatalogGrid(filtered);
-    }
-
-    function renderCatalogGrid(items) {
-        const grid = document.getElementById('modal-catalog-grid');
-        grid.innerHTML = '';
-        if (items.length === 0) {
-            grid.innerHTML = '<div style="text-align: center; grid-column: 1/-1; padding: 40px; color: var(--text-secondary);">Nenhum produto correspondente.</div>';
+        if (newQty > item.stock) {
+            showToast(`Estoque insuficiente! Disponível: ${item.stock}`, 'error');
+            qtyInput.value = item.stock;
             return;
         }
 
-        items.forEach(p => {
-            const card = document.createElement('div');
-            card.className = 'product-card';
-            card.innerHTML = `
-                <div class="product-img">📦</div>
-                <div class="product-info">
-                    <div class="product-code">${p.code}</div>
-                    <div class="product-name">${p.name}</div>
-                    <div class="product-stock ${p.stock > 0 ? 'stock-badge-green' : 'stock-badge-red'}">
-                        Estoque: ${p.stock}
-                    </div>
-                    <div class="product-price">R$ ${p.price.toFixed(2)}</div>
-                </div>
-                <button type="button" class="btn btn-primary btn-sm btn-purple" onclick="addItemFromCatalog('${p.id}')" style="min-height: 36px; padding: 4px 8px;">
-                    Adicionar
-                </button>
-            `;
-            grid.appendChild(card);
-        });
+        if (newQty <= 0) {
+            localCart = localCart.filter(i => i.id !== id);
+        } else {
+            item.quantity = newQty;
+            item.price = newPrice;
+            item.isEditing = false;
+        }
+        updateWizardDOMs();
     }
 
-    function addItemFromCatalog(id) {
-        const prod = products.find(p => p.id === id);
-        if (prod) {
-            addItemToCart(prod);
-        }
+    function removeCartItem(id) {
+        localCart = localCart.filter(i => i.id !== id);
+        updateWizardDOMs();
     }
 
     // ── Cliente + Entrega Selection ──
     function selectCustomer(cust) {
-        if (cust.status !== 'liberado') {
-            showToast('Este cliente está bloqueado!', 'error');
-            return;
-        }
         selectedCustomer = cust;
         closeModal('select-customer-modal');
-        setStep(3);
+        updateWizardDOMs();
     }
 
     function onModalCustomerSearch(query) {
-        const list = document.getElementById('modal-customer-list');
         const filtered = customers.filter(c => 
             c.name.toLowerCase().includes(query.toLowerCase()) || 
             c.cnpj.includes(query)
@@ -918,30 +787,22 @@
     function renderCustomerList(listData) {
         const container = document.getElementById('modal-customer-list');
         container.innerHTML = '';
-        if (listData.length === 0) {
-            container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">Nenhum cliente correspondente.</div>';
-            return;
-        }
-
         listData.forEach(c => {
             const card = document.createElement('div');
             card.className = 'customer-picker-card';
             card.onclick = () => selectCustomer(c);
-            
             const initials = c.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
             card.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <div class="customer-avatar">${initials}</div>
+                    <div class="customer-avatar" style="background: var(--stoqui-purple);">${initials}</div>
                     <div>
                         <h4 style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">${c.name}</h4>
                         <span style="font-size: 0.75rem; color: var(--text-secondary);">${c.cnpj}</span>
                     </div>
                 </div>
-                <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
             `;
             container.appendChild(card);
         });
-        lucide.createIcons();
     }
 
     function setDeliveryType(type) {
@@ -960,23 +821,9 @@
             document.getElementById('delivery-details-panel').style.display = 'block';
         }
         updateWizardDOMs();
-        saveDraftToLocalStorage();
     }
 
-    // ── Resumo Financeiro & Obs overrides ──
-    function onNotesInput() {
-        const val = document.getElementById('order-notes').value;
-        document.getElementById('notes-char-counter').innerText = `${val.length} / 500`;
-        saveDraftToLocalStorage();
-    }
-
-    function appendNoteTemplate(text) {
-        const area = document.getElementById('order-notes');
-        const current = area.value.trim();
-        area.value = current ? `${current}, ${text}` : text;
-        onNotesInput();
-    }
-
+    // ── Resumo Financeiro overrides ──
     function onCouponSelect(val) {
         if (val === 'COLISEU5') {
             discountAmount = getSubtotal() * 0.05;
@@ -986,7 +833,6 @@
             discountAmount = 0;
         }
         updateWizardDOMs();
-        saveDraftToLocalStorage();
     }
 
     function openEditValuePopover(fieldName, label, currentValue) {
@@ -1011,31 +857,72 @@
 
         closeModal('edit-values-modal');
         updateWizardDOMs();
-        saveDraftToLocalStorage();
     }
 
-    // ── Payment selection logic ──
-    function selectPaymentMethod(methodName, iconName) {
-        selectedPaymentMethod = methodName;
-        selectedPaymentIcon = iconName;
-        advanceStep(6);
+    // ── Split Payments Keypad and actions ──
+    function openPaymentKeypad(methodName, iconName) {
+        currentSelectingPaymentMethod = methodName;
+        currentSelectingPaymentIcon = iconName;
+        keypadTypedVal = "";
+        
+        const balance = getBalanceRemaining();
+        document.getElementById('edit-payment-amount-input').value = balance.toFixed(2);
+        document.getElementById('keypad-balance-text').innerText = `Faltam: R$ ${balance.toFixed(2)}`;
+        document.getElementById('keypad-total-text').innerText = `R$ ${getTotal().toFixed(2)}`;
+
+        setStep(5.2);
     }
 
-    function deselectPaymentMethod() {
-        selectedPaymentMethod = null;
+    function onKeypadDigit(digit) {
+        keypadTypedVal += digit;
+        const val = parseFloat(keypadTypedVal || "0") / 100;
+        document.getElementById('edit-payment-amount-input').value = val.toFixed(2);
+    }
+
+    function onKeypadBackspace() {
+        keypadTypedVal = keypadTypedVal.slice(0, -1);
+        const val = parseFloat(keypadTypedVal || "0") / 100;
+        document.getElementById('edit-payment-amount-input').value = val.toFixed(2);
+    }
+
+    function confirmAddPaymentMethod() {
+        const val = parseFloat(document.getElementById('edit-payment-amount-input').value) || 0;
+        if (val <= 0) {
+            showToast('Valor digitado deve ser maior que zero!', 'error');
+            return;
+        }
+
+        const balance = getBalanceRemaining();
+        if (val > balance) {
+            showToast('Valor adicionado excede o saldo restante!', 'error');
+            return;
+        }
+
+        paymentsList.push({
+            method: currentSelectingPaymentMethod,
+            icon: currentSelectingPaymentIcon,
+            amount: val
+        });
+
+        showToast(`Pagamento em ${currentSelectingPaymentMethod} adicionado.`);
         setStep(5);
     }
 
-    // Save final submit faturamento
-    async function onConfirmOrderSubmit() {
-        const btn = document.getElementById('btn-submit-order');
+    function removePaymentItem(index) {
+        paymentsList.splice(index, 1);
+        updateWizardDOMs();
+    }
+
+    // Faturamento dynamic integration
+    async function onConcluirCheckout() {
+        const btn = document.getElementById('btn-concluir-order');
         btn.disabled = true;
-        document.getElementById('btn-submit-text').innerText = 'Faturando...';
+        btn.innerText = 'Processando...';
 
         const payload = {
-            customer_id: selectedCustomer.id,
+            customer_id: selectedCustomer ? selectedCustomer.id : 'temp-1',
             status: 'order',
-            payment_condition: selectedPaymentMethod,
+            payment_condition: paymentsList.map(p => `${p.method}: R$ ${p.amount.toFixed(2)}`).join(', '),
             items: localCart.map(i => ({
                 product_id: i.id,
                 quantity: i.quantity,
@@ -1051,21 +938,30 @@
             });
             const data = await response.json();
             if (response.ok && data.success) {
-                // Success: update layout details and advance to Step 7
-                document.getElementById('success-payment-method').innerText = `🟠 ${selectedPaymentMethod}`;
-                document.getElementById('success-payment-val').innerText = `R$ ${getTotal().toFixed(2)}`;
+                // Success: fill success details and advance to Step 7
+                const successContainer = document.getElementById('success-payments-details-list');
+                successContainer.innerHTML = '';
+                paymentsList.forEach(p => {
+                    const row = document.createElement('div');
+                    row.style.display = 'flex';
+                    row.style.justifyContent = 'space-between';
+                    row.style.fontSize = '0.9rem';
+                    row.innerHTML = `
+                        <span>🟠 ${p.method}</span>
+                        <span>R$ ${p.amount.toFixed(2)}</span>
+                    `;
+                    successContainer.appendChild(row);
+                });
                 document.getElementById('success-total-paid').innerText = `R$ ${getTotal().toFixed(2)}`;
                 
-                localStorage.removeItem('coliseuspeed_cart_draft');
                 advanceStep(7);
             } else {
-                showToast(data.detail || 'Erro ao sincronizar com o ERP.', 'error');
+                showToast(data.detail || 'Erro ao integrar com o ERP.', 'error');
             }
         } catch(e) {
-            showToast('Erro na conexão com o servidor ERP.', 'error');
+            showToast('Erro de conexão com o servidor ERP.', 'error');
         } finally {
             btn.disabled = false;
-            document.getElementById('btn-submit-text').innerText = `Concluir R$ ${getTotal().toFixed(2)}`;
         }
     }
 
@@ -1073,7 +969,7 @@
         window.location.href = '/orders';
     }
 
-    // ── Calculation Helpers ──
+    // ── Calculations ──
     function getSubtotal() {
         return localCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }
@@ -1083,171 +979,231 @@
         if (disc > sub) disc = sub;
         return sub - disc + freightAmount + saleTaxAmount;
     }
+    function getTotalPaid() {
+        return paymentsList.reduce((sum, p) => sum + p.amount, 0);
+    }
+    function getBalanceRemaining() {
+        return getTotal() - getTotalPaid();
+    }
 
-    // ── DOM update compiler ──
+    // ── Render layouts update ──
     function updateWizardDOMs() {
         const sub = getSubtotal();
         const total = getTotal();
+        const paid = getTotalPaid();
+        const balance = getBalanceRemaining();
 
-        // Step 2 Summary Cart
-        if (currentStep === 2) {
-            document.getElementById('step-2-summary-text').innerText = `${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'}`;
-            document.getElementById('step-2-total-val').innerText = `R$ ${sub.toFixed(2)}`;
+        // 1. Desktop Cart
+        const cartContainer = document.getElementById('cart-rows-container');
+        const cartEmptyPlaceholder = document.getElementById('cart-empty-placeholder');
+        const clearCartBtn = document.getElementById('btn-clear-cart');
+        const continueBtn = document.getElementById('btn-continue-step3');
 
-            const container = document.getElementById('cart-items-list');
-            container.innerHTML = '';
+        // Clean dynamic rows
+        cartContainer.querySelectorAll('.stoqui-cart-row-item').forEach(e => e.remove());
+
+        if (localCart.length === 0) {
+            cartEmptyPlaceholder.style.display = 'block';
+            clearCartBtn.style.display = 'none';
+            continueBtn.disabled = true;
+            document.getElementById('cart-title-text').innerText = 'Carrinho (0 itens)';
+            document.getElementById('cart-total-val').innerText = 'R$ 0';
+        } else {
+            cartEmptyPlaceholder.style.display = 'none';
+            clearCartBtn.style.display = 'block';
+            continueBtn.disabled = false;
+            document.getElementById('cart-title-text').innerText = `Carrinho (${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'})`;
+            document.getElementById('cart-total-val').innerText = `R$ ${sub.toFixed(2)}`;
+
             localCart.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'product-list-card';
-                card.innerHTML = `
-                    <div class="product-list-row">
+                const row = document.createElement('div');
+                row.className = 'stoqui-cart-row-item';
+                row.style.background = '#ffffff';
+                row.style.border = '1px solid var(--border-color)';
+                row.style.borderRadius = '8px';
+                row.style.padding = '12px';
+                row.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 1.5rem;">📦</span>
+                            <span>📦</span>
                             <div>
-                                <h4 style="font-weight: 700; font-size: 0.95rem;">${item.name}</h4>
-                                <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 600;">SKU: ${item.code}</span>
+                                <h4 style="font-weight: 700; font-size: 0.9rem; color: #0f172a;">${item.name}</h4>
                             </div>
                         </div>
-                        <button type="button" onclick="onAdjustQty('${item.id}', -${item.quantity})" style="border: none; background: none; color: var(--danger); cursor: pointer;">
-                            <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
-                        </button>
-                    </div>
-                    <div class="product-list-row" style="background: #fafafa; border-radius: 8px; padding: 8px 12px;">
-                        <div class="cart-item-qty">
-                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', -1)">-</button>
-                            <span style="font-weight: 700; min-width: 24px; text-align: center;">${item.quantity}</span>
-                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', 1)">+</button>
-                        </div>
-                        <div style="text-align: right;">
-                            <span style="font-size: 0.75rem; color: var(--text-secondary);">× R$ ${item.price.toFixed(2)}</span>
-                            <div style="font-weight: 800; color: var(--purple-primary); font-size: 1rem;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 16px; height: 16px;"></i></button>
+                            <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
                         </div>
                     </div>
-                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">
+                    
+                    ${item.isEditing ? `
+                    <div class="cart-inline-edit">
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
+                                <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
+                            </div>
+                            <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
+                                <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
+                            <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple);">Confirmar</button>
+                        </div>
+                    </div>
+                    ` : `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.85rem;">
+                        <span style="color: var(--text-secondary); font-weight: 600;">${item.quantity} × R$ ${item.price.toFixed(2)}</span>
+                        <span style="font-weight: 800; color: #0f172a;">R$ ${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px; font-weight: 600;">
                         ${item.stock} em estoque
                     </div>
+                    `}
                 `;
-                container.appendChild(card);
+                cartContainer.appendChild(row);
             });
         }
 
-        // Step 3 Selected Client represent
+        // 2. Cliente represent
         if (selectedCustomer) {
             const initials = selectedCustomer.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
             document.getElementById('sel-cust-avatar').innerText = initials;
             document.getElementById('sel-cust-name').innerText = selectedCustomer.name;
-            document.getElementById('sel-cust-subtitle').innerText = `CNPJ: ${selectedCustomer.cnpj}`;
+            document.getElementById('sel-cust-subtitle').innerText = `CNPJ/CPF: ${selectedCustomer.cnpj}`;
             
             // Step 4 mirroring
             document.getElementById('sel-cust-avatar-step4').innerText = initials;
             document.getElementById('sel-cust-name-step4').innerText = selectedCustomer.name;
-        } else {
-            document.getElementById('sel-cust-avatar').innerText = '👤';
-            document.getElementById('sel-cust-name').innerText = 'Outro';
-            document.getElementById('sel-cust-subtitle').innerText = 'Selecione o cliente';
-            
-            document.getElementById('sel-cust-avatar-step4').innerText = '👤';
-            document.getElementById('sel-cust-name-step4').innerText = 'Outro';
         }
 
-        // Step 4 Details List
+        // 3. Step 4 Summary Totals
         if (currentStep === 4) {
             const summaryBox = document.getElementById('delivery-summary-box');
             if (deliveryType === 'pickup') {
                 summaryBox.innerHTML = `
-                    <span style="color: var(--purple-primary);">🏪</span>
-                    <div style="display: flex; flex-direction: column;">
-                        <span>✓ Retirada no local</span>
-                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: normal;">Cliente retira na loja</span>
-                    </div>
+                    <span style="color: var(--stoqui-purple);">🏪</span>
+                    <span>✓ Retirada no local (Cliente retira na loja)</span>
                 `;
             } else {
                 summaryBox.innerHTML = `
-                    <span style="color: var(--purple-primary);">🚚</span>
-                    <div style="display: flex; flex-direction: column;">
-                        <span>✓ Entrega em endereço</span>
-                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: normal;">${document.getElementById('delivery-address-input').value || 'Av. Paulista, 1000'}</span>
-                    </div>
+                    <span style="color: var(--stoqui-purple);">🚚</span>
+                    <span>✓ Entrega (Entregamos no endereço: ${document.getElementById('delivery-address-input').value || 'Av. Paulista, 1000'})</span>
                 `;
             }
 
-            // Render calculations summary
             const finList = document.getElementById('financial-summary-list');
             finList.innerHTML = `
-                <!-- Items list -->
                 ${localCart.map(i => `
-                <div class="table-card-row" style="margin-bottom: 8px;">
-                    <span style="font-weight: 600;">${i.quantity}x ${i.name}</span>
+                <div class="table-card-row" style="margin-bottom: 8px; font-size: 0.9rem;">
+                    <span>${i.quantity}x ${i.name}</span>
                     <span>R$ ${(i.price * i.quantity).toFixed(2)}</span>
                 </div>
                 `).join('')}
 
-                <div class="table-card-row" style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px; color: var(--text-secondary);">
+                <div class="table-card-row" style="border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px; font-size: 0.88rem; color: var(--text-secondary);">
                     <span>Subtotal</span>
                     <span>R$ ${sub.toFixed(2)}</span>
                 </div>
                 
-                <div class="table-card-row" style="align-items: center; margin-top: 8px; color: var(--text-secondary);">
+                <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
                     <span style="display: flex; align-items: center; gap: 4px;">
-                        Frete <button type="button" onclick="openEditValuePopover('freight', 'Editar Valor do Frete', ${freightAmount})" style="border: none; background: none; color: var(--purple-primary); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                        Frete <button type="button" onclick="openEditValuePopover('freight', 'Editar Valor do Frete', ${freightAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
                     </span>
                     <span>R$ ${freightAmount.toFixed(2)}</span>
                 </div>
 
-                <div class="table-card-row" style="align-items: center; margin-top: 8px; color: var(--text-secondary);">
+                <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
                     <span style="display: flex; align-items: center; gap: 4px;">
-                        Taxa de venda <button type="button" onclick="openEditValuePopover('tax', 'Editar Taxa de Venda', ${saleTaxAmount})" style="border: none; background: none; color: var(--purple-primary); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                        Taxa de venda <button type="button" onclick="openEditValuePopover('tax', 'Editar Taxa de Venda', ${saleTaxAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
                     </span>
                     <span>R$ ${saleTaxAmount.toFixed(2)}</span>
                 </div>
 
-                <div class="table-card-row" style="align-items: center; margin-top: 8px; color: var(--text-secondary);">
+                <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
                     <span style="display: flex; align-items: center; gap: 4px;">
-                        Desconto <button type="button" onclick="openEditValuePopover('discount', 'Editar Desconto do Pedido', ${discountAmount})" style="border: none; background: none; color: var(--purple-primary); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                        Desconto <button type="button" onclick="openEditValuePopover('discount', 'Editar Desconto do Pedido', ${discountAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
                     </span>
                     <span style="color: var(--danger); font-weight: 700;">- R$ ${discountAmount.toFixed(2)}</span>
                 </div>
 
-                <div class="table-card-row" style="border-top: 2px solid var(--purple-primary); padding-top: 12px; margin-top: 12px; font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">
+                <div class="table-card-row" style="border-top: 2px solid var(--stoqui-purple); padding-top: 10px; margin-top: 10px; font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">
                     <span>Total</span>
-                    <span style="color: var(--purple-primary);">R$ ${total.toFixed(2)}</span>
+                    <span style="color: var(--stoqui-purple);">R$ ${total.toFixed(2)}</span>
                 </div>
             `;
         }
 
-        // Step 5 values updates
-        document.getElementById('step-5-total-val').innerText = `R$ ${total.toFixed(2)}`;
+        // 4. Step 5 Pagamentos split representation
+        if (currentStep === 5) {
+            document.getElementById('step-5-total-val').innerText = `R$ ${total.toFixed(2)}`;
 
-        // Step 6 updates
-        document.getElementById('step-6-total-val').innerText = `R$ ${total.toFixed(2)}`;
-        if (selectedPaymentMethod) {
-            document.getElementById('conf-payment-name').innerText = selectedPaymentMethod;
-            document.getElementById('conf-payment-value').innerText = `R$ ${total.toFixed(2)}`;
-            document.getElementById('btn-submit-order').innerText = `Concluir R$ ${total.toFixed(2)}`;
-            
-            // Icon dynamically updated
-            const iconElement = document.getElementById('conf-payment-icon');
-            iconElement.setAttribute('data-lucide', selectedPaymentIcon);
+            const splitList = document.getElementById('split-payments-list');
+            splitList.innerHTML = '';
+            paymentsList.forEach((p, idx) => {
+                const card = document.createElement('div');
+                card.style.background = '#ffffff';
+                card.style.border = '1px solid var(--border-color)';
+                card.style.borderRadius = '8px';
+                card.style.padding = '12px 16px';
+                card.style.display = 'flex';
+                card.style.justifyContent = 'space-between';
+                card.style.alignItems = 'center';
+                card.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="color: var(--stoqui-purple);">💵</span>
+                        <span style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${p.method}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-weight: 800; color: #0f172a;">R$ ${p.amount.toFixed(2)}</span>
+                        <button type="button" onclick="removePaymentItem(${idx})" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 4px;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+                    </div>
+                `;
+                splitList.appendChild(card);
+            });
+
+            // Action area based on remaining balance
+            const actionArea = document.getElementById('split-payments-action-area');
+            if (balance > 0.01) {
+                actionArea.innerHTML = `
+                    <button type="button" onclick="advanceStep(5.1)" class="btn-stoqui" style="background: none; border: 2px dashed var(--stoqui-purple); color: var(--stoqui-purple); box-shadow: none; margin-bottom: 20px;">
+                        <i data-lucide="plus" style="width: 18px; height: 18px;"></i> <span>Adicionar pagamento</span>
+                    </button>
+                    
+                    <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; color: var(--danger); font-weight: 700; font-size: 0.9rem; margin-bottom: 20px;">
+                        <span>Faltam:</span>
+                        <span>R$ ${balance.toFixed(2)}</span>
+                    </div>
+
+                    <button type="button" class="btn-stoqui" disabled style="background: #e2e8f0; color: #94a3b8; box-shadow: none;">
+                        <span>Faltam R$ ${balance.toFixed(2)}</span>
+                    </button>
+                `;
+            } else {
+                actionArea.innerHTML = `
+                    <button type="button" id="btn-concluir-order" onclick="onConcluirCheckout()" class="btn-stoqui">
+                        <span>Concluir R$ ${total.toFixed(2)}</span>
+                    </button>
+                `;
+            }
         }
 
         lucide.createIcons();
     }
 
-    // ── Save Draft Helper ──
-    function saveDraftToLocalStorage() {
-        const draft = {
-            customer: selectedCustomer,
-            items: localCart,
-            delivery_type: deliveryType,
-            discount: discountAmount,
-            freight: freightAmount,
-            saleTax: saleTaxAmount,
-            notes: document.getElementById('order-notes').value
-        };
-        localStorage.setItem('coliseuspeed_cart_draft', JSON.stringify(draft));
-    }
+    // Modal helpers
+    const originalOpenModal = openModal;
+    openModal = function(id) {
+        if (id === 'select-customer-modal') {
+            document.getElementById('customer-modal-search').value = '';
+            renderCustomerList(customers);
+        }
+        originalOpenModal(id);
+    };
 
-    // ── CEP lookup address auto pre-fill ──
+    // Save CEP address query details
     async function onCepQuery(cep) {
         const val = cep.trim().replace(/\D/g, '');
         if (val.length === 8) {
@@ -1265,10 +1221,8 @@
         }
     }
 
-    // Fast new customer saving trigger
     function onSaveNewCustomer(e) {
         e.preventDefault();
-        
         const newCust = {
             id: 'temp-' + Date.now(),
             name: document.getElementById('new-cust-name').value.trim(),
@@ -1283,11 +1237,10 @@
 
         customers.push(newCust);
         selectCustomer(newCust);
-        
         closeModal('new-customer-modal');
-        showToast('Cliente cadastrado e selecionado com sucesso!', 'success');
-        
-        // Reset form
+        showToast('Cliente cadastrado e selecionado com sucesso!');
+
+        // Reset fields
         document.getElementById('new-cust-name').value = '';
         document.getElementById('new-cust-doc').value = '';
         document.getElementById('new-cust-phone').value = '';
@@ -1295,15 +1248,5 @@
         document.getElementById('new-cust-cep').value = '';
         document.getElementById('new-cust-street').value = '';
     }
-
-    // Modal display list helpers
-    const originalOpenModal = openModal;
-    openModal = function(id) {
-        if (id === 'select-customer-modal') {
-            document.getElementById('customer-modal-search').value = '';
-            renderCustomerList(customers);
-        }
-        originalOpenModal(id);
-    };
 </script>
 {% endblock %}
