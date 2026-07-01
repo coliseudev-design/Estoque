@@ -1,342 +1,356 @@
 {% extends "base.html" %}
 
-{% block title %}Lançamento de Pedidos ERP — ColiseuSpeed Force{% endblock %}
-{% block header_title %}Lançamento de Pedido ERP{% endblock %}
-{% block header_subtitle %}Interface rápida para atendimento no PDV ou campo{% endblock %}
+{% block title %}Lançamento de Pedidos — ColiseuSpeed Force{% endblock %}
 
 {% block content %}
 <style>
-    /* Custom page styles for Order Launch redone */
-    .order-grid {
-        display: grid;
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    
-    @media (min-width: 1025px) {
-        .order-grid {
-            grid-template-columns: 1.1fr 0.9fr;
-        }
-        .full-width-col {
-            grid-column: 1 / -1;
-        }
+    /* ── Coliseu Purple Design System for Wizard ── */
+    :root {
+        --purple-primary: #7C3AED;
+        --purple-light: #A78BFA;
+        --purple-dark: #6D28D9;
+        --purple-bg: #F5F3FF;
     }
 
-    /* Client autocomplete styling */
-    .autocomplete-container {
-        position: relative;
-        width: 100%;
-    }
-    .autocomplete-dropdown {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
+    /* Layout constraints */
+    .wizard-container {
+        max-width: 600px;
+        margin: 0 auto 80px auto;
         background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        z-index: 200;
-        max-height: 240px;
-        overflow-y: auto;
-        display: none;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
-    .autocomplete-item {
-        padding: 10px 16px;
+
+    /* Compact Header Navigation with back arrow and progress bar */
+    .wizard-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 16px;
+        position: relative;
+        background: #fafafa;
+    }
+
+    .back-btn {
+        background: none;
+        border: none;
+        color: var(--text-primary);
         cursor: pointer;
-        transition: background 0.15s ease;
-        border-bottom: 1px solid #f1f5f9;
-    }
-    .autocomplete-item:hover {
-        background: #f1f5f9;
-    }
-    .autocomplete-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: var(--primary-light);
-        color: #ffffff;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 700;
-        font-size: 0.85rem;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        transition: var(--transition);
+    }
+    .back-btn:hover {
+        background: rgba(0,0,0,0.05);
     }
 
-    /* Status Badges */
-    .badge-status {
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-size: 0.72rem;
-        font-weight: 700;
+    .wizard-header-title {
+        flex: 1;
     }
-    .badge-active { background: rgba(76, 175, 80, 0.1); color: var(--success); }
-    .badge-blocked { background: rgba(244, 67, 54, 0.1); color: var(--danger); }
-
-    /* Scanner feedback visuals */
-    .scanner-wrapper {
-        border-radius: 8px;
-        transition: background 0.2s ease, border-color 0.2s ease;
+    .wizard-header-title h2 {
+        font-size: 1.15rem;
+        font-weight: 800;
+        color: var(--text-primary);
     }
-    .scanner-success {
-        border-color: var(--success) !important;
-        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15) !important;
-    }
-    .scanner-error {
-        border-color: var(--danger) !important;
-        box-shadow: 0 0 0 3px rgba(244, 67, 54, 0.15) !important;
+    .wizard-header-title span {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-weight: 600;
     }
 
-    /* Cart Drawer Mobile */
-    .cart-drawer-trigger {
+    .progress-bar-container {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: #e2e8f0;
+    }
+    .progress-bar {
+        height: 100%;
+        background: var(--purple-primary);
+        width: 14.2%;
+        transition: width 0.3s ease;
+    }
+
+    /* Wizard Content Area */
+    .wizard-body {
+        padding: 24px;
+        flex: 1;
+    }
+
+    .step-container {
         display: none;
+    }
+    .step-container.active {
+        display: block;
+    }
+
+    /* Step 1: Empty state placeholder */
+    .empty-cart-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        text-align: center;
+    }
+    .empty-cart-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+        color: var(--purple-light);
+    }
+
+    /* Floating action buttons */
+    .float-add-btn {
         position: fixed;
-        bottom: 75px;
-        right: 16px;
-        z-index: 999;
-        background: var(--primary-color);
+        bottom: 85px;
+        right: 20px;
+        background: var(--purple-primary);
         color: #ffffff;
         border: none;
         border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        box-shadow: 0 4px 15px rgba(30, 136, 229, 0.4);
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-    }
-    .cart-drawer-badge {
-        position: absolute;
-        top: -4px;
-        right: -4px;
-        background: var(--secondary-color);
-        color: var(--text-primary);
-        font-size: 0.75rem;
-        font-weight: 800;
-        border-radius: 50%;
-        width: 22px;
-        height: 22px;
+        width: 56px;
+        height: 56px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 2px solid #ffffff;
+        box-shadow: 0 4px 15px rgba(124, 92, 246, 0.4);
+        cursor: pointer;
+        z-index: 99;
+        transition: var(--transition);
+    }
+    .float-add-btn:hover {
+        background: var(--purple-dark);
+        transform: scale(1.05);
     }
 
-    @media (max-width: 768px) {
-        .cart-drawer-trigger {
-            display: flex;
-        }
+    /* Big purple buttons */
+    .btn-purple {
+        background: linear-gradient(135deg, var(--purple-primary) 0%, var(--purple-light) 100%);
+        color: #ffffff;
+        box-shadow: 0 4px 14px rgba(124, 92, 246, 0.3);
+    }
+    .btn-purple:hover {
+        opacity: 0.95;
     }
 
-    /* Delivery Type radio buttons */
-    .delivery-options {
+    /* Item Card layout */
+    .product-list-card {
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .product-list-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* Customer Selection Card */
+    .customer-picker-card {
+        border: 1.5px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .customer-picker-card:hover {
+        border-color: var(--purple-primary);
+        background: var(--purple-bg);
+    }
+    .customer-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--purple-primary);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    /* Delivery select styles */
+    .delivery-radio-card {
+        border: 1.5px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        cursor: pointer;
+        transition: var(--transition);
+        margin-bottom: 12px;
+    }
+    .delivery-radio-card:hover {
+        border-color: var(--purple-primary);
+    }
+    .delivery-radio-card.selected {
+        border-color: var(--purple-primary);
+        background: var(--purple-bg);
+        color: var(--purple-dark);
+    }
+
+    /* Payment Methods Grid */
+    .payment-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-        margin-top: 10px;
+        gap: 12px;
+        margin-top: 16px;
     }
-    .delivery-card {
+    .payment-card {
         border: 1.5px solid var(--border-color);
-        border-radius: 8px;
-        padding: 12px;
+        border-radius: 12px;
+        padding: 16px 8px;
         text-align: center;
         cursor: pointer;
         transition: var(--transition);
-        font-weight: 600;
-        font-size: 0.85rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        background: #ffffff;
     }
-    .delivery-card input {
-        display: none;
+    .payment-card:hover {
+        border-color: var(--purple-primary);
+        background: var(--purple-bg);
     }
-    .delivery-card.selected {
-        border-color: var(--primary-color);
-        background: rgba(30, 136, 229, 0.05);
-        color: var(--primary-color);
+    .payment-card i {
+        color: var(--purple-primary);
+    }
+    .payment-card span {
+        font-weight: 700;
+        font-size: 0.8rem;
+        color: var(--text-primary);
+    }
+
+    /* Checkmark success anim */
+    .checkmark-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: rgba(76, 175, 80, 0.1);
+        color: var(--success);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px auto;
+        font-size: 2.5rem;
     }
 </style>
 
-<div class="order-grid">
-
-    <!-- 1. SEÇÃO DE CLIENTE (100% de largura no Desktop) -->
-    <div class="full-width-col">
-        <!-- Client Search Bar -->
-        <div class="card" id="client-search-card" style="padding: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-                <h3 style="font-size: 1rem; font-weight: 800; color: var(--primary-dark);">Identificação do Cliente</h3>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="openModal('new-customer-modal')">
-                    <i data-lucide="plus-circle" style="width: 16px; height: 16px;"></i>
-                    <span>+ Novo Cliente</span>
-                </button>
-            </div>
-            
-            <div class="autocomplete-container">
-                <div class="input-wrapper">
-                    <span class="icon">👤</span>
-                    <input 
-                        type="text" 
-                        id="customer-search-input" 
-                        class="form-control" 
-                        placeholder="Busque cliente por Nome, CPF/CNPJ ou Telefone..." 
-                        oninput="onCustomerQuery(this.value)"
-                    >
-                </div>
-                <!-- Suggestions Dropdown -->
-                <div id="customer-dropdown" class="autocomplete-dropdown"></div>
-            </div>
-
-            <!-- Selected Client Card -->
-            <div id="selected-customer-card" style="display: none; margin-top: 16px; background: #fafafa; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; position: relative;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
-                    <div>
-                        <h4 id="sel-cust-name" style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);"></h4>
-                        <div id="sel-cust-doc" style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;"></div>
-                        <div style="display: flex; gap: 16px; margin-top: 10px; font-size: 0.85rem; flex-wrap: wrap;">
-                            <span id="sel-cust-phone" style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary);"></span>
-                            <span id="sel-cust-email" style="display: flex; align-items: center; gap: 4px; color: var(--text-secondary);"></span>
-                        </div>
-                        <div id="sel-cust-address" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px; display: flex; align-items: center; gap: 4px;"></div>
-                    </div>
-                    
-                    <div style="text-align: right; display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
-                        <div id="sel-cust-limit-badge" class="badge-status" style="font-size: 0.8rem; padding: 4px 10px;"></div>
-                        <div style="font-size: 0.78rem; color: var(--text-secondary);">
-                            Limite: <strong id="sel-cust-limit"></strong> | Saldo Devedor: <strong id="sel-cust-debt" style="color: var(--danger);"></strong>
-                        </div>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="clearSelectedCustomer()" style="margin-top: 6px; min-height: 32px;">
-                            <i data-lucide="refresh-cw" style="width: 12px; height: 12px;"></i>
-                            <span>Trocar Cliente</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
+<div class="wizard-container">
+    
+    <!-- Wizard header navigation -->
+    <header class="wizard-header">
+        <button type="button" class="back-btn" id="back-button" onclick="navigateBack()">
+            <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
+        </button>
+        <div class="wizard-header-title">
+            <h2 id="header-step-title">Novo pedido</h2>
+            <span id="header-step-subtitle">Etapa 1 de 7</span>
         </div>
-    </div>
+        <div class="progress-bar-container">
+            <div id="wizard-progress-bar" class="progress-bar"></div>
+        </div>
+    </header>
 
-    <!-- 2. CAPTURA DE PRODUTOS (Esquerda) -->
-    <div class="catalog-panel">
-        <!-- Barcode and search scanner wrapper -->
-        <div class="card" style="padding: 16px;">
-            <h3 style="font-size: 1rem; font-weight: 800; color: var(--primary-dark); margin-bottom: 12px;">Inserção de Produtos</h3>
-            
-            <div style="display: flex; gap: 12px; margin-bottom: 12px;">
-                <div class="input-wrapper" style="flex: 1;">
-                    <span class="icon">🔍</span>
-                    <input 
-                        type="text" 
-                        id="barcode-input" 
-                        class="form-control scanner-wrapper" 
-                        placeholder="Escanear código de barras ou digite o SKU..." 
-                        onkeydown="onBarcodeKeyDown(event)"
-                    >
-                </div>
-                <button type="button" class="btn btn-secondary" onclick="openModal('catalog-picker-modal')" style="width: auto; min-height: 44px; padding: 0 16px;">
-                    <i data-lucide="book-open"></i>
-                    <span>📋 Catálogo</span>
+    <div class="wizard-body">
+
+        <!-- ETAPA 1: PRODUTOS (Carrinho Vazio) -->
+        <section id="step-1" class="step-container active">
+            <div class="empty-cart-state" onclick="openModal('catalog-picker-modal')">
+                <div class="empty-cart-icon">🛒</div>
+                <h3 style="font-weight: 800; font-size: 1.15rem; margin-bottom: 6px;">Nenhum produto adicionado</h3>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Clique para adicionar produtos ao pedido</p>
+            </div>
+        </section>
+
+        <!-- ETAPA 2: PRODUTOS (Com Itens no Carrinho) -->
+        <section id="step-2" class="step-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <span id="step-2-summary-text" style="font-weight: 700; font-size: 0.9rem; color: var(--text-secondary);">1 item</span>
+                <button type="button" onclick="clearCart()" class="btn btn-secondary btn-sm" style="min-height: 32px; width: auto; color: var(--danger); background: rgba(244, 67, 54, 0.08);">
+                    Limpar
                 </button>
             </div>
 
-            <!-- Product search helper autocomplete -->
-            <div class="autocomplete-container">
-                <input 
-                    type="text" 
-                    id="product-search-input" 
-                    class="form-control" 
-                    placeholder="Ou digite o nome do produto para buscar..." 
-                    oninput="onProductQuery(this.value)"
-                >
-                <div id="product-dropdown" class="autocomplete-dropdown"></div>
+            <!-- Items List -->
+            <div id="cart-items-list" style="margin-bottom: 24px;"></div>
+
+            <!-- Step 2 Footer summary -->
+            <div style="border-top: 1px solid var(--border-color); padding-top: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <span style="font-size: 1.1rem; font-weight: 800; color: var(--text-primary);">Total:</span>
+                    <span id="step-2-total-val" style="font-size: 1.4rem; font-weight: 800; color: var(--purple-primary);">R$ 0,00</span>
+                </div>
+                <button type="button" onclick="advanceStep(3)" class="btn btn-purple">
+                    <span>Continuar →</span>
+                </button>
             </div>
-        </div>
+        </section>
 
-        <!-- Desktop POS Cart table (Desktop View) -->
-        <div class="card table-container" style="flex: 1; overflow-y: auto; padding: 16px;">
-            <h3 style="font-size: 1rem; font-weight: 800; color: var(--primary-dark); margin-bottom: 12px;">Carrinho de Venda</h3>
-            <table class="table" style="font-size: 0.85rem;">
-                <thead>
-                    <tr>
-                        <th>Produto</th>
-                        <th>Preço Unit</th>
-                        <th style="width: 120px;">Qtd</th>
-                        <th>Desconto</th>
-                        <th>Subtotal</th>
-                        <th style="text-align: right;">Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="cart-rows-desktop">
-                    <tr>
-                        <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Carrinho Vazio</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- 3. RESUMO FINANCEIRO (Direita) -->
-    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; padding: 20px;">
-        <div>
-            <h3 style="font-size: 1rem; font-weight: 800; color: var(--primary-dark); margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-                Resumo do Pedido
+        <!-- ETAPA 3: CLIENTE + ENTREGA -->
+        <section id="step-3" class="step-container">
+            <!-- Cliente Section -->
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="user" style="width: 16px; height: 16px;"></i> Cliente
             </h3>
             
-            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.9rem; color: var(--text-secondary);">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Subtotal:</span>
-                    <span id="summary-subtotal" style="font-weight: 700; color: var(--text-primary);">R$ 0,00</span>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>Desconto Geral:</span>
-                    <div style="display: flex; align-items: center; gap: 8px; max-width: 140px;">
-                        <input type="number" id="discount-input" class="form-control" style="min-height: 36px; padding: 6px; text-align: right;" value="0" oninput="onFinancialOverride()">
-                        <select id="discount-type" class="form-control" style="min-height: 36px; padding: 6px; width: 60px;" onchange="onFinancialOverride()">
-                            <option value="R$">R$</option>
-                            <option value="%">%</option>
-                        </select>
+            <div class="customer-picker-card" onclick="openModal('select-customer-modal')">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div id="sel-cust-avatar" class="customer-avatar">👤</div>
+                    <div>
+                        <h4 id="sel-cust-name" style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Outro</h4>
+                        <span id="sel-cust-subtitle" style="font-size: 0.8rem; color: var(--text-secondary);">Selecione o cliente</span>
                     </div>
                 </div>
+                <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
+            </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span>Frete:</span>
-                    <input type="number" id="freight-input" class="form-control" style="min-height: 36px; padding: 6px; text-align: right; max-width: 80px;" value="0" oninput="onFinancialOverride()">
-                </div>
+            <!-- Entrega Section -->
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-top: 28px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <i data-lucide="truck" style="width: 16px; height: 16px;"></i> Entrega
+            </h3>
 
-                <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 8px; font-size: 0.8rem; font-style: italic;">
-                    <span>Impostos Estimados (ICMS 8%, PIS 0.8%, COFINS 1.2%):</span>
-                    <span id="summary-taxes">R$ 0,00</span>
-                </div>
-
-                <div style="display: flex; justify-content: space-between; border-top: 2px solid var(--primary-dark); padding-top: 12px; font-size: 1.4rem; font-weight: 800; color: var(--text-primary);">
-                    <span>TOTAL:</span>
-                    <span id="summary-total" style="color: var(--primary-color);">R$ 0,00</span>
+            <div class="delivery-radio-card selected" id="delivery-opt-pickup" onclick="setDeliveryType('pickup')">
+                <i data-lucide="store" style="width: 24px; height: 24px; color: var(--purple-primary);"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 0.9rem;">🏪 Retirada no local</div>
+                    <span style="font-size: 0.78rem; color: var(--text-secondary);">Cliente retira na loja</span>
                 </div>
             </div>
-        </div>
 
-        <!-- 4. OBSERVAÇÕES E ENTREGA -->
-        <div style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 16px;">
-            <div class="form-group" style="margin-bottom: 12px;">
-                <label class="form-label" style="font-weight: 700; font-size: 0.8rem;">Tipo de Entrega</label>
-                <div class="delivery-options">
-                    <label class="delivery-card selected" id="opt-pickup" onclick="setDeliveryType('pickup')">
-                        <input type="radio" name="delivery_type" value="pickup" checked>
-                        <span>🏪 Retirada</span>
-                    </label>
-                    <label class="delivery-card" id="opt-ship" onclick="setDeliveryType('ship')">
-                        <input type="radio" name="delivery_type" value="ship">
-                        <span>🚚 Entrega</span>
-                    </label>
-                    <label class="delivery-card" id="opt-schedule" onclick="setDeliveryType('schedule')">
-                        <input type="radio" name="delivery_type" value="schedule">
-                        <span>📅 Agendado</span>
-                    </label>
+            <div class="delivery-radio-card" id="delivery-opt-ship" onclick="setDeliveryType('ship')">
+                <i data-lucide="truck" style="width: 24px; height: 24px; color: var(--purple-primary);"></i>
+                <div style="flex: 1;">
+                    <div style="font-weight: 700; font-size: 0.9rem;">🚚 Entrega</div>
+                    <span style="font-size: 0.78rem; color: var(--text-secondary);">Entregamos no endereço</span>
                 </div>
             </div>
 
             <!-- Optional Delivery details picker -->
-            <div id="delivery-details-panel" style="display: none; margin-bottom: 12px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+            <div id="delivery-details-panel" style="display: none; margin-top: 12px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
                 <div class="form-group" style="margin-bottom: 8px;">
                     <label class="form-label" style="font-size: 0.75rem;">Transportadora</label>
                     <select id="shipper-select" class="form-control" style="min-height: 36px; padding: 6px;">
@@ -345,69 +359,171 @@
                         <option value="jadlog">JadLog Express</option>
                     </select>
                 </div>
-                <div class="form-group" id="delivery-date-group" style="display: none; margin-bottom: 0;">
-                    <label class="form-label" style="font-size: 0.75rem;">Data da Entrega</label>
-                    <input type="date" id="delivery-date-input" class="form-control" style="min-height: 36px; padding: 6px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label" style="font-size: 0.75rem;">Endereço de Entrega</label>
+                    <input type="text" id="delivery-address-input" class="form-control" style="min-height: 36px; padding: 6px;" placeholder="Digite o logradouro completo para entrega">
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="order-notes" class="form-label" style="font-weight: 700; font-size: 0.8rem;">Observações / Instruções Especiais</label>
-                <textarea id="order-notes" class="form-control" style="min-height: 80px; padding: 8px; font-size: 0.85rem;" placeholder="Notas especiais de faturamento, frágil, horário de entrega..." maxlength="500" oninput="onNotesInput()"></textarea>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-                    <div style="display: flex; gap: 6px;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="appendNoteTemplate('Frágil')" style="min-height: 28px; padding: 2px 6px; font-size: 0.7rem;">Frágil</button>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="appendNoteTemplate('Entregar após 14h')" style="min-height: 28px; padding: 2px 6px; font-size: 0.7rem;">Após 14h</button>
+            <!-- Step 3 Footer -->
+            <button type="button" onclick="advanceStep(4)" class="btn btn-purple" style="margin-top: 30px;">
+                <span>Continuar para pagamento →</span>
+            </button>
+        </section>
+
+        <!-- ETAPA 4: RESUMO DETALHADO -->
+        <section id="step-4" class="step-container">
+            <!-- Client card summary -->
+            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div id="sel-cust-avatar-step4" class="customer-avatar">👤</div>
+                    <div>
+                        <h4 id="sel-cust-name-step4" style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Outro</h4>
+                        <span style="font-size: 0.8rem; color: var(--text-secondary);">Alterar cliente</span>
                     </div>
-                    <span id="notes-char-counter" style="font-size: 0.72rem; color: var(--text-secondary);">0 / 500</span>
+                </div>
+                <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
+            </div>
+
+            <!-- Delivery option selected representation -->
+            <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Entrega</h3>
+            <div id="delivery-summary-box" style="font-size: 0.9rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;"></div>
+
+            <!-- Observations textarea -->
+            <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+                <i data-lucide="menu" style="width: 14px; height: 14px;"></i> Observações
+            </h3>
+            <textarea id="order-notes" class="form-control" style="min-height: 80px; padding: 8px; font-size: 0.85rem; margin-bottom: 6px;" placeholder="Adicione observações sobre este pedido..." maxlength="500" oninput="onNotesInput()"></textarea>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; gap: 6px;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="appendNoteTemplate('Frágil')" style="min-height: 28px; padding: 2px 6px; font-size: 0.7rem;">Frágil</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="appendNoteTemplate('Entregar após 14h')" style="min-height: 28px; padding: 2px 6px; font-size: 0.7rem;">Após 14h</button>
+                </div>
+                <span id="notes-char-counter" style="font-size: 0.72rem; color: var(--text-secondary);">0 / 500</span>
+            </div>
+
+            <!-- Coupon dropdown -->
+            <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+                <i data-lucide="tag" style="width: 14px; height: 14px;"></i> Cupom
+            </h3>
+            <select id="coupon-select" class="form-control" style="margin-bottom: 24px;" onchange="onCouponSelect(this.value)">
+                <option value="none">Selecione um cupom</option>
+                <option value="COLISEU5">COLISEU5 (5% Desconto Geral)</option>
+                <option value="DESCONTO10">DESCONTO10 (R$ 10,00 Desconto)</option>
+            </select>
+
+            <!-- Financial detailed override inputs -->
+            <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Resumo do pedido:</h3>
+            <div id="financial-summary-list" style="margin-bottom: 24px;"></div>
+
+            <!-- Step 4 Footer -->
+            <button type="button" onclick="advanceStep(5)" class="btn btn-purple">
+                <span>Continuar para pagamento →</span>
+            </button>
+        </section>
+
+        <!-- ETAPA 5: PAGAMENTO (Seleção) -->
+        <section id="step-5" class="step-container">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <span style="font-size: 0.95rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Total a Pagar:</span>
+                <h1 id="step-5-total-val" style="font-size: 2.2rem; font-weight: 800; color: var(--purple-primary); margin-top: 4px;">R$ 0,00</h1>
+            </div>
+
+            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                Selecione o Método
+            </h3>
+
+            <div class="payment-grid">
+                <div class="payment-card" onclick="selectPaymentMethod('Pix', 'qr-code')">
+                    <i data-lucide="qr-code" style="width: 28px; height: 28px;"></i>
+                    <span>Pix</span>
+                </div>
+                <div class="payment-card" onclick="selectPaymentMethod('Dinheiro', 'banknote')">
+                    <i data-lucide="banknote" style="width: 28px; height: 28px;"></i>
+                    <span>Dinheiro</span>
+                </div>
+                <div class="payment-card" onclick="selectPaymentMethod('Mercado Pago', 'credit-card')">
+                    <i data-lucide="credit-card" style="width: 28px; height: 28px;"></i>
+                    <span>Mercado Pago</span>
+                </div>
+                <div class="payment-card" onclick="selectPaymentMethod('Pagaleve', 'wallet')">
+                    <i data-lucide="wallet" style="width: 28px; height: 28px;"></i>
+                    <span>Pagaleve</span>
+                </div>
+                <div class="payment-card" onclick="selectPaymentMethod('Cartão de Crédito', 'credit-card')">
+                    <i data-lucide="credit-card" style="width: 28px; height: 28px;"></i>
+                    <span>Cartão Crédito</span>
+                </div>
+                <div class="payment-card" onclick="selectPaymentMethod('Parcelado (PRO)', 'layers')">
+                    <i data-lucide="layers" style="width: 28px; height: 28px;"></i>
+                    <span>Parcelado [PRO]</span>
+                </div>
+                <div class="payment-card" onclick="selectPaymentMethod('Fiado (PRO)', 'user-minus')">
+                    <i data-lucide="user-minus" style="width: 28px; height: 28px;"></i>
+                    <span>Fiado [PRO]</span>
+                </div>
+                <div class="payment-card" onclick="selectPaymentMethod('Cartão de Débito', 'credit-card')">
+                    <i data-lucide="credit-card" style="width: 28px; height: 28px;"></i>
+                    <span>Cartão Débito</span>
+                </div>
+                <div class="payment-card" onclick="showToast('Outras opções disponíveis no ERP corporativo.', 'info')">
+                    <i data-lucide="more-horizontal" style="width: 28px; height: 28px;"></i>
+                    <span>Mais opções</span>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- 5. AÇÕES (Rodapé) -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 24px;">
-            <button type="button" onclick="submitOrder('budget')" class="btn btn-secondary" style="width: 100%;">
-                <span>Rascunho (Salvar)</span>
-            </button>
-            <button type="button" id="btn-submit-order" onclick="submitOrder('order')" class="btn btn-primary" style="width: 100%; background: #22c55e;">
-                <span>Lançar Pedido</span>
-            </button>
-            <button type="button" onclick="resetOrderForm()" class="btn btn-secondary" style="width: 100%; grid-column: 1 / -1; min-height: 36px; background: #6b7280; color: #fff;">
-                <span>Limpar Formulário</span>
-            </button>
-        </div>
-    </div>
-
-</div>
-
-<!-- Mobile Float Cart Drawer Trigger Button -->
-<button type="button" class="cart-drawer-trigger" onclick="openModal('mobile-cart-drawer')">
-    <i data-lucide="shopping-cart"></i>
-    <span id="mobile-cart-badge" class="cart-drawer-badge">0</span>
-</button>
-
-<!-- Mobile Cart Drawer Modal -->
-<div id="mobile-cart-drawer" class="modal-overlay">
-    <div class="modal-content" style="height: 100%;">
-        <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-            <h3 style="font-weight: 800; font-size: 1.05rem;">Carrinho de Venda</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('mobile-cart-drawer')" style="min-height: 36px; width: auto; padding: 0 12px;">
-                <span>Fechar</span>
-            </button>
-        </div>
-        <!-- Dynamic mobile list -->
-        <div id="cart-rows-mobile" class="cart-items" style="flex: 1; padding: 16px;">
-            <div style="text-align: center; color: var(--text-muted); padding: 40px;">Carrinho Vazio</div>
-        </div>
-        <div style="padding: 16px; border-top: 1px solid var(--border-color); background: #fafafa;">
-            <div style="display: flex; justify-content: space-between; font-size: 1.2rem; font-weight: 800; margin-bottom: 12px;">
-                <span>Total:</span>
-                <span id="mobile-cart-total-display" style="color: var(--primary-color);">R$ 0,00</span>
+        <!-- ETAPA 6: CONFIRMAÇÃO DE PAGAMENTO -->
+        <section id="step-6" class="step-container">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <span style="font-size: 0.95rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Total a Pagar:</span>
+                <h1 id="step-6-total-val" style="font-size: 2.2rem; font-weight: 800; color: var(--purple-primary); margin-top: 4px;">R$ 0,00</h1>
             </div>
-            <button type="button" class="btn btn-primary" onclick="closeModal('mobile-cart-drawer')" style="width: 100%;">
-                <span>Continuar Venda</span>
+
+            <div style="background: #fafafa; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 44px; height: 44px; border-radius: 8px; background: rgba(124, 92, 246, 0.08); color: var(--purple-primary); display: flex; align-items: center; justify-content: center;">
+                        <i id="conf-payment-icon" data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <div>
+                        <h4 id="conf-payment-name" style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary);">Cartão de Crédito</h4>
+                        <span id="conf-payment-value" style="font-size: 0.88rem; font-weight: 700; color: var(--purple-primary);">R$ 0,00</span>
+                    </div>
+                </div>
+                <button type="button" onclick="deselectPaymentMethod()" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 8px;">
+                    <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+                </button>
+            </div>
+
+            <!-- Confirm Button -->
+            <button type="button" id="btn-submit-order" onclick="onConfirmOrderSubmit()" class="btn btn-purple">
+                <span id="btn-submit-text">Concluir R$ 0,00</span>
             </button>
-        </div>
+        </section>
+
+        <!-- ETAPA 7: SUCESSO -->
+        <section id="step-7" class="step-container" style="text-align: center;">
+            <div class="checkmark-circle">✓</div>
+            <h2 style="font-weight: 800; font-size: 1.5rem; color: var(--text-primary); margin-bottom: 6px;">Pagamento concluído!</h2>
+            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 30px;">O pagamento foi registrado com sucesso</p>
+
+            <div style="background: #fafafa; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; text-align: left; margin-bottom: 30px;">
+                <h4 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Detalhes do pagamento</h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.9rem; font-weight: 700; color: var(--text-primary);">
+                    <span id="success-payment-method">Cartão de Crédito</span>
+                    <span id="success-payment-val">R$ 0,00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 12px; font-size: 0.9rem; font-weight: 800; color: var(--text-primary);">
+                    <span>Total pago</span>
+                    <span id="success-total-paid">R$ 0,00</span>
+                </div>
+            </div>
+
+            <button type="button" onclick="finalizeSuccessFlow()" class="btn btn-purple">
+                <span>← Finalizar e ver pedido</span>
+            </button>
+        </section>
+
     </div>
 </div>
 
@@ -420,7 +536,7 @@
                 <span>Fechar</span>
             </button>
         </div>
-        <div style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+        <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px;">
             <input 
                 type="text" 
                 id="catalog-modal-search" 
@@ -429,9 +545,7 @@
                 oninput="onModalCatalogSearch(this.value)"
             >
         </div>
-        <div id="modal-catalog-grid" class="catalog-grid" style="padding: 16px; flex: 1;">
-            <!-- Render dynamically -->
-        </div>
+        <div id="modal-catalog-grid" class="catalog-grid" style="padding: 16px; flex: 1;"></div>
     </div>
 </div>
 
@@ -471,15 +585,67 @@
                     <input type="text" id="new-cust-street" class="form-control" placeholder="Nome do logradouro">
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+            <button type="submit" class="btn btn-primary btn-purple" style="width: 100%; margin-top: 10px;">
                 <span>+ Salvar e Selecionar</span>
             </button>
         </form>
     </div>
 </div>
 
+<!-- Modal 3: Selecionar Cliente Search -->
+<div id="select-customer-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <h3 style="font-weight: 800; font-size: 1.05rem;">👤 Selecionar Cliente</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('select-customer-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
+                <span>Fechar</span>
+            </button>
+        </div>
+        <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px;">
+            <input 
+                type="text" 
+                id="customer-modal-search" 
+                class="form-control" 
+                placeholder="Busque por nome, CPF/CNPJ ou Telefone..." 
+                oninput="onModalCustomerSearch(this.value)"
+            >
+            <button type="button" class="btn btn-secondary" onclick="openModal('new-customer-modal')" style="width: auto; min-height: 44px; padding: 0 12px;">
+                <span>+ Novo</span>
+            </button>
+        </div>
+        <div id="modal-customer-list" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px;"></div>
+    </div>
+</div>
+
+<!-- Modal 4: Edit Resumo values popover -->
+<div id="edit-values-modal" class="modal-overlay">
+    <div class="modal-content" style="max-height: 60vh;">
+        <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <h3 id="edit-value-modal-title" style="font-weight: 800; font-size: 1.05rem;">Editar Valor</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('edit-values-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
+                <span>Fechar</span>
+            </button>
+        </div>
+        <form onsubmit="onSaveEditValue(event)" style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+            <input type="hidden" id="edit-value-field-name">
+            <div class="form-group">
+                <label id="edit-value-field-label" class="form-label" style="font-weight: 700;">Valor (R$)</label>
+                <input type="number" step="0.01" id="edit-value-input" class="form-control" required style="font-size: 1.2rem; font-weight: 700; text-align: center;">
+            </div>
+            <button type="submit" class="btn btn-primary btn-purple" style="width: 100%;">
+                <span>Salvar Alteração</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Floating '+' product picker shortcut -->
+<button type="button" class="float-add-btn" id="float-add-trigger" onclick="openModal('catalog-picker-modal')">
+    <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
+</button>
+
 <script>
-    // Inline data sets compiled from template context
+    // Inline data compiled from context
     const customers = [
         {% for cust in customers %}
         {
@@ -509,15 +675,96 @@
         {% endfor %}
     ];
 
-    // Local checkout variables
-    let selectedCustomer = null;
+    // State Variables
+    let currentStep = 1;
     let localCart = [];
+    let selectedCustomer = null;
     let deliveryType = 'pickup';
+    let shipperName = 'propria';
+    let deliveryAddress = '';
+    
+    // Financial components
     let discountAmount = 0;
-    let discountType = 'R$';
     let freightAmount = 0;
+    let saleTaxAmount = 0; // Taxa de Venda
+    let selectedPaymentMethod = null;
+    let selectedPaymentIcon = 'credit-card';
 
-    // Load initial draft if stored in localStorage
+    // ── Wizard State Navigation ──
+    function setStep(step) {
+        // Validation checks per transition
+        if (step === 2 && localCart.length === 0) {
+            step = 1;
+        }
+        if (step === 4 && !selectedCustomer) {
+            showToast('Por favor, selecione um cliente para continuar.', 'error');
+            return;
+        }
+
+        currentStep = step;
+
+        // Toggle container displays
+        for (let i = 1; i <= 7; i++) {
+            const container = document.getElementById('step-' + i);
+            if (container) {
+                container.classList.remove('active');
+            }
+        }
+        document.getElementById('step-' + step).classList.add('active');
+
+        // Back button control visibility
+        const backBtn = document.getElementById('back-button');
+        if (step === 1 || step === 7) {
+            backBtn.style.visibility = 'hidden';
+        } else {
+            backBtn.style.visibility = 'visible';
+        }
+
+        // Floating action '+' button control
+        const floatAdd = document.getElementById('float-add-trigger');
+        if (step === 1 || step === 2) {
+            floatAdd.style.display = 'flex';
+        } else {
+            floatAdd.style.display = 'none';
+        }
+
+        // Header titles
+        const titles = {
+            1: { title: 'Novo pedido', subtitle: 'Etapa 1 de 7: Produtos' },
+            2: { title: 'Novo pedido', subtitle: `Etapa 2 de 7: Carrinho (${localCart.length} itens)` },
+            3: { title: 'Cliente + Entrega', subtitle: 'Etapa 3 de 7: Destinatário' },
+            4: { title: 'Resumo do pedido', subtitle: 'Etapa 4 de 7: Revisão detalhada' },
+            5: { title: 'Pagamento', subtitle: 'Etapa 5 de 7: Métodos' },
+            6: { title: 'Pagamento', subtitle: 'Etapa 6 de 7: Confirmação' },
+            7: { title: 'Pagamento concluído', subtitle: 'Finalização do Pedido' }
+        };
+
+        document.getElementById('header-step-title').innerText = titles[step].title;
+        document.getElementById('header-step-subtitle').innerText = titles[step].subtitle;
+        
+        // Progress bar percentage
+        document.getElementById('wizard-progress-bar').style.width = `${(step / 7) * 100}%`;
+
+        // Update layouts
+        updateWizardDOMs();
+        saveDraftToLocalStorage();
+    }
+
+    function advanceStep(next) {
+        setStep(next);
+    }
+
+    function navigateBack() {
+        if (currentStep > 1 && currentStep < 7) {
+            if (currentStep === 6) {
+                deselectPaymentMethod();
+            } else {
+                setStep(currentStep - 1);
+            }
+        }
+    }
+
+    // Initialize Page
     window.addEventListener('DOMContentLoaded', () => {
         const draft = localStorage.getItem('coliseuspeed_cart_draft');
         if (draft) {
@@ -527,256 +774,28 @@
                 selectedCustomer = parsed.customer || null;
                 deliveryType = parsed.delivery_type || 'pickup';
                 discountAmount = parsed.discount || 0;
-                discountType = parsed.discount_type || 'R$';
                 freightAmount = parsed.freight || 0;
-                
+                saleTaxAmount = parsed.saleTax || 0;
                 document.getElementById('order-notes').value = parsed.notes || '';
-                document.getElementById('discount-input').value = discountAmount;
-                document.getElementById('discount-type').value = discountType;
-                document.getElementById('freight-input').value = freightAmount;
                 
-                if (selectedCustomer) {
-                    displaySelectedCustomer(selectedCustomer);
+                if (localCart.length > 0) {
+                    currentStep = 2;
                 }
-                setDeliveryType(deliveryType);
-                updateLayoutDOMs();
-                showToast('Rascunho recuperado com sucesso!', 'success');
             } catch(e) {
-                console.error('Failed to restore draft:', e);
+                console.error(e);
             }
         }
-        
-        // Focus client input initially
-        document.getElementById('customer-search-input').focus();
+        setStep(currentStep);
     });
 
-    // 1. Customer Autocomplete & Selection
-    function onCustomerQuery(query) {
-        const dropdown = document.getElementById('customer-dropdown');
-        if (query.trim().length < 2) {
-            dropdown.style.display = 'none';
-            return;
-        }
-
-        const filtered = customers.filter(c => 
-            c.name.toLowerCase().includes(query.toLowerCase()) || 
-            c.cnpj.includes(query) || 
-            c.phone.includes(query)
-        );
-
-        dropdown.innerHTML = '';
-        if (filtered.length === 0) {
-            dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted);">Nenhum cliente encontrado</div>';
-            dropdown.style.display = 'block';
-            return;
-        }
-
-        filtered.forEach(c => {
-            const item = document.createElement('div');
-            item.className = 'autocomplete-item';
-            item.onclick = () => selectCustomer(c);
-            
-            const initials = c.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-            const statusClass = c.status === 'liberado' ? 'badge-active' : 'badge-blocked';
-            const statusLabel = c.status === 'liberado' ? 'LIBERADO' : 'BLOQUEADO';
-
-            item.innerHTML = `
-                <div class="autocomplete-avatar">${initials}</div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">${c.name}</div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">${c.cnpj} | ${c.phone}</div>
-                </div>
-                <span class="badge-status ${statusClass}">${statusLabel}</span>
-            `;
-            dropdown.appendChild(item);
-        });
-        dropdown.style.display = 'block';
-    }
-
-    function selectCustomer(cust) {
-        if (cust.status !== 'liberado') {
-            showToast('Cliente selecionado está BLOQUEADO no ERP!', 'error');
-            return;
-        }
-        selectedCustomer = cust;
-        document.getElementById('customer-dropdown').style.display = 'none';
-        document.getElementById('customer-search-input').value = '';
-        
-        displaySelectedCustomer(cust);
-        
-        // Auto-focus barcode input
-        document.getElementById('barcode-input').focus();
-        saveDraftToLocalStorage();
-    }
-
-    function displaySelectedCustomer(cust) {
-        document.getElementById('customer-search-input').style.display = 'none';
-        
-        const card = document.getElementById('selected-customer-card');
-        document.getElementById('sel-cust-name').innerText = cust.name;
-        document.getElementById('sel-cust-doc').innerText = `Documento: ${cust.cnpj}`;
-        document.getElementById('sel-cust-phone').innerHTML = `<i data-lucide="phone" style="width: 14px; height: 14px;"></i> ${cust.phone}`;
-        document.getElementById('sel-cust-email').innerHTML = `<i data-lucide="mail" style="width: 14px; height: 14px;"></i> ${cust.email}`;
-        document.getElementById('sel-cust-address').innerHTML = `<i data-lucide="map-pin" style="width: 14px; height: 14px;"></i> ${cust.address}`;
-        
-        // Limit badge color logic
-        const badge = document.getElementById('sel-cust-limit-badge');
-        const limitRatio = cust.credit_available / cust.credit_limit;
-        
-        badge.innerText = cust.status.toUpperCase();
-        if (limitRatio < 0.1) {
-            badge.className = 'badge-status badge-blocked'; // red
-        } else if (limitRatio < 0.3) {
-            badge.style.background = 'rgba(255, 193, 7, 0.1)';
-            badge.style.color = '#ff9800'; // yellow
-        } else {
-            badge.className = 'badge-status badge-active'; // green
-        }
-
-        document.getElementById('sel-cust-limit').innerText = `R$ ${cust.credit_limit.toFixed(2)}`;
-        document.getElementById('sel-cust-debt').innerText = `R$ ${(cust.credit_limit - cust.credit_available).toFixed(2)}`;
-        
-        card.style.display = 'block';
-        lucide.createIcons();
-    }
-
-    function clearSelectedCustomer() {
-        selectedCustomer = null;
-        document.getElementById('selected-customer-card').style.display = 'none';
-        
-        const input = document.getElementById('customer-search-input');
-        input.style.display = 'block';
-        input.value = '';
-        input.focus();
-        saveDraftToLocalStorage();
-    }
-
-    // 2. Barcode & Product capture listeners
-    function onBarcodeKeyDown(event) {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            const sku = event.target.value.trim();
-            if (!sku) return;
-
-            // Search product matching SKU/code or name
-            const prod = products.find(p => p.code.toLowerCase() === sku.toLowerCase());
-            const wrapper = document.getElementById('barcode-input');
-            
-            if (prod) {
-                // Add item to cart
-                addItemToCart(prod);
-                wrapper.value = '';
-                wrapper.classList.remove('scanner-error');
-                wrapper.classList.add('scanner-success');
-                setTimeout(() => wrapper.classList.remove('scanner-success'), 1000);
-            } else {
-                showToast(`SKU/Código '${sku}' não cadastrado no catálogo!`, 'error');
-                wrapper.classList.remove('scanner-success');
-                wrapper.classList.add('scanner-error');
-                setTimeout(() => wrapper.classList.remove('scanner-error'), 1000);
-            }
+    // ── Cart State Handlers ──
+    function clearCart() {
+        if (confirm('Deseja esvaziar o carrinho de compras?')) {
+            localCart = [];
+            setStep(1);
         }
     }
 
-    function onProductQuery(query) {
-        const dropdown = document.getElementById('product-dropdown');
-        if (query.trim().length < 2) {
-            dropdown.style.display = 'none';
-            return;
-        }
-
-        const filtered = products.filter(p => 
-            p.name.toLowerCase().includes(query.toLowerCase()) || 
-            p.code.toLowerCase().includes(query.toLowerCase())
-        );
-
-        dropdown.innerHTML = '';
-        if (filtered.length === 0) {
-            dropdown.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted);">Nenhum produto encontrado</div>';
-            dropdown.style.display = 'block';
-            return;
-        }
-
-        filtered.forEach(p => {
-            const item = document.createElement('div');
-            item.className = 'autocomplete-item';
-            item.onclick = () => {
-                addItemToCart(p);
-                dropdown.style.display = 'none';
-                document.getElementById('product-search-input').value = '';
-                document.getElementById('barcode-input').focus();
-            };
-
-            item.innerHTML = `
-                <div style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">📦</div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">${p.name}</div>
-                    <div style="font-size: 0.75rem; color: var(--text-secondary);">SKU: ${p.code} | Estoque: ${p.stock}</div>
-                </div>
-                <span style="font-weight: 800; font-size: 0.9rem; color: var(--primary-color);">R$ ${p.price.toFixed(2)}</span>
-            `;
-            dropdown.appendChild(item);
-        });
-        dropdown.style.display = 'block';
-    }
-
-    // Modal search catalog grid
-    function onModalCatalogSearch(query) {
-        const grid = document.getElementById('modal-catalog-grid');
-        const filtered = products.filter(p => 
-            p.name.toLowerCase().includes(query.toLowerCase()) || 
-            p.code.toLowerCase().includes(query.toLowerCase())
-        );
-        renderModalCatalogGrid(filtered);
-    }
-
-    function renderModalCatalogGrid(prodList) {
-        const grid = document.getElementById('modal-catalog-grid');
-        grid.innerHTML = '';
-        if (prodList.length === 0) {
-            grid.innerHTML = '<div style="text-align: center; grid-column: 1/-1; padding: 40px; color: var(--text-muted);">Nenhum item correspondente</div>';
-            return;
-        }
-
-        prodList.forEach(p => {
-            const card = document.createElement('div');
-            card.className = 'product-card';
-            card.innerHTML = `
-                <div class="product-img">📦</div>
-                <div class="product-info">
-                    <div class="product-code">${p.code}</div>
-                    <div class="product-name">${p.name}</div>
-                    <div class="product-stock ${p.stock > 0 ? 'stock-badge-green' : 'stock-badge-red'}">
-                        Estoque: ${p.stock}
-                    </div>
-                    <div class="product-price">R$ ${p.price.toFixed(2)}</div>
-                </div>
-                <button type="button" class="btn btn-primary btn-sm" onclick="addItemToCartFromModal('${p.id}')">
-                    Adicionar
-                </button>
-            `;
-            grid.appendChild(card);
-        });
-    }
-
-    function addItemToCartFromModal(id) {
-        const prod = products.find(p => p.id === id);
-        if (prod) {
-            addItemToCart(prod);
-        }
-    }
-
-    // Open modal pickers and display list
-    const originalOpenModal = openModal;
-    openModal = function(id) {
-        if (id === 'catalog-picker-modal') {
-            document.getElementById('catalog-modal-search').value = '';
-            renderModalCatalogGrid(products);
-        }
-        originalOpenModal(id);
-    };
-
-    // 3. Cart items handlers
     function addItemToCart(prod) {
         const existing = localCart.find(i => i.id === prod.id);
         if (existing) {
@@ -799,15 +818,12 @@
                 quantity: 1
             });
         }
-        showToast('Produto adicionado!');
-        updateLayoutDOMs();
-        saveDraftToLocalStorage();
-    }
-
-    function removeCartItem(id) {
-        localCart = localCart.filter(i => i.id !== id);
-        showToast('Item removido.');
-        updateLayoutDOMs();
+        showToast('Produto adicionado ao carrinho!');
+        if (currentStep === 1) {
+            setStep(2);
+        } else {
+            updateWizardDOMs();
+        }
         saveDraftToLocalStorage();
     }
 
@@ -817,161 +833,137 @@
 
         item.quantity += delta;
         if (item.quantity > item.stock) {
-            showToast('Quantidade máxima em estoque atingida!', 'error');
+            showToast('Quantidade em estoque excedida!', 'error');
             item.quantity = item.stock;
         }
         if (item.quantity <= 0) {
-            removeCartItem(id);
-            return;
+            localCart = localCart.filter(i => i.id !== id);
+            showToast('Item removido.');
         }
-        updateLayoutDOMs();
-        saveDraftToLocalStorage();
-    }
-
-    // Editable unit prices in line
-    function updateCartItemPrice(id, newPriceVal) {
-        const item = localCart.find(i => i.id === id);
-        if (!item) return;
-
-        const price = parseFloat(newPriceVal);
-        if (!isNaN(price) && price >= 0) {
-            item.price = price;
-        }
-        updateLayoutDOMs();
-        saveDraftToLocalStorage();
-    }
-
-    // 4. Financial recalcs and DOM update wrapper
-    function onFinancialOverride() {
-        discountAmount = parseFloat(document.getElementById('discount-input').value) || 0;
-        discountType = document.getElementById('discount-type').value;
-        freightAmount = parseFloat(document.getElementById('freight-input').value) || 0;
-        
-        updateLayoutDOMs();
-        saveDraftToLocalStorage();
-    }
-
-    function updateLayoutDOMs() {
-        const desktopBody = document.getElementById('cart-rows-desktop');
-        const mobileBody = document.getElementById('cart-rows-mobile');
-        
-        desktopBody.innerHTML = '';
-        mobileBody.innerHTML = '';
-        
-        let subtotal = 0;
-        let totalQty = 0;
 
         if (localCart.length === 0) {
-            desktopBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Carrinho Vazio</td></tr>`;
-            mobileBody.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 40px;">Carrinho Vazio</div>`;
+            setStep(1);
         } else {
-            localCart.forEach(item => {
-                subtotal += item.price * item.quantity;
-                totalQty += item.quantity;
+            updateWizardDOMs();
+        }
+        saveDraftToLocalStorage();
+    }
 
-                // Desktop table row
-                const dRow = document.createElement('tr');
-                dRow.innerHTML = `
-                    <td style="font-weight: 700; color: var(--text-primary);">
-                        ${item.name}<br>
-                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 600;">SKU: ${item.code}</span>
-                    </td>
-                    <td>
-                        <input type="number" step="0.01" class="form-control" style="min-height: 32px; max-width: 90px; padding: 4px;" value="${item.price.toFixed(2)}" onchange="updateCartItemPrice('${item.id}', this.value)">
-                    </td>
-                    <td>
-                        <div class="cart-item-qty" style="justify-content: flex-start;">
-                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', -1)">-</button>
-                            <span style="font-weight: 700; font-size: 0.9rem; min-width: 20px; text-align: center;">${item.quantity}</span>
-                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', 1)">+</button>
-                        </div>
-                    </td>
-                    <td>R$ 0,00</td>
-                    <td style="font-weight: 800; color: var(--primary-color);">R$ ${(item.price * item.quantity).toFixed(2)}</td>
-                    <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="removeCartItem('${item.id}')" style="min-height: 32px; background: rgba(239, 68, 68, 0.08); color: var(--danger);">
-                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                        </button>
-                    </td>
-                `;
-                desktopBody.appendChild(dRow);
+    // Modal Edit Catalog Search
+    function onModalCatalogSearch(query) {
+        const grid = document.getElementById('modal-catalog-grid');
+        const filtered = products.filter(p => 
+            p.name.toLowerCase().includes(query.toLowerCase()) || 
+            p.code.toLowerCase().includes(query.toLowerCase())
+        );
+        renderCatalogGrid(filtered);
+    }
 
-                // Mobile card drawer item
-                const mCard = document.createElement('div');
-                mCard.className = 'table-card';
-                mCard.innerHTML = `
-                    <div class="table-card-row">
-                        <span class="table-card-title">${item.name}</span>
-                        <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger);"><i data-lucide="x" style="width: 18px; height: 18px;"></i></button>
-                    </div>
-                    <div class="table-card-row">
-                        <span class="table-card-subtitle">SKU: ${item.code}</span>
-                        <span class="table-card-amount">R$ ${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                    <div class="table-card-row" style="margin-top: 8px; align-items: center;">
-                        <div class="cart-item-qty">
-                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', -1)">-</button>
-                            <span style="font-weight: 700; min-width: 20px; text-align: center;">${item.quantity}</span>
-                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', 1)">+</button>
-                        </div>
-                        <span style="font-size: 0.8rem; color: var(--text-secondary);">Preço unit: R$ ${item.price.toFixed(2)}</span>
-                    </div>
-                `;
-                mobileBody.appendChild(mCard);
-            });
+    function renderCatalogGrid(items) {
+        const grid = document.getElementById('modal-catalog-grid');
+        grid.innerHTML = '';
+        if (items.length === 0) {
+            grid.innerHTML = '<div style="text-align: center; grid-column: 1/-1; padding: 40px; color: var(--text-secondary);">Nenhum produto correspondente.</div>';
+            return;
         }
 
-        // Apply financial discounts rules
-        let discountVal = discountAmount;
-        if (discountType === '%') {
-            discountVal = subtotal * (discountAmount / 100);
+        items.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'product-card';
+            card.innerHTML = `
+                <div class="product-img">📦</div>
+                <div class="product-info">
+                    <div class="product-code">${p.code}</div>
+                    <div class="product-name">${p.name}</div>
+                    <div class="product-stock ${p.stock > 0 ? 'stock-badge-green' : 'stock-badge-red'}">
+                        Estoque: ${p.stock}
+                    </div>
+                    <div class="product-price">R$ ${p.price.toFixed(2)}</div>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm btn-purple" onclick="addItemFromCatalog('${p.id}')" style="min-height: 36px; padding: 4px 8px;">
+                    Adicionar
+                </button>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function addItemFromCatalog(id) {
+        const prod = products.find(p => p.id === id);
+        if (prod) {
+            addItemToCart(prod);
+        }
+    }
+
+    // ── Cliente + Entrega Selection ──
+    function selectCustomer(cust) {
+        if (cust.status !== 'liberado') {
+            showToast('Este cliente está bloqueado!', 'error');
+            return;
+        }
+        selectedCustomer = cust;
+        closeModal('select-customer-modal');
+        setStep(3);
+    }
+
+    function onModalCustomerSearch(query) {
+        const list = document.getElementById('modal-customer-list');
+        const filtered = customers.filter(c => 
+            c.name.toLowerCase().includes(query.toLowerCase()) || 
+            c.cnpj.includes(query)
+        );
+        renderCustomerList(filtered);
+    }
+
+    function renderCustomerList(listData) {
+        const container = document.getElementById('modal-customer-list');
+        container.innerHTML = '';
+        if (listData.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-secondary);">Nenhum cliente correspondente.</div>';
+            return;
         }
 
-        if (discountVal > subtotal) {
-            discountVal = subtotal;
-            showToast('O desconto não pode exceder o valor subtotal!', 'error');
-        }
-
-        // Auto taxes calculation (ICMS 8%, PIS 0.8%, COFINS 1.2%)
-        const taxes = subtotal * 0.10; // total 10%
-        const total = subtotal - discountVal + freightAmount;
-
-        // Render summary totalizers
-        document.getElementById('summary-subtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
-        document.getElementById('summary-taxes').innerText = `R$ ${taxes.toFixed(2)}`;
-        document.getElementById('summary-total').innerText = `R$ ${total.toFixed(2)}`;
-        document.getElementById('mobile-cart-total-display').innerText = `R$ ${total.toFixed(2)}`;
-        
-        // Update float cart badges
-        document.getElementById('mobile-cart-badge').innerText = totalQty;
-        
+        listData.forEach(c => {
+            const card = document.createElement('div');
+            card.className = 'customer-picker-card';
+            card.onclick = () => selectCustomer(c);
+            
+            const initials = c.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+            card.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="customer-avatar">${initials}</div>
+                    <div>
+                        <h4 style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">${c.name}</h4>
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">${c.cnpj}</span>
+                    </div>
+                </div>
+                <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
+            `;
+            container.appendChild(card);
+        });
         lucide.createIcons();
     }
 
-    // 5. Notes and delivery type configurations
     function setDeliveryType(type) {
         deliveryType = type;
+        const pickup = document.getElementById('delivery-opt-pickup');
+        const ship = document.getElementById('delivery-opt-ship');
         
-        // Selected badge visual switch
-        document.getElementById('opt-pickup').classList.remove('selected');
-        document.getElementById('opt-ship').classList.remove('selected');
-        document.getElementById('opt-schedule').classList.remove('selected');
-        
+        pickup.classList.remove('selected');
+        ship.classList.remove('selected');
+
         if (type === 'pickup') {
-            document.getElementById('opt-pickup').classList.add('selected');
+            pickup.classList.add('selected');
             document.getElementById('delivery-details-panel').style.display = 'none';
-        } else if (type === 'ship') {
-            document.getElementById('opt-ship').classList.add('selected');
-            document.getElementById('delivery-details-panel').style.display = 'block';
-            document.getElementById('delivery-date-group').style.display = 'none';
         } else {
-            document.getElementById('opt-schedule').classList.add('selected');
+            ship.classList.add('selected');
             document.getElementById('delivery-details-panel').style.display = 'block';
-            document.getElementById('delivery-date-group').style.display = 'block';
         }
+        updateWizardDOMs();
         saveDraftToLocalStorage();
     }
 
+    // ── Resumo Financeiro & Obs overrides ──
     function onNotesInput() {
         const val = document.getElementById('order-notes').value;
         document.getElementById('notes-char-counter').innerText = `${val.length} / 500`;
@@ -985,7 +977,277 @@
         onNotesInput();
     }
 
-    // CEP addresses autocomplete lookup
+    function onCouponSelect(val) {
+        if (val === 'COLISEU5') {
+            discountAmount = getSubtotal() * 0.05;
+        } else if (val === 'DESCONTO10') {
+            discountAmount = 10.0;
+        } else {
+            discountAmount = 0;
+        }
+        updateWizardDOMs();
+        saveDraftToLocalStorage();
+    }
+
+    function openEditValuePopover(fieldName, label, currentValue) {
+        document.getElementById('edit-value-field-name').value = fieldName;
+        document.getElementById('edit-value-field-label').innerText = label;
+        document.getElementById('edit-value-input').value = currentValue;
+        openModal('edit-values-modal');
+    }
+
+    function onSaveEditValue(e) {
+        e.preventDefault();
+        const fieldName = document.getElementById('edit-value-field-name').value;
+        const val = parseFloat(document.getElementById('edit-value-input').value) || 0;
+        
+        if (fieldName === 'freight') {
+            freightAmount = val;
+        } else if (fieldName === 'tax') {
+            saleTaxAmount = val;
+        } else if (fieldName === 'discount') {
+            discountAmount = val;
+        }
+
+        closeModal('edit-values-modal');
+        updateWizardDOMs();
+        saveDraftToLocalStorage();
+    }
+
+    // ── Payment selection logic ──
+    function selectPaymentMethod(methodName, iconName) {
+        selectedPaymentMethod = methodName;
+        selectedPaymentIcon = iconName;
+        advanceStep(6);
+    }
+
+    function deselectPaymentMethod() {
+        selectedPaymentMethod = null;
+        setStep(5);
+    }
+
+    // Save final submit faturamento
+    async function onConfirmOrderSubmit() {
+        const btn = document.getElementById('btn-submit-order');
+        btn.disabled = true;
+        document.getElementById('btn-submit-text').innerText = 'Faturando...';
+
+        const payload = {
+            customer_id: selectedCustomer.id,
+            status: 'order',
+            payment_condition: selectedPaymentMethod,
+            items: localCart.map(i => ({
+                product_id: i.id,
+                quantity: i.quantity,
+                price: i.price
+            }))
+        };
+
+        try {
+            const response = await fetch('/api/orders/new', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                // Success: update layout details and advance to Step 7
+                document.getElementById('success-payment-method').innerText = `🟠 ${selectedPaymentMethod}`;
+                document.getElementById('success-payment-val').innerText = `R$ ${getTotal().toFixed(2)}`;
+                document.getElementById('success-total-paid').innerText = `R$ ${getTotal().toFixed(2)}`;
+                
+                localStorage.removeItem('coliseuspeed_cart_draft');
+                advanceStep(7);
+            } else {
+                showToast(data.detail || 'Erro ao sincronizar com o ERP.', 'error');
+            }
+        } catch(e) {
+            showToast('Erro na conexão com o servidor ERP.', 'error');
+        } finally {
+            btn.disabled = false;
+            document.getElementById('btn-submit-text').innerText = `Concluir R$ ${getTotal().toFixed(2)}`;
+        }
+    }
+
+    function finalizeSuccessFlow() {
+        window.location.href = '/orders';
+    }
+
+    // ── Calculation Helpers ──
+    function getSubtotal() {
+        return localCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    }
+    function getTotal() {
+        const sub = getSubtotal();
+        let disc = discountAmount;
+        if (disc > sub) disc = sub;
+        return sub - disc + freightAmount + saleTaxAmount;
+    }
+
+    // ── DOM update compiler ──
+    function updateWizardDOMs() {
+        const sub = getSubtotal();
+        const total = getTotal();
+
+        // Step 2 Summary Cart
+        if (currentStep === 2) {
+            document.getElementById('step-2-summary-text').innerText = `${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'}`;
+            document.getElementById('step-2-total-val').innerText = `R$ ${sub.toFixed(2)}`;
+
+            const container = document.getElementById('cart-items-list');
+            container.innerHTML = '';
+            localCart.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'product-list-card';
+                card.innerHTML = `
+                    <div class="product-list-row">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.5rem;">📦</span>
+                            <div>
+                                <h4 style="font-weight: 700; font-size: 0.95rem;">${item.name}</h4>
+                                <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: 600;">SKU: ${item.code}</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="onAdjustQty('${item.id}', -${item.quantity})" style="border: none; background: none; color: var(--danger); cursor: pointer;">
+                            <i data-lucide="trash-2" style="width: 18px; height: 18px;"></i>
+                        </button>
+                    </div>
+                    <div class="product-list-row" style="background: #fafafa; border-radius: 8px; padding: 8px 12px;">
+                        <div class="cart-item-qty">
+                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', -1)">-</button>
+                            <span style="font-weight: 700; min-width: 24px; text-align: center;">${item.quantity}</span>
+                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', 1)">+</button>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">× R$ ${item.price.toFixed(2)}</span>
+                            <div style="font-weight: 800; color: var(--purple-primary); font-size: 1rem;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">
+                        ${item.stock} em estoque
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Step 3 Selected Client represent
+        if (selectedCustomer) {
+            const initials = selectedCustomer.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+            document.getElementById('sel-cust-avatar').innerText = initials;
+            document.getElementById('sel-cust-name').innerText = selectedCustomer.name;
+            document.getElementById('sel-cust-subtitle').innerText = `CNPJ: ${selectedCustomer.cnpj}`;
+            
+            // Step 4 mirroring
+            document.getElementById('sel-cust-avatar-step4').innerText = initials;
+            document.getElementById('sel-cust-name-step4').innerText = selectedCustomer.name;
+        } else {
+            document.getElementById('sel-cust-avatar').innerText = '👤';
+            document.getElementById('sel-cust-name').innerText = 'Outro';
+            document.getElementById('sel-cust-subtitle').innerText = 'Selecione o cliente';
+            
+            document.getElementById('sel-cust-avatar-step4').innerText = '👤';
+            document.getElementById('sel-cust-name-step4').innerText = 'Outro';
+        }
+
+        // Step 4 Details List
+        if (currentStep === 4) {
+            const summaryBox = document.getElementById('delivery-summary-box');
+            if (deliveryType === 'pickup') {
+                summaryBox.innerHTML = `
+                    <span style="color: var(--purple-primary);">🏪</span>
+                    <div style="display: flex; flex-direction: column;">
+                        <span>✓ Retirada no local</span>
+                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: normal;">Cliente retira na loja</span>
+                    </div>
+                `;
+            } else {
+                summaryBox.innerHTML = `
+                    <span style="color: var(--purple-primary);">🚚</span>
+                    <div style="display: flex; flex-direction: column;">
+                        <span>✓ Entrega em endereço</span>
+                        <span style="font-size: 0.72rem; color: var(--text-secondary); font-weight: normal;">${document.getElementById('delivery-address-input').value || 'Av. Paulista, 1000'}</span>
+                    </div>
+                `;
+            }
+
+            // Render calculations summary
+            const finList = document.getElementById('financial-summary-list');
+            finList.innerHTML = `
+                <!-- Items list -->
+                ${localCart.map(i => `
+                <div class="table-card-row" style="margin-bottom: 8px;">
+                    <span style="font-weight: 600;">${i.quantity}x ${i.name}</span>
+                    <span>R$ ${(i.price * i.quantity).toFixed(2)}</span>
+                </div>
+                `).join('')}
+
+                <div class="table-card-row" style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px; color: var(--text-secondary);">
+                    <span>Subtotal</span>
+                    <span>R$ ${sub.toFixed(2)}</span>
+                </div>
+                
+                <div class="table-card-row" style="align-items: center; margin-top: 8px; color: var(--text-secondary);">
+                    <span style="display: flex; align-items: center; gap: 4px;">
+                        Frete <button type="button" onclick="openEditValuePopover('freight', 'Editar Valor do Frete', ${freightAmount})" style="border: none; background: none; color: var(--purple-primary); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                    </span>
+                    <span>R$ ${freightAmount.toFixed(2)}</span>
+                </div>
+
+                <div class="table-card-row" style="align-items: center; margin-top: 8px; color: var(--text-secondary);">
+                    <span style="display: flex; align-items: center; gap: 4px;">
+                        Taxa de venda <button type="button" onclick="openEditValuePopover('tax', 'Editar Taxa de Venda', ${saleTaxAmount})" style="border: none; background: none; color: var(--purple-primary); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                    </span>
+                    <span>R$ ${saleTaxAmount.toFixed(2)}</span>
+                </div>
+
+                <div class="table-card-row" style="align-items: center; margin-top: 8px; color: var(--text-secondary);">
+                    <span style="display: flex; align-items: center; gap: 4px;">
+                        Desconto <button type="button" onclick="openEditValuePopover('discount', 'Editar Desconto do Pedido', ${discountAmount})" style="border: none; background: none; color: var(--purple-primary); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                    </span>
+                    <span style="color: var(--danger); font-weight: 700;">- R$ ${discountAmount.toFixed(2)}</span>
+                </div>
+
+                <div class="table-card-row" style="border-top: 2px solid var(--purple-primary); padding-top: 12px; margin-top: 12px; font-size: 1.25rem; font-weight: 800; color: var(--text-primary);">
+                    <span>Total</span>
+                    <span style="color: var(--purple-primary);">R$ ${total.toFixed(2)}</span>
+                </div>
+            `;
+        }
+
+        // Step 5 values updates
+        document.getElementById('step-5-total-val').innerText = `R$ ${total.toFixed(2)}`;
+
+        // Step 6 updates
+        document.getElementById('step-6-total-val').innerText = `R$ ${total.toFixed(2)}`;
+        if (selectedPaymentMethod) {
+            document.getElementById('conf-payment-name').innerText = selectedPaymentMethod;
+            document.getElementById('conf-payment-value').innerText = `R$ ${total.toFixed(2)}`;
+            document.getElementById('btn-submit-order').innerText = `Concluir R$ ${total.toFixed(2)}`;
+            
+            // Icon dynamically updated
+            const iconElement = document.getElementById('conf-payment-icon');
+            iconElement.setAttribute('data-lucide', selectedPaymentIcon);
+        }
+
+        lucide.createIcons();
+    }
+
+    // ── Save Draft Helper ──
+    function saveDraftToLocalStorage() {
+        const draft = {
+            customer: selectedCustomer,
+            items: localCart,
+            delivery_type: deliveryType,
+            discount: discountAmount,
+            freight: freightAmount,
+            saleTax: saleTaxAmount,
+            notes: document.getElementById('order-notes').value
+        };
+        localStorage.setItem('coliseuspeed_cart_draft', JSON.stringify(draft));
+    }
+
+    // ── CEP lookup address auto pre-fill ──
     async function onCepQuery(cep) {
         const val = cep.trim().replace(/\D/g, '');
         if (val.length === 8) {
@@ -1013,20 +1275,19 @@
             cnpj: document.getElementById('new-cust-doc').value.trim(),
             phone: document.getElementById('new-cust-phone').value.trim(),
             email: document.getElementById('new-cust-email').value.trim() || 'contato@empresa.com',
-            address: document.getElementById('new-cust-street').value.trim() || 'Sem endereço informado',
+            address: document.getElementById('new-cust-street').value.trim() || 'Av. Paulista, 1000 - São Paulo/SP',
             credit_limit: 5000.0,
             credit_available: 5000.0,
             status: 'liberado'
         };
 
-        // Select and insert
         customers.push(newCust);
         selectCustomer(newCust);
         
         closeModal('new-customer-modal');
         showToast('Cliente cadastrado e selecionado com sucesso!', 'success');
         
-        // Reset form fields
+        // Reset form
         document.getElementById('new-cust-name').value = '';
         document.getElementById('new-cust-doc').value = '';
         document.getElementById('new-cust-phone').value = '';
@@ -1035,89 +1296,14 @@
         document.getElementById('new-cust-street').value = '';
     }
 
-    // Save state helper
-    function saveDraftToLocalStorage() {
-        const draft = {
-            customer: selectedCustomer,
-            items: localCart,
-            delivery_type: deliveryType,
-            discount: discountAmount,
-            discount_type: discountType,
-            freight: freightAmount,
-            notes: document.getElementById('order-notes').value
-        };
-        localStorage.setItem('coliseuspeed_cart_draft', JSON.stringify(draft));
-    }
-
-    function resetOrderForm() {
-        if (confirm('Deseja realmente limpar todos os campos do formulário atual?')) {
-            clearSelectedCustomer();
-            localCart = [];
-            document.getElementById('order-notes').value = '';
-            document.getElementById('discount-input').value = '0';
-            document.getElementById('freight-input').value = '0';
-            
-            discountAmount = 0;
-            freightAmount = 0;
-            
-            setDeliveryType('pickup');
-            updateLayoutDOMs();
-            localStorage.removeItem('coliseuspeed_cart_draft');
-            showToast('Formulário limpo com sucesso.', 'success');
+    // Modal display list helpers
+    const originalOpenModal = openModal;
+    openModal = function(id) {
+        if (id === 'select-customer-modal') {
+            document.getElementById('customer-modal-search').value = '';
+            renderCustomerList(customers);
         }
-    }
-
-    // Faturamento integration submit
-    async function submitOrder(status = 'order') {
-        if (!selectedCustomer) {
-            showToast('Selecione um cliente para prosseguir!', 'error');
-            return;
-        }
-        if (localCart.length === 0) {
-            showToast('Adicione pelo menos um item ao carrinho!', 'error');
-            return;
-        }
-
-        const btn = document.getElementById('btn-submit-order');
-        btn.disabled = true;
-        btn.innerText = 'Processando...';
-
-        const payload = {
-            customer_id: selectedCustomer.id,
-            status: status,
-            payment_condition: '0', // custom
-            items: localCart.map(i => ({
-                product_id: i.id,
-                quantity: i.quantity,
-                price: i.price
-            }))
-        };
-
-        try {
-            const response = await fetch('/api/orders/new', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-            if (response.ok && data.success) {
-                showToast(status === 'budget' ? 'Rascunho salvo!' : 'Pedido lançado com sucesso no ERP!', 'success');
-                
-                // Clear localStorage
-                localStorage.removeItem('coliseuspeed_cart_draft');
-                
-                setTimeout(() => {
-                    window.location.href = '/orders';
-                }, 1000);
-            } else {
-                showToast(data.detail || 'Erro ao integrar com o ERP.', 'error');
-            }
-        } catch (err) {
-            showToast('Erro de conexão ao faturar com o ERP.', 'error');
-        } finally {
-            btn.disabled = false;
-            btn.innerText = 'Lançar Pedido';
-        }
-    }
+        originalOpenModal(id);
+    };
 </script>
 {% endblock %}
