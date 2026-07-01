@@ -19,9 +19,11 @@ async def customers_view(request: Request):
     api_key = request.cookies.get("rep_api_key")
     
     customers = await api_client.get_customers(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     return templates.TemplateResponse("customers/list.html", {
         "request": request,
         "customers": customers,
+        "orders": orders,
         "rep_name": rep_name,
         "selected_branch_name": branch_name,
         "active_page": "customers"

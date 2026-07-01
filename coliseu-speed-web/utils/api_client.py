@@ -46,10 +46,10 @@ class ApiClient:
         ]
         
         self._mock_customers = [
-            {"id": "1", "name": "Antônio da Silva ME", "cnpj": "12345678000199", "credit_limit": 5000.00, "credit_available": 3579.50, "status": "liberado"},
-            {"id": "2", "name": "Supermercado Pão e Mel Ltda", "cnpj": "98765432000100", "credit_limit": 15000.00, "credit_available": 8200.00, "status": "liberado"},
-            {"id": "3", "name": "Construtora Alfa Engenharia Ltda", "cnpj": "11223344000122", "credit_limit": 50000.00, "credit_available": 50000.00, "status": "liberado"},
-            {"id": "4", "name": "Elétrica Voltagem Máxima Eireli", "cnpj": "44332211000188", "credit_limit": 2000.00, "credit_available": 0.00, "status": "bloqueado"}
+            {"id": "1", "name": "Antônio da Silva ME", "cnpj": "12345678000199", "credit_limit": 5000.00, "credit_available": 3579.50, "status": "liberado", "city": "São Paulo - SP", "phone": "(11) 98765-4321", "email": "antonio.silva@gmail.com", "address": "Rua das Flores, 123, Ap 42, Centro, São Paulo - SP, CEP: 01001-000"},
+            {"id": "2", "name": "Supermercado Pão e Mel Ltda", "cnpj": "98765432000100", "credit_limit": 15000.00, "credit_available": 8200.00, "status": "liberado", "city": "Campinas - SP", "phone": "(19) 98112-2334", "email": "contato@paomel.com.br", "address": "Av. Brasil, 1500, Jardim Guanabara, Campinas - SP, CEP: 13073-000"},
+            {"id": "3", "name": "Construtora Alfa Engenharia Ltda", "cnpj": "11223344000122", "credit_limit": 50000.00, "credit_available": 50000.00, "status": "liberado", "city": "Ribeirão Preto - SP", "phone": "(16) 3602-9988", "email": "engenharia@alfa.com.br", "address": "Rua Lafaiete, 850, Vila Seixas, Ribeirão Preto - SP, CEP: 14015-080"},
+            {"id": "4", "name": "Elétrica Voltagem Máxima Eireli", "cnpj": "44332211000188", "credit_limit": 2000.00, "credit_available": 0.00, "status": "bloqueado", "city": "Sorocaba - SP", "phone": "(15) 3224-4556", "email": "comercial@voltagem.com.br", "address": "Av. Ipanema, 2300, Vila Nova, Sorocaba - SP, CEP: 18070-000"}
         ]
 
     def _get_headers(self, api_key: str = None, branch_id: str = None) -> dict:
@@ -190,7 +190,11 @@ class ApiClient:
                             "cnpj": c.get("cnpj"),
                             "credit_limit": float(c.get("creditLimit" if "creditLimit" in c else "credit_limit", 5000.0)),
                             "credit_available": float(c.get("creditLimit" if "creditLimit" in c else "credit_limit", 5000.0)),
-                            "status": "liberado"
+                            "status": "liberado",
+                            "city": c.get("city", c.get("cidade", "São Paulo - SP")),
+                            "phone": c.get("phone", c.get("telefone", "(11) 98765-4321")),
+                            "email": c.get("email", "contato@empresa.com.br"),
+                            "address": c.get("address", c.get("endereco", "Rua das Flores, 123, Centro"))
                         }
                         for c in customers
                     ]
