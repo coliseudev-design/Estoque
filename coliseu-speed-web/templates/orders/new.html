@@ -901,6 +901,13 @@
             }
         }
 
+        // Pre-populate customer list when entering selection step 3.5
+        if (step === 3.5) {
+            const searchEl = document.getElementById('customer-modal-search');
+            if (searchEl) searchEl.value = '';
+            posRenderCustomerList(customers);
+        }
+
         posUpdateWizardDOMs();
         lucide.createIcons();
     }
@@ -1134,6 +1141,7 @@
         posUpdateWizardDOMs();
     }
 
+    // Open overrides popover
     function posOpenEditValuePopover(fieldName, label, currentValue) {
         const fieldNameInput = document.getElementById('edit-value-field-name');
         if (fieldNameInput) fieldNameInput.value = fieldName;
@@ -1191,7 +1199,6 @@
         if (displayEl) displayEl.innerText = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    // Backspace digit action
     function posOnKeypadBackspace() {
         keypadTypedVal = keypadTypedVal.slice(0, -1);
         const val = parseFloat(keypadTypedVal || "0") / 100;
@@ -1575,7 +1582,6 @@
         // 4. Step 3 Merged Summary totals
         if (currentStep === 3) {
             const summaryBox = document.getElementById('delivery-summary-box');
-            const deliveryDetailsPanel = document.getElementById('delivery-details-panel');
             if (summaryBox) {
                 if (deliveryType === 'pickup') {
                     summaryBox.innerHTML = `
