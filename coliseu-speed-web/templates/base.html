@@ -30,12 +30,15 @@
             </button>
         </div>
 
-        <div class="sidebar-menu-wrapper">
-            <!-- Search Menu Input (Ctrl+K) -->
+        <!-- Search Menu Input (Ctrl+K) - Fixed at top -->
+        <div class="sidebar-search-container">
             <div class="sidebar-search-box">
                 <i data-lucide="search"></i>
                 <input type="text" id="sidebar-menu-search" placeholder="Buscar menu... (Ctrl+K)" oninput="posOnSidebarSearch(this.value)">
             </div>
+        </div>
+
+        <div class="sidebar-menu-wrapper">
 
             <!-- PRINCIPAL Section -->
             <div class="sidebar-section">
@@ -90,13 +93,7 @@
                             <span>Relatórios</span>
                         </a>
                     </li>
-                    <li class="sidebar-item" data-tooltip="Analytics">
-                        <a href="#">
-                            <i data-lucide="line-chart"></i>
-                            <span>Analytics</span>
-                            <span class="sidebar-badge badge-black">BLACK</span>
-                        </a>
-                    </li>
+
                     <li class="sidebar-item" data-tooltip="Contas a receber">
                         <a href="#">
                             <i data-lucide="dollar-sign"></i>

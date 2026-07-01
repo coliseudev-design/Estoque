@@ -126,49 +126,69 @@ body {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    padding: 16px 8px;
+    padding: 8px;
+}
+
+/* Thin modern scrollbar for sidebar menu wrapper */
+.sidebar-menu-wrapper::-webkit-scrollbar {
+    width: 4px;
+}
+.sidebar-menu-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+.sidebar-menu-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+}
+.sidebar-menu-wrapper::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+/* Sidebar Search Box Container */
+.sidebar-search-container {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 /* Sidebar Search Box */
 .sidebar-search-box {
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: 8px;
-    padding: 8px 12px;
-    margin-bottom: 16px;
+    padding: 7px 10px;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 .sidebar-search-box i {
-    width: 16px;
-    height: 16px;
-    color: rgba(255,255,255,0.6);
+    width: 14px;
+    height: 14px;
+    color: rgba(255,255,255,0.5);
 }
 .sidebar-search-box input {
     background: none;
     border: none;
     outline: none;
     color: #ffffff;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     width: 100%;
 }
 .sidebar-search-box input::placeholder {
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.45);
 }
 
 /* Sidebar Section */
 .sidebar-section {
-    margin-bottom: 18px;
+    margin-bottom: 12px;
 }
 .sidebar-section-title {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 800;
-    color: rgba(255,255,255,0.45);
+    color: rgba(255,255,255,0.4);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding-left: 12px;
-    margin-bottom: 6px;
+    padding-left: 10px;
+    margin-bottom: 4px;
     white-space: nowrap;
 }
 
@@ -176,15 +196,15 @@ body {
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
 }
 
 .sidebar-item a {
     display: flex;
     align-items: center;
-    gap: 12px;
-    height: 40px;
-    padding: 0 12px;
+    gap: 10px;
+    height: 36px;
+    padding: 0 10px;
     color: rgba(255,255,255,0.8);
     text-decoration: none;
     border-radius: 8px;
@@ -265,6 +285,7 @@ body {
     width: 80px !important;
 }
 .sidebar.collapsed .sidebar-logo-text,
+.sidebar.collapsed .sidebar-search-container,
 .sidebar.collapsed .sidebar-search-box,
 .sidebar.collapsed .sidebar-section-title,
 .sidebar.collapsed .sidebar-item a span,
