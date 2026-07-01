@@ -17,6 +17,24 @@
         --stoqui-gray-bg: #F8FAFC;
     }
 
+    /* Toggle visibility between desktop table wrapper and mobile container */
+    @media (max-width: 768px) {
+        .catalog-desktop-table-wrapper {
+            display: none !important;
+        }
+        #catalog-mobile-container {
+            display: flex !important;
+        }
+    }
+    @media (min-width: 769px) {
+        .catalog-desktop-table-wrapper {
+            display: block !important;
+        }
+        #catalog-mobile-container {
+            display: none !important;
+        }
+    }
+
     /* Filter Panel grid input controls */
     .catalog-filter-grid {
         display: grid;
@@ -87,6 +105,23 @@
         padding: 12px 16px;
         vertical-align: middle;
         font-size: 0.88rem;
+    }
+
+    /* Mobile Catalog card list items styling */
+    .catalog-mobile-card {
+        background: #ffffff;
+        border: 1.5px solid var(--border-color);
+        border-radius: 12px;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .catalog-mobile-card:hover {
+        border-color: var(--stoqui-purple);
+        box-shadow: 0 4px 12px rgba(29,78,216,0.05);
     }
 
     /* Dialog detail split grid */
@@ -163,26 +198,29 @@
         </div>
     </div>
 
-    <!-- Product Table Linear container -->
-    <div class="card table-container" style="padding: 0; overflow: hidden; border: 1.5px solid var(--border-color); box-shadow: none;">
-        <div style="overflow-x: auto;">
-            <table class="table" style="min-width: 900px; margin-bottom: 0;">
-                <thead>
-                    <tr style="background: #fafafa; border-bottom: 1.5px solid var(--border-color);">
-                        <th>Código</th>
-                        <th>Descrição do Produto</th>
-                        <th>Marca</th>
-                        <th>Categoria</th>
-                        <th>Estoque</th>
-                        <th>Preço Unitário</th>
-                        <th style="text-align: right; width: 140px;">Ação</th>
-                    </tr>
-                </thead>
-                <tbody id="catalog-table-body">
-                    <!-- Loaded dynamically -->
-                </tbody>
-            </table>
-        </div>
+    <!-- Product Table Linear container (Desktop Only) -->
+    <div class="catalog-desktop-table-wrapper">
+        <table class="table" style="min-width: 900px; margin-bottom: 0; background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 12px;">
+            <thead>
+                <tr style="background: #fafafa; border-bottom: 1.5px solid var(--border-color);">
+                    <th>Código</th>
+                    <th>Descrição do Produto</th>
+                    <th>Marca</th>
+                    <th>Categoria</th>
+                    <th>Estoque</th>
+                    <th>Preço Unitário</th>
+                    <th style="text-align: right; width: 140px;">Ação</th>
+                </tr>
+            </thead>
+            <tbody id="catalog-table-body">
+                <!-- Loaded dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile Card Listing container (Mobile Only) -->
+    <div id="catalog-mobile-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 120px;">
+        <!-- Dynamic mobile cards populated by JS -->
     </div>
 
 </div>
@@ -317,9 +355,12 @@
 
     function posRenderCatalogList(items) {
         const tbody = document.getElementById('catalog-table-body');
-        if (!tbody) return;
+        const mobContainer = document.getElementById('catalog-mobile-container');
+        if (!tbody || !mobContainer) return;
 
         tbody.innerHTML = '';
+        mobContainer.innerHTML = '';
+
         if (items.length === 0) {
             tbody.innerHTML = `
                 <tr>
@@ -328,22 +369,27 @@
                     </td>
                 </tr>
             `;
+            mobContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary); background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 12px;">
+                    Nenhum produto atende aos filtros definidos.
+                </div>
+            `;
             return;
         }
 
         items.forEach(prod => {
-            const row = document.createElement('tr');
-            row.className = 'product-linear-row';
-            row.onclick = (e) => {
-                // Ignore clicks on action buttons
-                if (e.target.closest('a') || e.target.closest('button')) return;
-                posOpenProductDetails(prod);
-            };
-
             const priceText = prod.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const stockBadge = prod.stock > 0 ? 
                 `<span class="badge" style="background: rgba(16,185,129,0.08); color: var(--success); font-weight: 700; border-radius: 6px;">${prod.stock}</span>` : 
                 `<span class="badge" style="background: rgba(239,68,68,0.08); color: var(--danger); font-weight: 700; border-radius: 6px;">0</span>`;
+
+            // 1. Render Desktop Table Row
+            const row = document.createElement('tr');
+            row.className = 'product-linear-row';
+            row.onclick = (e) => {
+                if (e.target.closest('a') || e.target.closest('button')) return;
+                posOpenProductDetails(prod.id);
+            };
 
             row.innerHTML = `
                 <td style="font-weight: 700; color: #0f172a;">${prod.code}</td>
@@ -359,13 +405,57 @@
                 </td>
             `;
             tbody.appendChild(row);
+
+            // 2. Render Mobile Card
+            const card = document.createElement('div');
+            card.className = 'catalog-mobile-card';
+            card.onclick = (e) => {
+                if (e.target.closest('a') || e.target.closest('button')) return;
+                posOpenProductDetails(prod.id);
+            };
+
+            const mobStockBadge = prod.stock > 0 ? 
+                `<span style="background: #E8F5E9; color: #2E7D32; font-weight: 700; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px;">Estoque: ${prod.stock}</span>` : 
+                `<span style="background: #FFEBEE; color: #C62828; font-weight: 700; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px;">Sem estoque</span>`;
+
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                    <div>
+                        <span style="font-size: 0.75rem; font-weight: 800; color: #64748b; background: #F1F5F9; padding: 2px 6px; border-radius: 4px;">${prod.code}</span>
+                        <h4 style="font-weight: 700; color: #0f172a; font-size: 0.9rem; margin: 4px 0 0 0; line-height: 1.3;">${prod.name}</h4>
+                    </div>
+                    <div style="font-weight: 800; color: #0f172a; font-size: 1rem; white-space: nowrap;">R$ ${priceText}</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.76rem; color: #475569; border-top: 1.5px dashed var(--border-color); padding-top: 8px; margin-top: 4px;">
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <span>${prod.brand || 'Stoqui'}</span>
+                        <span style="color: #cbd5e1;">|</span>
+                        <span>${prod.category || 'Geral'}</span>
+                    </div>
+                    <div>
+                        ${mobStockBadge}
+                    </div>
+                </div>
+                <div style="margin-top: 6px; display: flex; gap: 8px;">
+                    <a href="/orders/new" class="btn btn-secondary btn-sm" style="flex: 1; display: inline-flex; justify-content: center; align-items: center; gap: 4px; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">
+                        <i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Lançar Pedido
+                    </a>
+                    <button type="button" onclick="posOpenProductDetails('${prod.id}')" class="btn btn-light btn-sm" style="padding: 8px 12px; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 700; font-size: 0.8rem; background: #ffffff; color: #475569; display: inline-flex; align-items: center; justify-content: center;">
+                        Ficha
+                    </button>
+                </div>
+            `;
+            mobContainer.appendChild(card);
         });
 
         lucide.createIcons();
     }
 
     // Opens drawer and displays full technical specifications and faturamento buyers
-    function posOpenProductDetails(prod) {
+    function posOpenProductDetails(prodId) {
+        const prod = catalogProducts.find(p => p.id === prodId || p.code === prodId);
+        if (!prod) return;
+
         document.getElementById('detail-prod-name').innerText = prod.name;
         document.getElementById('detail-prod-code').innerText = prod.code;
         document.getElementById('detail-prod-brand').innerText = prod.brand || 'Stoqui';
