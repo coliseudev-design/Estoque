@@ -297,6 +297,67 @@
         gap: 8px;
         z-index: 99;
     }
+
+    /* Dynamic Payments Method Grid - Stoqui Style */
+    .stoqui-payment-methods-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        max-width: 720px;
+        margin: 20px auto;
+    }
+    @media (min-width: 576px) {
+        .stoqui-payment-methods-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+    .stoqui-payment-card {
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        cursor: pointer;
+        transition: var(--transition);
+        position: relative;
+        text-align: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+    }
+    .stoqui-payment-card:hover {
+        border-color: var(--stoqui-purple);
+        box-shadow: 0 4px 12px rgba(29, 78, 216, 0.08);
+        transform: translateY(-2px);
+    }
+    .stoqui-payment-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    .stoqui-payment-card-title {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: #1e293b;
+    }
+    .stoqui-badge-pro {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #A855F7;
+        color: #ffffff;
+        font-size: 0.65rem;
+        font-weight: 800;
+        padding: 2px 6px;
+        border-radius: 10px;
+        text-transform: uppercase;
+    }
 </style>
 
 <!-- JSON script variables safe serialization -->
@@ -373,7 +434,7 @@
                     <span id="cart-total-val" style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">R$ 0</span>
                 </div>
                 
-                <button type="button" id="btn-continue-step3" onclick="advanceStep(3)" class="btn-stoqui" disabled>
+                <button type="button" id="btn-continue-step3" onclick="posOnCheckoutFormsTrigger()" class="btn-stoqui" disabled>
                     <span>Continuar →</span>
                 </button>
             </div>
@@ -436,7 +497,7 @@
                     <span id="mobile-bottom-qty" style="font-size: 0.85rem; color: var(--text-secondary);">1 item · Total</span>
                     <strong id="mobile-bottom-total" style="font-size: 1.25rem; color: #0f172a;">R$ 0</strong>
                 </div>
-                <button type="button" onclick="advanceStep(3)" class="btn-stoqui">
+                <button type="button" onclick="posOnCheckoutFormsTrigger()" class="btn-stoqui">
                     <span>Continuar →</span>
                 </button>
             </div>
@@ -505,7 +566,7 @@
                     <h3 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0;">Resumo do pedido:</h3>
                     <div id="financial-summary-list" style="background: #fafafa; border-radius: 8px; padding: 16px; border: 1px solid var(--border-color);"></div>
 
-                    <button type="button" onclick="advanceStep(5)" class="btn-stoqui">
+                    <button type="button" onclick="posOnCheckoutContinuePayments()" class="btn-stoqui">
                         <span>Continuar para pagamento →</span>
                     </button>
                 </div>
@@ -548,49 +609,95 @@
             </button>
         </section>
 
-        <!-- ETAPA 5: PAGAMENTOS (Múltiplas Formas e Saldo) -->
+        <!-- ETAPA 5: LISTA DE PAGAMENTOS ADICIONADOS (REVIEW LIST) -->
         <section id="step-5" class="step-container" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
-                <span style="font-size: 1rem; font-weight: 700; color: #334155;">TOTAL A PAGAR:</span>
-                <span id="step-5-total-val" style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">R$ 0,00</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid var(--border-color); padding: 16px; margin-bottom: 16px;">
+                <span style="font-size: 0.9rem; font-weight: 800; color: #475569; text-transform: uppercase;">Total a pagar:</span>
+                <span id="step-5-total-val" style="font-size: 1.25rem; font-weight: 800; color: #0f172a;">R$ 0,00</span>
             </div>
 
             <!-- List of added split payments -->
             <div id="split-payments-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;"></div>
 
-            <!-- Mid split payments selector trigger -->
-            <div id="split-payments-action-area"></div>
+            <!-- Add new payment button trigger -->
+            <button type="button" onclick="advanceStep(5.1)" class="btn-stoqui" style="background: none; border: 2px dashed var(--stoqui-purple); color: var(--stoqui-purple); box-shadow: none; margin-bottom: 16px; font-weight: 700;">
+                <i data-lucide="plus" style="width: 18px; height: 18px;"></i> <span>Adicionar pagamento</span>
+            </button>
+
+            <!-- Bottom dynamic status totals action footer -->
+            <div id="split-payments-action-area" style="margin-top: 16px;"></div>
         </section>
 
-        <!-- ETAPA 5.1: MÉTODOS DISPONÍVEIS LIST GRID -->
+        <!-- ETAPA 5.1: GRID DE ESPÉCIES/FORMAS DE PAGAMENTO (SELECTION GRID) -->
         <section id="step-5-grid" class="step-container" style="display: none;">
-            <h3 style="font-size: 0.9rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">
-                Adicionar pagamento
-            </h3>
-            <div class="payment-grid">
-                <div class="payment-card" onclick="posOpenPaymentKeypad('Pix', 'qr-code')">
-                    <i data-lucide="qr-code" style="width: 24px; height: 24px;"></i>
-                    <span>Pix</span>
+            <!-- Informational alert matching Screenshot 2 -->
+            <div style="background: #f1f5f9; border-radius: 8px; padding: 12px 16px; font-size: 0.82rem; color: #475569; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border: 1.5px solid var(--border-color);">
+                <i data-lucide="info" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i>
+                <span>Para pagamento parcelado ou fiado, é necessário adicionar um cliente ao pedido.</span>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 24px;">
+                <span style="font-size: 0.82rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Restam para o pedido</span>
+                <div id="step-5-grid-remaining-display" style="font-size: 2.2rem; font-weight: 800; color: #0f172a; margin-top: 6px;">R$ 0,00</div>
+            </div>
+
+            <div class="stoqui-payment-methods-grid">
+                <div class="stoqui-payment-card" onclick="posOpenPaymentKeypad('Pix', 'qr-code', '#0EA5E9', 'rgba(14, 165, 233, 0.08)')">
+                    <div class="stoqui-payment-card-icon" style="background: rgba(14, 165, 233, 0.08); color: #0EA5E9;">
+                        <i data-lucide="qr-code" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span class="stoqui-payment-card-title">Pix</span>
                 </div>
-                <div class="payment-card" onclick="posOpenPaymentKeypad('Dinheiro', 'banknote')">
-                    <i data-lucide="banknote" style="width: 24px; height: 24px;"></i>
-                    <span>Dinheiro</span>
+                <div class="stoqui-payment-card" onclick="posOpenPaymentKeypad('Dinheiro', 'banknote', '#22C55E', 'rgba(34, 197, 94, 0.08)')">
+                    <div class="stoqui-payment-card-icon" style="background: rgba(34, 197, 94, 0.08); color: #22C55E;">
+                        <i data-lucide="banknote" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span class="stoqui-payment-card-title">Dinheiro</span>
                 </div>
-                <div class="payment-card" onclick="posOpenPaymentKeypad('Mercado Pago', 'credit-card')">
-                    <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
-                    <span>Mercado Pago</span>
+                <div class="stoqui-payment-card" onclick="posOpenPaymentKeypad('Mercado Pago', 'handshake', '#3B82F6', 'rgba(59, 130, 246, 0.08)')">
+                    <div class="stoqui-payment-card-icon" style="background: rgba(59, 130, 246, 0.08); color: #3B82F6;">
+                        <i data-lucide="handshake" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span class="stoqui-payment-card-title">Mercado Pago</span>
                 </div>
-                <div class="payment-card" onclick="posOpenPaymentKeypad('Pagaleve', 'wallet')">
-                    <i data-lucide="wallet" style="width: 24px; height: 24px;"></i>
-                    <span>Pagaleve</span>
+                <div class="stoqui-payment-card" onclick="posOpenPaymentKeypad('Pagaleve', 'credit-card', '#EC4899', 'rgba(236, 72, 153, 0.08)')">
+                    <div class="stoqui-payment-card-icon" style="background: rgba(236, 72, 153, 0.08); color: #EC4899;">
+                        <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span class="stoqui-badge-pro">Pro</span>
+                    <span class="stoqui-payment-card-title">Pagaleve</span>
                 </div>
-                <div class="payment-card" onclick="posOpenPaymentKeypad('Cartão de Crédito', 'credit-card')">
-                    <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
-                    <span>Cartão de Crédito</span>
+                <div class="stoqui-payment-card" onclick="posOpenPaymentKeypad('Cartão de Crédito', 'credit-card', '#F97316', 'rgba(249, 115, 22, 0.08)')">
+                    <div class="stoqui-payment-card-icon" style="background: rgba(249, 115, 22, 0.08); color: #F97316;">
+                        <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span class="stoqui-payment-card-title">Cartão de Crédito</span>
                 </div>
-                <div class="payment-card" onclick="posOpenPaymentKeypad('Cartão de Débito', 'credit-card')">
-                    <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
-                    <span>Cartão de Débito</span>
+                <div class="stoqui-payment-card" onclick="posOpenPaymentKeypad('Parcelado', 'calendar', '#2563EB', 'rgba(37, 99, 235, 0.08)')">
+                    <div class="stoqui-payment-card-icon" style="background: rgba(37, 99, 235, 0.08); color: #2563EB;">
+                        <i data-lucide="calendar" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span class="stoqui-badge-pro">Pro</span>
+                    <span class="stoqui-payment-card-title">Parcelado</span>
+                </div>
+                <div class="stoqui-payment-card" onclick="posOpenPaymentKeypad('Fiado', 'clock', '#D97706', 'rgba(217, 119, 6, 0.08)')">
+                    <div class="stoqui-payment-card-icon" style="background: rgba(217, 119, 6, 0.08); color: #D97706;">
+                        <i data-lucide="clock" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span class="stoqui-badge-pro">Pro</span>
+                    <span class="stoqui-payment-card-title">Fiado</span>
+                </div>
+                <div class="stoqui-payment-card" onclick="posOpenPaymentKeypad('Cartão de Débito', 'credit-card', '#3B82F6', 'rgba(59, 130, 246, 0.08)')">
+                    <div class="stoqui-payment-card-icon" style="background: rgba(59, 130, 246, 0.08); color: #3B82F6;">
+                        <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span class="stoqui-payment-card-title">Cartão de Débito</span>
+                </div>
+                <div class="stoqui-payment-card" onclick="posOpenPaymentKeypad('Outro', 'more-horizontal', '#64748B', 'rgba(100, 116, 139, 0.08)')">
+                    <div class="stoqui-payment-card-icon" style="background: rgba(100, 116, 139, 0.08); color: #64748B;">
+                        <i data-lucide="more-horizontal" style="width: 24px; height: 24px;"></i>
+                    </div>
+                    <span class="stoqui-payment-card-title">Mais opções</span>
                 </div>
             </div>
         </section>
@@ -761,6 +868,8 @@
     let paymentsList = [];
     let currentSelectingPaymentMethod = null;
     let currentSelectingPaymentIcon = 'credit-card';
+    let currentSelectingPaymentColor = '#3B82F6';
+    let currentSelectingPaymentBg = 'rgba(59, 130, 246, 0.08)';
     let keypadTypedVal = "";
 
     // Define custom local modal handlers to isolate script execution order
@@ -804,7 +913,6 @@
         } else if (currentStep === 2) {
             posClearCart();
         } else if (currentStep === 3) {
-            // Back from Step 3 returns to cart (Step 2 on mobile or Step 1 on desktop split view)
             const isMobile = window.innerWidth < 768;
             setStep(isMobile ? 2 : 1);
         } else if (currentStep === 3.5) {
@@ -812,7 +920,12 @@
         } else if (currentStep === 5) {
             setStep(3);
         } else if (currentStep === 5.1) {
-            setStep(5);
+            // Back from grid view (Step 5.1) goes to review list (Step 5) if payments exist, otherwise to Step 3
+            if (paymentsList.length > 0) {
+                setStep(5);
+            } else {
+                setStep(3);
+            }
         } else if (currentStep === 5.2) {
             setStep(5.1);
         }
@@ -821,6 +934,7 @@
     // Dynamic step rendering utility to avoid element selection errors
     function getStepElementId(step) {
         if (step === 3.5) return 'step-3-5';
+        if (step === 5) return 'step-5';
         if (step === 5.1) return 'step-5-grid';
         if (step === 5.2) return 'step-5-keypad';
         return 'step-' + Math.floor(step);
@@ -868,7 +982,7 @@
                 } else if (step === 3.5) {
                     titleSpan.innerText = 'Selecionar cliente';
                 } else if (step === 5 || step === 5.1 || step === 5.2) {
-                    titleSpan.innerText = 'Pagamentos';
+                    titleSpan.innerText = 'Pagamento';
                 } else if (step === 7) {
                     titleSpan.innerText = 'Pagamento concluído';
                 }
@@ -908,12 +1022,32 @@
             posRenderCustomerList(customers);
         }
 
+        // Pre-render list in grid view (Step 5.1)
+        if (step === 5.1) {
+            const displayEl = document.getElementById('step-5-grid-remaining-display');
+            if (displayEl) displayEl.innerText = `R$ ${posGetBalanceRemaining().toFixed(2)}`;
+        }
+
         posUpdateWizardDOMs();
         lucide.createIcons();
     }
 
     function advanceStep(next) {
         setStep(next);
+    }
+
+    // Trigger forms from desktop split layout cart
+    function posOnCheckoutFormsTrigger() {
+        setStep(3);
+    }
+
+    // Dynamic direct navigation to payment species grid or review list
+    function posOnCheckoutContinuePayments() {
+        if (paymentsList.length === 0) {
+            setStep(5.1); // Direct to species grid
+        } else {
+            setStep(5); // Direct to review list
+        }
     }
 
     // Toggle Somente com estoque filter
@@ -1173,14 +1307,16 @@
     }
 
     // ── Split Payments Keypad actions ──
-    function posOpenPaymentKeypad(methodName, iconName) {
+    function posOpenPaymentKeypad(methodName, iconName, colorVal, bgVal) {
         currentSelectingPaymentMethod = methodName;
         currentSelectingPaymentIcon = iconName;
+        currentSelectingPaymentColor = colorVal;
+        currentSelectingPaymentBg = bgVal;
         keypadTypedVal = "";
         
         const balance = posGetBalanceRemaining();
         const displayEl = document.getElementById('edit-payment-amount-display');
-        if (displayEl) displayEl.innerText = balance.toFixed(2);
+        if (displayEl) displayEl.innerText = balance.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         
         const balanceTextEl = document.getElementById('keypad-balance-text');
         if (balanceTextEl) balanceTextEl.innerText = `Faltam: R$ ${balance.toFixed(2)}`;
@@ -1228,16 +1364,26 @@
         paymentsList.push({
             method: currentSelectingPaymentMethod,
             icon: currentSelectingPaymentIcon,
+            color: currentSelectingPaymentColor,
+            bg: currentSelectingPaymentBg,
             amount: val
         });
 
         showToast(`Pagamento em ${currentSelectingPaymentMethod} adicionado.`);
+        
+        // Go to review list (Step 5)
         setStep(5);
     }
 
     function removePaymentItem(index) {
         paymentsList.splice(index, 1);
-        posUpdateWizardDOMs();
+        
+        // If payments become empty, automatically return to species selection grid
+        if (paymentsList.length === 0) {
+            setStep(5.1);
+        } else {
+            posUpdateWizardDOMs();
+        }
     }
 
     // ERP checkout faturamento integration
@@ -1273,7 +1419,10 @@
                         row.style.justifyContent = 'space-between';
                         row.style.fontSize = '0.9rem';
                         row.innerHTML = `
-                            <span>🟠 ${p.method}</span>
+                            <span style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: ${p.color};"><i data-lucide="${p.icon}" style="width: 16px; height: 16px;"></i></span>
+                                <span>${p.method}</span>
+                            </span>
                             <span>R$ ${p.amount.toFixed(2)}</span>
                         `;
                         successContainer.appendChild(row);
@@ -1640,7 +1789,7 @@
             }
         }
 
-        // 5. Step 5 Pagamentos split updates
+        // 5. Step 5 Pagamentos review updates
         if (currentStep === 5 || currentStep === 5.1 || currentStep === 5.2) {
             const step5Val = document.getElementById('step-5-total-val');
             if (step5Val) step5Val.innerText = `R$ ${total.toFixed(2)}`;
@@ -1653,34 +1802,31 @@
                     card.style.background = '#ffffff';
                     card.style.border = '1px solid var(--border-color)';
                     card.style.borderRadius = '8px';
-                    card.style.padding = '10px 14px';
+                    card.style.padding = '12px 16px';
                     card.style.display = 'flex';
                     card.style.justifyContent = 'space-between';
                     card.style.alignItems = 'center';
+                    card.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)';
                     card.innerHTML = `
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="color: var(--stoqui-purple);">💵</span>
-                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">${p.method}</span>
+                            <span style="color: ${p.color}; display: flex; align-items: center; justify-content: center;"><i data-lucide="${p.icon}" style="width: 18px; height: 18px;"></i></span>
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">${p.method}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <span style="font-weight: 800; color: #0f172a;">R$ ${p.amount.toFixed(2)}</span>
-                            <button type="button" onclick="removePaymentItem(${idx})" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 4px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
+                            <span style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">R$ ${p.amount.toFixed(2)}</span>
+                            <button type="button" onclick="removePaymentItem(${idx})" style="border: none; background: none; color: var(--text-secondary); cursor: pointer; padding: 4px; display: flex; align-items: center;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
                         </div>
                     `;
                     splitList.appendChild(card);
                 });
             }
 
-            // Action area calculations
+            // Bottom dynamic review footer matching Screenshot 3/4
             const actionArea = document.getElementById('split-payments-action-area');
             if (actionArea) {
                 if (balance > 0.01) {
                     actionArea.innerHTML = `
-                        <button type="button" onclick="advanceStep(5.1)" class="btn-stoqui" style="background: none; border: 2px dashed var(--stoqui-purple); color: var(--stoqui-purple); box-shadow: none; margin-bottom: 16px;">
-                            <i data-lucide="plus" style="width: 18px; height: 18px;"></i> <span>Adicionar pagamento</span>
-                        </button>
-                        
-                        <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; color: var(--danger); font-weight: 700; font-size: 0.88rem; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; font-weight: 700; font-size: 0.88rem; color: #ef4444; background: #fef2f2; border-radius: 8px; border: 1px solid #fecaca; margin-bottom: 16px;">
                             <span>Faltam:</span>
                             <span>R$ ${balance.toFixed(2)}</span>
                         </div>
@@ -1691,6 +1837,11 @@
                     `;
                 } else {
                     actionArea.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; font-weight: 700; font-size: 0.88rem; color: #22c55e; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0; margin-bottom: 16px;">
+                            <span>Saldo Restante:</span>
+                            <span>R$ 0,00</span>
+                        </div>
+
                         <button type="button" id="btn-concluir-order" onclick="posOnConcluirCheckout()" class="btn-stoqui">
                             <span>Concluir R$ ${total.toFixed(2)}</span>
                         </button>
