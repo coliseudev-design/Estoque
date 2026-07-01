@@ -37,12 +37,12 @@ class ApiClient:
         ]
         
         self._mock_products = [
-            {"id": "p1", "code": "PROD-001", "name": "Cabo Flexível Sil 2.5mm Preto 100m", "price": 189.90, "stock": 45, "category": "Materiais Elétricos"},
-            {"id": "p2", "code": "PROD-002", "name": "Disjuntor Bipolar Din 20A Siemens", "price": 42.50, "stock": 120, "category": "Materiais Elétricos"},
-            {"id": "p3", "code": "PROD-003", "name": "Lâmpada LED Taschibra 12W Bulbo Bivolt", "price": 11.90, "stock": 350, "category": "Iluminação"},
-            {"id": "p4", "code": "PROD-004", "name": "Fita Isolante 3M Imperial 20m Preta", "price": 8.50, "stock": 80, "category": "Ferramentas"},
-            {"id": "p5", "code": "PROD-005", "name": "Sensor de Presença de Embutir Intelbras", "price": 54.90, "stock": 18, "category": "Segurança"},
-            {"id": "p6", "code": "PROD-006", "name": "Quadro de Distribuição de Embutir 12/16 disjuntores Tigre", "price": 95.00, "stock": 8, "category": "Materiais Elétricos"}
+            {"id": "PROD-001", "code": "PROD-001", "name": "Cabo Flexível Sil 2.5mm Preto 100m", "price": 189.90, "stock": 45, "brand": "Sil", "category": "Materiais Elétricos", "reference": "REF-SIL-001", "barcode": "7891234560010"},
+            {"id": "PROD-002", "code": "PROD-002", "name": "Disjuntor Bipolar Din 20A Siemens", "price": 42.50, "stock": 120, "brand": "Siemens", "category": "Materiais Elétricos", "reference": "REF-SIE-002", "barcode": "7891234560027"},
+            {"id": "PROD-003", "code": "PROD-003", "name": "Lâmpada LED Taschibra 12W Bulbo Bivolt", "price": 11.90, "stock": 350, "brand": "Taschibra", "category": "Iluminação", "reference": "REF-TAS-003", "barcode": "7891234560034"},
+            {"id": "PROD-004", "code": "PROD-004", "name": "Fita Isolante 3M Imperial 20m Preta", "price": 8.50, "stock": 80, "brand": "3M", "category": "Ferramentas", "reference": "REF-3M-004", "barcode": "7891234560041"},
+            {"id": "PROD-005", "code": "PROD-005", "name": "Sensor de Presença de Embutir Intelbras", "price": 54.90, "stock": 18, "brand": "Intelbras", "category": "Segurança", "reference": "REF-INT-005", "barcode": "7891234560058"},
+            {"id": "PROD-006", "code": "PROD-006", "name": "Quadro de Distribuição de Embutir 12/16 disjuntores Tigre", "price": 95.00, "stock": 8, "brand": "Tigre", "category": "Materiais Elétricos", "reference": "REF-TIG-006", "barcode": "7891234560065"}
         ]
         
         self._mock_customers = [
@@ -155,7 +155,10 @@ class ApiClient:
                             "name": p.get("name"),
                             "price": float(p.get("price", 0)),
                             "stock": int(p.get("stock", 0)),
-                            "category": p.get("brand", "Geral")
+                            "brand": p.get("brand", "Stoqui"),
+                            "category": p.get("category", "Geral"),
+                            "reference": p.get("reference", p.get("code", "")),
+                            "barcode": p.get("barCode", p.get("barcode", "7891234560010"))
                         }
                         for p in products
                     ]

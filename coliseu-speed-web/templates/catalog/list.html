@@ -1,49 +1,429 @@
 {% extends "base.html" %}
 
-{% block title %}Catálogo — ColiseuSpeed Force{% endblock %}
-{% block header_title %}Catálogo de Produtos{% endblock %}
-{% block header_subtitle %}Consulte a lista de mercadorias e a disponibilidade de estoque{% endblock %}
+{% block title %}Catálogo de Produtos — ColiseuSpeed Force{% endblock %}
 
 {% block content %}
-<div class="catalog-panel" style="height: auto;">
-    <!-- Catalog Query Filters -->
-    <div class="card" style="padding: 16px;">
-        <div class="catalog-search-bar">
-            <input 
-                type="text" 
-                id="search-input" 
-                class="form-control" 
-                placeholder="Busque por código, descrição ou marca do produto..." 
-                oninput="debounceSearch()"
-            >
-            <button onclick="searchProducts(document.getElementById('search-input').value)" class="btn btn-primary">
-                <i data-lucide="search"></i>
-            </button>
+<style>
+    /* Hide base.html main-header to take complete control of styling */
+    .main-header {
+        display: none !important;
+    }
+
+    /* Design Tokens */
+    :root {
+        --stoqui-purple: #1D4ED8; /* Solid Blue matching PDV theme */
+        --stoqui-purple-light: #3B82F6;
+        --stoqui-purple-bg: #EFF6FF;
+        --stoqui-gray-bg: #F8FAFC;
+    }
+
+    /* Filter Panel grid input controls */
+    .catalog-filter-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        background: #ffffff;
+        border: 1.5px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+    }
+    @media (min-width: 576px) {
+        .catalog-filter-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+    @media (min-width: 992px) {
+        .catalog-filter-grid {
+            grid-template-columns: 1.2fr 0.8fr 1fr 1fr;
+        }
+    }
+
+    /* Filter Form input controls */
+    .filter-input-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .filter-input-wrapper label {
+        font-size: 0.78rem;
+        font-weight: 800;
+        color: #475569;
+        text-transform: uppercase;
+        padding-left: 2px;
+    }
+    .filter-input-control {
+        min-height: 40px;
+        border: 1.5px solid var(--border-color);
+        border-radius: 8px;
+        padding: 0 12px;
+        font-size: 0.88rem;
+        outline: none;
+        transition: var(--transition);
+        width: 100%;
+        background: #ffffff;
+    }
+    .filter-input-control:focus {
+        border-color: var(--stoqui-purple-light);
+        box-shadow: 0 0 0 3px var(--stoqui-purple-bg);
+    }
+
+    /* Linear Table layout */
+    .product-linear-row {
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    .product-linear-row:hover {
+        background: var(--stoqui-gray-bg) !important;
+    }
+
+    .table th {
+        font-size: 0.78rem;
+        font-weight: 800;
+        color: #475569;
+        text-transform: uppercase;
+        padding: 14px 16px;
+    }
+    .table td {
+        padding: 12px 16px;
+        vertical-align: middle;
+        font-size: 0.88rem;
+    }
+
+    /* Dialog detail split grid */
+    .product-detail-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    @media (min-width: 768px) {
+        .product-detail-layout {
+            grid-template-columns: 0.8fr 1.2fr;
+        }
+    }
+
+    /* Stylized Image card placeholder */
+    .product-detail-image-card {
+        background: linear-gradient(135deg, var(--stoqui-purple-bg) 0%, #dbeafe 100%);
+        border-radius: 12px;
+        height: 220px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1.5px solid var(--border-color);
+    }
+
+    /* Dynamic Buyers list items */
+    .buyer-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: #ffffff;
+        border: 1.5px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
+</style>
+
+<!-- JSON script safe serialization -->
+<script id="products-json-data" type="application/json">
+    {{ products | tojson }}
+</script>
+<script id="orders-json-data" type="application/json">
+    {{ orders | tojson }}
+</script>
+
+<div style="padding: 4px 8px;">
+
+    <!-- Custom Header section -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+        <h1 style="font-size: 1.45rem; font-weight: 800; color: #0f172a; margin: 0;">Catálogo de Produtos</h1>
+        <a href="/orders/new" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; min-height: 38px; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">
+            <i data-lucide="shopping-cart" style="width: 16px; height: 16px;"></i> Novo Pedido
+        </a>
+    </div>
+
+    <!-- Top search parameters grid -->
+    <div class="catalog-filter-grid">
+        <div class="filter-input-wrapper">
+            <label for="filter-name">Descrição / Nome</label>
+            <input type="text" id="filter-name" class="filter-input-control" placeholder="Busque por descrição..." oninput="posOnFilterChange()">
+        </div>
+        <div class="filter-input-wrapper">
+            <label for="filter-code">Código / SKU</label>
+            <input type="text" id="filter-code" class="filter-input-control" placeholder="Ex: PROD-001" oninput="posOnFilterChange()">
+        </div>
+        <div class="filter-input-wrapper">
+            <label for="filter-barcode">Código de Barras</label>
+            <input type="text" id="filter-barcode" class="filter-input-control" placeholder="Ex: 789..." oninput="posOnFilterChange()">
+        </div>
+        <div class="filter-input-wrapper">
+            <label for="filter-reference">Código Fabricante / Ref</label>
+            <input type="text" id="filter-reference" class="filter-input-control" placeholder="Ex: REF-SIL..." oninput="posOnFilterChange()">
         </div>
     </div>
 
-    <!-- Products Grid -->
-    <div id="catalog-grid-container" class="catalog-grid" style="overflow-y: visible;">
-        {% for prod in products %}
-        <div class="product-card">
-            <div class="product-img">📦</div>
-            <div class="product-info">
-                <div class="product-code">{{ prod.code }}</div>
-                <div class="product-name">{{ prod.name }}</div>
-                <div class="product-stock {% if prod.stock > 0 %}stock-badge-green{% else %}stock-badge-red{% endif %}">
-                    Estoque: {{ prod.stock }}
-                </div>
-                <div class="product-price">R$ {{ "%.2f"|format(prod.price) }}</div>
+    <!-- Product Table Linear container -->
+    <div class="card table-container" style="padding: 0; overflow: hidden; border: 1.5px solid var(--border-color); box-shadow: none;">
+        <div style="overflow-x: auto;">
+            <table class="table" style="min-width: 900px; margin-bottom: 0;">
+                <thead>
+                    <tr style="background: #fafafa; border-bottom: 1.5px solid var(--border-color);">
+                        <th>Código</th>
+                        <th>Descrição do Produto</th>
+                        <th>Marca</th>
+                        <th>Categoria</th>
+                        <th>Estoque</th>
+                        <th>Preço Unitário</th>
+                        <th style="text-align: right; width: 140px;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="catalog-table-body">
+                    <!-- Loaded dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Product Detail Drawer Popover Modal -->
+<div id="product-detail-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 780px; max-height: 90vh;">
+        <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <div>
+                <h3 style="font-weight: 800; font-size: 1.1rem; color: #0f172a; margin: 0;">Ficha do Produto</h3>
+                <span style="font-size: 0.78rem; color: var(--text-secondary);">Ficha técnica e histórico de vendas</span>
             </div>
-            <a href="/orders/new" class="btn btn-primary btn-sm" style="text-decoration: none;">
-                Lançar Pedido
-            </a>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="posCloseModal('product-detail-modal')" style="min-height: 32px; width: auto; padding: 0 10px; border-radius: 8px;">
+                <span>Fechar</span>
+            </button>
         </div>
-        {% else %}
-        <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">
-            Nenhum produto cadastrado.
+
+        <div style="padding: 20px; overflow-y: auto; flex: 1;">
+            <div class="product-detail-layout">
+                
+                <!-- Left: Stylized image placeholder -->
+                <div>
+                    <div class="product-detail-image-card">
+                        <div style="text-align: center; color: var(--stoqui-purple);">
+                            <i data-lucide="package" style="width: 64px; height: 64px; stroke-width: 1.5; margin: 0 auto 10px auto;"></i>
+                            <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Visualização 3D</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 14px; text-align: center;">
+                        <a href="/orders/new" class="btn-stoqui" style="text-decoration: none; width: 100%;">
+                            <i data-lucide="shopping-cart" style="width: 16px; height: 16px;"></i> <span>Vender Produto</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Right: Information grid and Buyers list -->
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <h2 id="detail-prod-name" style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">Nome do Produto</h2>
+                        <span id="detail-prod-code" style="font-size: 0.8rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 3px 8px; border-radius: 4px;">PROD-000</span>
+                    </div>
+
+                    <!-- Tech properties grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #fafafa; border-radius: 8px; border: 1.5px solid var(--border-color); padding: 12px 16px;">
+                        <div>
+                            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Marca</div>
+                            <span id="detail-prod-brand" style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">--</span>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Categoria</div>
+                            <span id="detail-prod-category" style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">--</span>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Cód. Fabricante / Ref</div>
+                            <span id="detail-prod-reference" style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">--</span>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Cód. de Barras</div>
+                            <span id="detail-prod-barcode" style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">--</span>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Estoque</div>
+                            <span id="detail-prod-stock" style="font-weight: 700; color: #0f172a; font-size: 0.88rem;">0</span>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.72rem; color: #64748b; font-weight: 700; text-transform: uppercase;">Preço</div>
+                            <span id="detail-prod-price" style="font-weight: 800; color: var(--stoqui-purple); font-size: 1.05rem;">R$ 0,00</span>
+                        </div>
+                    </div>
+
+                    <!-- Who bought this section (Faturamento buyers history) -->
+                    <div style="background: #f8fafc; border-radius: 8px; border: 1.5px solid var(--border-color); padding: 14px 16px;">
+                        <h4 style="font-weight: 800; font-size: 0.82rem; color: #475569; text-transform: uppercase; margin: 0 0 12px 0; display: flex; align-items: center; gap: 6px;">
+                            <i data-lucide="users" style="width: 16px; height: 16px; color: var(--stoqui-purple);"></i> Quem comprou este produto
+                        </h4>
+                        <div id="product-buyers-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Populated dynamically from orders context -->
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
         </div>
-        {% endfor %}
     </div>
 </div>
+
+<script>
+    // Extract datasets
+    const catalogProducts = JSON.parse(document.getElementById('products-json-data').textContent || '[]');
+    const ordersHistory = JSON.parse(document.getElementById('orders-json-data').textContent || '[]');
+
+    // Boot initial state
+    window.addEventListener('DOMContentLoaded', () => {
+        posRenderCatalogList(catalogProducts);
+    });
+
+    function posCloseModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.remove('open');
+    }
+
+    function posOpenModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.add('open');
+    }
+
+    // Handles multi-parameter filtering
+    function posOnFilterChange() {
+        const filterName = document.getElementById('filter-name').value.toLowerCase().trim();
+        const filterCode = document.getElementById('filter-code').value.toLowerCase().trim();
+        const filterBarcode = document.getElementById('filter-barcode').value.trim();
+        const filterRef = document.getElementById('filter-reference').value.toLowerCase().trim();
+
+        let filtered = [...catalogProducts];
+
+        if (filterName) {
+            filtered = filtered.filter(p => p.name && p.name.toLowerCase().includes(filterName));
+        }
+        if (filterCode) {
+            filtered = filtered.filter(p => p.code && p.code.toLowerCase().includes(filterCode));
+        }
+        if (filterBarcode) {
+            filtered = filtered.filter(p => p.barcode && p.barcode.includes(filterBarcode));
+        }
+        if (filterRef) {
+            filtered = filtered.filter(p => p.reference && p.reference.toLowerCase().includes(filterRef));
+        }
+
+        posRenderCatalogList(filtered);
+    }
+
+    function posRenderCatalogList(items) {
+        const tbody = document.getElementById('catalog-table-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = '';
+        if (items.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                        Nenhum produto atende aos filtros definidos.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        items.forEach(prod => {
+            const row = document.createElement('tr');
+            row.className = 'product-linear-row';
+            row.onclick = (e) => {
+                // Ignore clicks on action buttons
+                if (e.target.closest('a') || e.target.closest('button')) return;
+                posOpenProductDetails(prod);
+            };
+
+            const priceText = prod.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const stockBadge = prod.stock > 0 ? 
+                `<span class="badge" style="background: rgba(16,185,129,0.08); color: var(--success); font-weight: 700; border-radius: 6px;">${prod.stock}</span>` : 
+                `<span class="badge" style="background: rgba(239,68,68,0.08); color: var(--danger); font-weight: 700; border-radius: 6px;">0</span>`;
+
+            row.innerHTML = `
+                <td style="font-weight: 700; color: #0f172a;">${prod.code}</td>
+                <td style="font-weight: 600; color: var(--text-primary);">${prod.name}</td>
+                <td>${prod.brand || 'Stoqui'}</td>
+                <td>${prod.category || 'Geral'}</td>
+                <td>${stockBadge}</td>
+                <td style="font-weight: 800; color: #0f172a;">R$ ${priceText}</td>
+                <td style="text-align: right;">
+                    <a href="/orders/new" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 6px; font-weight: 700;">
+                        <i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Lançar Pedido
+                    </a>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        lucide.createIcons();
+    }
+
+    // Opens drawer and displays full technical specifications and faturamento buyers
+    function posOpenProductDetails(prod) {
+        document.getElementById('detail-prod-name').innerText = prod.name;
+        document.getElementById('detail-prod-code').innerText = prod.code;
+        document.getElementById('detail-prod-brand').innerText = prod.brand || 'Stoqui';
+        document.getElementById('detail-prod-category').innerText = prod.category || 'Geral';
+        document.getElementById('detail-prod-reference').innerText = prod.reference || prod.code;
+        document.getElementById('detail-prod-barcode').innerText = prod.barcode || '7891234560010';
+        document.getElementById('detail-prod-stock').innerText = prod.stock;
+        document.getElementById('detail-prod-price').innerText = `R$ ${prod.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // Populate buyers history from orders context
+        const buyersList = document.getElementById('product-buyers-list');
+        if (buyersList) {
+            buyersList.innerHTML = '';
+            
+            // Filter orders that contain this product
+            const matches = [];
+            ordersHistory.forEach(ord => {
+                const item = (ord.items || []).find(it => it.product_id === prod.code || it.product_id === prod.id);
+                if (item) {
+                    matches.push({
+                        customer: ord.customer_name || 'Sem cliente',
+                        quantity: item.quantity,
+                        date: ord.created_at
+                    });
+                }
+            });
+
+            if (matches.length === 0) {
+                buyersList.innerHTML = `<div style="font-size: 0.8rem; color: #64748b; padding: 4px 2px;">Nenhuma compra registrada para este produto.</div>`;
+            } else {
+                // Show list of buyers
+                matches.slice(0, 5).forEach(m => {
+                    let formattedDate = 'A/C';
+                    if (m.date) {
+                        const parts = m.date.split('T');
+                        if (parts.length > 0) {
+                            const dParts = parts[0].split('-');
+                            if (dParts.length === 3) {
+                                formattedDate = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
+                            }
+                        }
+                    }
+                    
+                    const el = document.createElement('div');
+                    el.className = 'buyer-list-item';
+                    el.innerHTML = `
+                        <span style="font-weight: 700; color: #1e293b;">${m.customer}</span>
+                        <span style="font-weight: 600; color: #64748b; font-size: 0.78rem;">${m.quantity} un em ${formattedDate}</span>
+                    `;
+                    buyersList.appendChild(el);
+                });
+            }
+        }
+
+        posOpenModal('product-detail-modal');
+        lucide.createIcons();
+    }
+</script>
 {% endblock %}
