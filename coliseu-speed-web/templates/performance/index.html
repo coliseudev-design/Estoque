@@ -1,104 +1,709 @@
 {% extends "base.html" %}
 
-{% block title %}Desempenho — ColiseuSpeed Force{% endblock %}
-{% block header_title %}Meu Desempenho{% endblock %}
-{% block header_subtitle %}Análise visual de metas de faturamento e vendas por categoria{% endblock %}
+{% block title %}Dashboard — ColiseuSpeed Force{% endblock %}
 
 {% block content %}
-<!-- Goals Card -->
-<div class="card" style="padding: 24px;">
-    <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark);">Meta Mensal de Vendas</h3>
-    {% set pct = kpis.achievement_rate %}
-    <div style="width: 100%; height: 20px; background: #e2e8f0; border-radius: 10px; overflow: hidden; position: relative;">
-        <div style="width: {{ pct }}%; height: 100%; background: linear-gradient(90deg, var(--primary-color) 0%, var(--success) 100%); border-radius: 10px;"></div>
-    </div>
-    <div style="display: flex; justify-content: space-between; margin-top: 10px; font-weight: 700; font-size: 0.9rem;">
-        <span style="color: var(--text-secondary);">Realizado: R$ {{ "%.2f"|format(kpis.total_sales) }}</span>
-        <span style="color: var(--success);">{{ pct }}% Atingido</span>
-        <span style="color: var(--text-secondary);">Meta: R$ {{ "%.2f"|format(kpis.sales_target) }}</span>
-    </div>
-</div>
+<style>
+    /* Hide base.html main-header to take complete control of styling */
+    .main-header {
+        display: none !important;
+    }
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 10px;">
-    
-    <!-- Sales by Category (Vertical Bars in HTML/CSS) -->
-    <div class="card" style="padding: 24px;">
-        <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark);">Vendas por Categoria</h3>
-        
-        <div style="display: flex; flex-direction: column; gap: 16px;">
-            <!-- Category 1 -->
+    /* Design Tokens */
+    :root {
+        --stoqui-purple: #1D4ED8; /* Solid Blue matching theme */
+        --stoqui-purple-light: #3B82F6;
+        --stoqui-purple-bg: #EFF6FF;
+        --stoqui-gray-bg: #F8FAFC;
+    }
+
+    /* Date Filter Pills */
+    .date-filter-pill {
+        background: #ffffff;
+        color: #475569;
+        border: 1.5px solid var(--border-color);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.82rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: var(--transition);
+        white-space: nowrap;
+    }
+    .date-filter-pill.active {
+        background: var(--stoqui-purple) !important;
+        color: #ffffff !important;
+        border-color: var(--stoqui-purple) !important;
+    }
+    .date-filter-pill:hover:not(.active) {
+        background: var(--stoqui-purple-bg);
+        border-color: var(--stoqui-purple-light);
+        color: var(--stoqui-purple);
+    }
+
+    /* Grid structures for the dashboard dashboard */
+    .kpi-row-2col {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    @media (min-width: 768px) {
+        .kpi-row-2col {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .kpi-row-3col {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    @media (min-width: 768px) {
+        .kpi-row-3col {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    /* Card customization */
+    .kpi-card {
+        background: #ffffff;
+        border: 1.5px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .kpi-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+    .kpi-card-title {
+        font-weight: 800;
+        font-size: 0.9rem;
+        color: #334155;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .kpi-card-value {
+        font-weight: 800;
+        font-size: 1.6rem;
+        color: #0f172a;
+        margin-bottom: 4px;
+    }
+
+    /* Compact lists styles */
+    .dashboard-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .dashboard-table th {
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        text-align: left;
+        padding: 8px 4px;
+        border-bottom: 1.5px solid var(--border-color);
+    }
+    .dashboard-table td {
+        font-size: 0.85rem;
+        padding: 10px 4px;
+        border-bottom: 1px solid var(--border-color);
+        color: #334155;
+    }
+</style>
+
+<!-- JSON script safe serialization -->
+<script id="products-json-data" type="application/json">
+    {{ products | tojson }}
+</script>
+<script id="orders-json-data" type="application/json">
+    {{ orders | tojson }}
+</script>
+
+<div style="padding: 4px 8px;">
+
+    <!-- Custom Header Section -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+        <h1 style="font-size: 1.45rem; font-weight: 800; color: #0f172a; margin: 0;">Painel de relatórios</h1>
+    </div>
+
+    <!-- Date Filter Pills -->
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px;">
+        <button type="button" id="date-pill-custom" class="date-filter-pill" onclick="posSetDateFilter('custom')">
+            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i> Personalizado
+        </button>
+        <button type="button" id="date-pill-today" class="date-filter-pill active" onclick="posSetDateFilter('today')">
+            Hoje
+        </button>
+        <button type="button" id="date-pill-yesterday" class="date-filter-pill" onclick="posSetDateFilter('yesterday')">
+            Ontem
+        </button>
+        <button type="button" id="date-pill-7days" class="date-filter-pill" onclick="posSetDateFilter('7days')">
+            7 dias
+        </button>
+        <button type="button" id="date-pill-30days" class="date-filter-pill" onclick="posSetDateFilter('30days')">
+            30 dias
+        </button>
+        <button type="button" id="date-pill-12months" class="date-filter-pill" onclick="posSetDateFilter('12months')">
+            12 meses
+        </button>
+        <button type="button" id="date-pill-month" class="date-filter-pill" onclick="posSetDateFilter('month')">
+            Este mês
+        </button>
+        <button type="button" id="date-pill-week" class="date-filter-pill" onclick="posSetDateFilter('week')">
+            Esta semana
+        </button>
+    </div>
+
+    <!-- PRO Banner matching mock model -->
+    <div style="background: linear-gradient(135deg, var(--stoqui-purple) 0%, #1d4ed8 100%); border-radius: 12px; padding: 20px; color: #ffffff; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(29, 78, 216, 0.15);">
+        <div style="flex: 1; min-width: 280px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 1.15rem;">🔓</span>
+                <strong style="font-size: 1.05rem; font-weight: 800;">Desbloqueie relatórios completos</strong>
+                <span style="background: #ffffff; color: var(--stoqui-purple); font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">Pro</span>
+            </div>
+            <p style="font-size: 0.82rem; color: rgba(255, 255, 255, 0.85); line-height: 1.4; margin: 0;">
+                Experimente e acompanhe o plano PRO para desbloquear todos os seus relatórios de desempenho e de sua equipe com análise de lojas, ticket médio, produtos mais vendidos, patrimônio e mais.
+            </p>
+        </div>
+        <button type="button" class="btn btn-light" style="background: #ffffff; color: var(--stoqui-purple); border: none; font-weight: 800; font-size: 0.85rem; padding: 10px 16px; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+            Acompanhar PRO
+        </button>
+    </div>
+
+    <!-- KPI Section Row 1: Visitas na loja (Full Width) -->
+    <div class="kpi-card" style="margin-bottom: 16px;">
+        <div class="kpi-card-header">
+            <span class="kpi-card-title"><i data-lucide="eye" style="width: 18px; height: 18px; color: var(--stoqui-purple-light);"></i> Visitas na loja</span>
+            <a href="#" style="font-size: 0.78rem; font-weight: 700; color: var(--stoqui-purple); text-decoration: none; display: flex; align-items: center; gap: 4px;">Ver todas <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i></a>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap;">
             <div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px;">
-                    <span>Materiais Elétricos</span>
-                    <span>R$ 11.240,00</span>
+                <div class="kpi-card-value">180</div>
+                <div style="font-size: 0.78rem; color: #64748b; font-weight: 700;">👤 Visitas hoje</div>
+            </div>
+            <!-- Styled SVG Chart representation -->
+            <div style="flex: 1; max-width: 480px; height: 60px;">
+                <svg viewBox="0 0 100 20" class="chart" style="width: 100%; height: 100%; overflow: visible;">
+                    <defs>
+                        <linearGradient id="gradient-visitas" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#EFF6FF" stop-opacity="0.8"/>
+                            <stop offset="100%" stop-color="#EFF6FF" stop-opacity="0.0"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M0 15 Q 20 8, 40 12 T 80 5 T 100 10 L 100 20 L 0 20 Z" fill="url(#gradient-visitas)"></path>
+                    <path d="M0 15 Q 20 8, 40 12 T 80 5 T 100 10" fill="none" stroke="var(--stoqui-purple-light)" stroke-width="1.2" stroke-linecap="round"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Section Row 2: Volume de pedidos (Full Width) -->
+    <div class="kpi-card" style="margin-bottom: 16px;">
+        <div class="kpi-card-header">
+            <span class="kpi-card-title"><i data-lucide="shopping-bag" style="width: 18px; height: 18px; color: var(--stoqui-purple-light);"></i> Volume de pedidos</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap;">
+            <div style="display: flex; gap: 32px;">
+                <div>
+                    <div class="kpi-card-value" id="kpi-val-total-orders">0</div>
+                    <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">Pedidos</div>
                 </div>
-                <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                    <div style="width: 75%; height: 100%; background: var(--primary-color); border-radius: 4px;"></div>
+                <div>
+                    <div style="font-size: 0.95rem; font-weight: 800; color: #16a34a; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">🟢 <span id="kpi-val-orders-paid">0</span></div>
+                    <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">Pagos</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.95rem; font-weight: 800; color: #d97706; display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">🟡 <span id="kpi-val-orders-pending">0</span></div>
+                    <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">Pendentes</div>
                 </div>
             </div>
+            <!-- Styled SVG Chart representation -->
+            <div style="flex: 1; max-width: 480px; height: 60px;">
+                <svg viewBox="0 0 100 20" class="chart" style="width: 100%; height: 100%; overflow: visible;">
+                    <path d="M0 18 Q 15 14, 30 16 T 60 4 T 90 12 T 100 6 L 100 20 L 0 20 Z" fill="rgba(168, 85, 247, 0.04)"></path>
+                    <path d="M0 18 Q 15 14, 30 16 T 60 4 T 90 12 T 100 6" fill="none" stroke="#A855F7" stroke-width="1.2" stroke-linecap="round"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Section Row 3: Receita & Lucro (Side-by-Side) -->
+    <div class="kpi-row-2col">
+        <!-- Receita -->
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-card-header">
+                    <span class="kpi-card-title"><i data-lucide="trending-up" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i> Receita</span>
+                </div>
+                <div class="kpi-card-value" id="kpi-val-receita">R$ 0,00</div>
+                <div style="display: flex; gap: 16px; font-size: 0.76rem; color: #64748b; font-weight: 700; margin-top: 6px;">
+                    <span>🟢 Confirmado: <span id="kpi-val-receita-paid" style="color: #0f172a;">R$ 0,00</span></span>
+                    <span>🟡 Pendente: <span id="kpi-val-receita-pending" style="color: #0f172a;">R$ 0,00</span></span>
+                </div>
+            </div>
+            <div style="height: 44px; margin-top: 14px;">
+                <svg viewBox="0 0 100 20" style="width: 100%; height: 100%; overflow: visible;">
+                    <path d="M0 16 T 25 12 T 50 18 T 75 4 T 100 8" fill="none" stroke="var(--stoqui-purple-light)" stroke-width="1.5"></path>
+                </svg>
+            </div>
+        </div>
+        
+        <!-- Lucro -->
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-card-header">
+                    <span class="kpi-card-title"><i data-lucide="percent" style="width: 16px; height: 16px; color: #22c55e;"></i> Lucro</span>
+                </div>
+                <div class="kpi-card-value" id="kpi-val-lucro" style="color: #16a34a;">R$ 0,00</div>
+                <div style="display: flex; gap: 16px; font-size: 0.76rem; color: #64748b; font-weight: 700; margin-top: 6px;">
+                    <span>🟢 Confirmado: <span id="kpi-val-lucro-paid" style="color: #0f172a;">R$ 0,00</span></span>
+                    <span>🟡 Pendente: <span id="kpi-val-lucro-pending" style="color: #0f172a;">R$ 0,00</span></span>
+                </div>
+            </div>
+            <div style="height: 44px; margin-top: 14px;">
+                <svg viewBox="0 0 100 20" style="width: 100%; height: 100%; overflow: visible;">
+                    <path d="M0 18 T 25 10 T 50 16 T 75 8 T 100 2" fill="none" stroke="#22c55e" stroke-width="1.5"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Section Row 4: Patrimônio & Categoria (Side-by-Side) -->
+    <div class="kpi-row-2col">
+        <!-- Patrimônio -->
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-card-header">
+                    <span class="kpi-card-title"><i data-lucide="package" style="width: 16px; height: 16px; color: #f97316;"></i> Valor total do patrimônio (estoque)</span>
+                </div>
+                <div class="kpi-card-value" id="kpi-val-patrimonio">R$ 0,00</div>
+                <div style="display: flex; gap: 16px; font-size: 0.76rem; color: #64748b; font-weight: 700; margin-top: 6px;">
+                    <span>Potencial de venda: <span id="kpi-val-patrimonio-sell" style="color: #0f172a;">R$ 0,00</span></span>
+                    <span>Margem potencial: <span style="color: #0f172a;">35%</span></span>
+                </div>
+            </div>
+            <div style="height: 44px; margin-top: 14px;">
+                <svg viewBox="0 0 100 20" style="width: 100%; height: 100%; overflow: visible;">
+                    <path d="M0 18 C 30 18, 40 4, 100 12 L 100 20 L 0 20 Z" fill="rgba(249, 115, 22, 0.05)"></path>
+                    <path d="M0 18 C 30 18, 40 4, 100 12" fill="none" stroke="#f97316" stroke-width="1.5"></path>
+                </svg>
+            </div>
+        </div>
+
+        <!-- Categoria -->
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-card-header">
+                    <span class="kpi-card-title"><i data-lucide="bar-chart-2" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i> Performance por categoria</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b; font-weight: 700; margin-bottom: 12px;">
+                    <span>Total de produtos: <strong id="kpi-val-total-products" style="color: #0f172a;">0</strong></span>
+                    <span>Valor total: <strong id="kpi-val-total-products-value" style="color: #0f172a;">R$ 0,00</strong></span>
+                </div>
+                
+                <div id="kpi-categories-progress-list" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Section Row 5: Ticket médio & Descontos & Distribuição (Three Column grid) -->
+    <div class="kpi-row-3col">
+        <!-- Ticket Médio -->
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <span class="kpi-card-title"><i data-lucide="dollar-sign" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i> Ticket médio</span>
+            </div>
+            <div class="kpi-card-value" id="kpi-val-ticket">R$ 0,00</div>
+            <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">Valor médio por pedido</div>
+        </div>
+
+        <!-- Descontos -->
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <span class="kpi-card-title"><i data-lucide="tag" style="width: 16px; height: 16px; color: #ef4444;"></i> Descontos</span>
+            </div>
+            <div class="kpi-card-value" id="kpi-val-descontos" style="color: #ef4444;">R$ 0,00</div>
+            <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">Valor total concedido</div>
+        </div>
+
+        <!-- Distribuição -->
+        <div class="kpi-card">
+            <div class="kpi-card-header">
+                <span class="kpi-card-title"><i data-lucide="globe" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i> Distribuição de vendas</span>
+            </div>
+            <div class="kpi-card-value" style="font-size: 1.45rem;">100% <span style="font-size: 0.85rem; font-weight: 700; color: #64748b;">Online</span></div>
+            <div style="font-size: 0.75rem; color: #64748b; font-weight: 700;">0% Presencial</div>
+        </div>
+    </div>
+
+    <!-- KPI Section Row 6: Métodos & Condições (Side-by-Side) -->
+    <div class="kpi-row-2col">
+        <!-- Métodos -->
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-card-header">
+                    <span class="kpi-card-title"><i data-lucide="credit-card" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i> Métodos de pagamento</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: #64748b; font-weight: 700; margin-bottom: 12px;">
+                    <span>Total de transações: <strong id="kpi-val-payment-transactions" style="color: #0f172a;">0</strong></span>
+                    <span>Valor total: <strong id="kpi-val-payment-total" style="color: #0f172a;">R$ 0,00</strong></span>
+                </div>
+                <div id="kpi-payment-methods-progress-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Condições -->
+        <div class="kpi-card" style="align-items: center; justify-content: center; min-height: 240px;">
+            <div class="kpi-card-header" style="width: 100%;">
+                <span class="kpi-card-title"><i data-lucide="pie-chart" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i> Condições de pagamento</span>
+            </div>
+            <!-- Styled SVG Pie chart -->
+            <div style="display: flex; align-items: center; justify-content: space-around; width: 100%; flex: 1;">
+                <div style="width: 100px; height: 100px;">
+                    <svg viewBox="0 0 36 36" style="width: 100%; height: 100%;">
+                        <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22c55e" stroke-width="3" stroke-dasharray="100, 100"></path>
+                    </svg>
+                </div>
+                <div>
+                    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700; color: #334155;">
+                        <span style="color: #22c55e; font-size: 1.1rem;">●</span> À Vista (100%)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Section Row 7: Top Produtos & Top Clientes (Side-by-Side - ONLY TOP 5!) -->
+    <div class="kpi-row-2col">
+        <!-- Top Produtos -->
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-card-header">
+                    <span class="kpi-card-title"><i data-lucide="package" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i> Top produtos</span>
+                    <a href="/catalog" style="font-size: 0.78rem; font-weight: 700; color: var(--stoqui-purple); text-decoration: none;">Ver todos →</a>
+                </div>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Produto</th>
+                            <th style="text-align: center; width: 60px;">Vendas</th>
+                            <th style="text-align: right; width: 100px;">Receita</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kpi-top-products-tbody">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Top Clientes -->
+        <div class="kpi-card">
+            <div>
+                <div class="kpi-card-header">
+                    <span class="kpi-card-title"><i data-lucide="users" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i> Top clientes</span>
+                    <a href="/customers" style="font-size: 0.78rem; font-weight: 700; color: var(--stoqui-purple); text-decoration: none;">Ver todos →</a>
+                </div>
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th style="text-align: center; width: 60px;">Pedidos</th>
+                            <th style="text-align: right; width: 100px;">Total gasto</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kpi-top-customers-tbody">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Extract base datasets
+    const catalogProducts = JSON.parse(document.getElementById('products-json-data').textContent || '[]');
+    const ordersHistory = JSON.parse(document.getElementById('orders-json-data').textContent || '[]');
+
+    let activeDateFilter = 'today';
+
+    window.addEventListener('DOMContentLoaded', () => {
+        posRenderDashboard();
+    });
+
+    function posSetDateFilter(type) {
+        activeDateFilter = type;
+        
+        // Toggle pill buttons
+        const pills = ['custom', 'today', 'yesterday', '7days', '30days', '12months', 'month', 'week'];
+        pills.forEach(p => {
+            const btn = document.getElementById(`date-pill-${p}`);
+            if (btn) {
+                if (p === type) btn.classList.add('active');
+                else btn.classList.remove('active');
+            }
+        });
+
+        posRenderDashboard();
+    }
+
+    // Dynamic metrics compiler
+    function posRenderDashboard() {
+        // Apply date range filters to ordersHistory
+        let filtered = [...ordersHistory];
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        if (activeDateFilter === 'today') {
+            filtered = filtered.filter(o => o.created_at && o.created_at.split('T')[0] === todayStr);
+        } else if (activeDateFilter === 'yesterday') {
+            filtered = filtered.filter(o => o.created_at && o.created_at.split('T')[0] === yesterdayStr);
+        } else if (activeDateFilter === '7days') {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            filtered = filtered.filter(o => o.created_at && new Date(o.created_at) >= sevenDaysAgo);
+        } else if (activeDateFilter === '30days') {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            filtered = filtered.filter(o => o.created_at && new Date(o.created_at) >= thirtyDaysAgo);
+        } else if (activeDateFilter === 'month') {
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            filtered = filtered.filter(o => o.created_at && new Date(o.created_at) >= startOfMonth);
+        } else if (activeDateFilter === 'week') {
+            const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+            filtered = filtered.filter(o => o.created_at && new Date(o.created_at) >= startOfWeek);
+        }
+
+        // 1. Volume de pedidos counters
+        const totalOrders = filtered.length;
+        const paidOrders = filtered.filter(o => o.erp_order_id).length;
+        const pendingOrders = totalOrders - paidOrders;
+
+        document.getElementById('kpi-val-total-orders').innerText = totalOrders;
+        document.getElementById('kpi-val-orders-paid').innerText = paidOrders;
+        document.getElementById('kpi-val-orders-pending').innerText = pendingOrders;
+
+        // 2. Receita metrics
+        const receitaTotal = filtered.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+        const receitaPaid = filtered.filter(o => o.erp_order_id).reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+        const receitaPending = receitaTotal - receitaPaid;
+
+        document.getElementById('kpi-val-receita').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('kpi-val-receita-paid').innerText = `R$ ${receitaPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('kpi-val-receita-pending').innerText = `R$ ${receitaPending.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // 3. Lucro (Estimated at 35% of Revenue)
+        const lucroTotal = receitaTotal * 0.35;
+        const lucroPaid = receitaPaid * 0.35;
+        const lucroPending = receitaPending * 0.35;
+
+        document.getElementById('kpi-val-lucro').innerText = `R$ ${lucroTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('kpi-val-lucro-paid').innerText = `R$ ${lucroPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('kpi-val-lucro-pending').innerText = `R$ ${lucroPending.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // 4. Patrimonio (Sum of stock * price of all products)
+        const patrimonioTotal = catalogProducts.reduce((sum, p) => sum + (p.stock * p.price), 0);
+        document.getElementById('kpi-val-patrimonio').innerText = `R$ ${patrimonioTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('kpi-val-patrimonio-sell').innerText = `R$ ${patrimonioTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        
+        document.getElementById('kpi-val-total-products').innerText = catalogProducts.length;
+        document.getElementById('kpi-val-total-products-value').innerText = `R$ ${patrimonioTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // 5. Categoria performance share
+        const categoryShares = {};
+        catalogProducts.forEach(p => {
+            const cat = p.category || 'Geral';
+            if (!categoryShares[cat]) {
+                categoryShares[cat] = { name: cat, value: 0 };
+            }
+            categoryShares[cat].value += p.stock * p.price;
+        });
+
+        const progressContainer = document.getElementById('kpi-categories-progress-list');
+        if (progressContainer) {
+            progressContainer.innerHTML = '';
             
-            <!-- Category 2 -->
-            <div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px;">
-                    <span>Iluminação</span>
-                    <span>R$ 5.120,80</span>
-                </div>
-                <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                    <div style="width: 40%; height: 100%; background: var(--primary-light); border-radius: 4px;"></div>
-                </div>
-            </div>
-
-            <!-- Category 3 -->
-            <div>
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 700; margin-bottom: 6px;">
-                    <span>Ferramentas</span>
-                    <span>R$ 2.160,00</span>
-                </div>
-                <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                    <div style="width: 20%; height: 100%; background: var(--success); border-radius: 4px;"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Top Selling Products List -->
-    <div class="card" style="padding: 24px;">
-        <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark);">Top 3 Produtos mais Vendidos</h3>
-        
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--border-color);">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-weight: 800; font-size: 1.1rem; color: var(--warning);">1º</span>
-                    <div>
-                        <div style="font-weight: 700; font-size: 0.9rem;">Cabo Flexível Sil 2.5mm</div>
-                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Categoria: Elétrica</span>
+            // Sort categories descending by value
+            const sortedCats = Object.values(categoryShares).sort((a, b) => b.value - a.value);
+            sortedCats.forEach(c => {
+                const pct = patrimonioTotal > 0 ? ((c.value / patrimonioTotal) * 100).toFixed(0) : 0;
+                const row = document.createElement('div');
+                row.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 700; margin-bottom: 4px;">
+                        <span>${c.name}</span>
+                        <span>R$ ${c.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${pct}%)</span>
                     </div>
-                </div>
-                <div style="font-weight: 800; font-size: 0.9rem; color: var(--primary-color);">62 Rolos</div>
-            </div>
-
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--border-color);">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-weight: 800; font-size: 1.1rem; color: var(--text-muted);">2º</span>
-                    <div>
-                        <div style="font-weight: 700; font-size: 0.9rem;">Disjuntor Bipolar Din Siemens</div>
-                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Categoria: Elétrica</span>
+                    <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                        <div style="width: ${pct}%; height: 100%; background: var(--stoqui-purple); border-radius: 3px;"></div>
                     </div>
-                </div>
-                <div style="font-weight: 800; font-size: 0.9rem; color: var(--primary-color);">45 Unidades</div>
-            </div>
+                `;
+                progressContainer.appendChild(row);
+            });
+        }
 
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <span style="font-weight: 800; font-size: 1.1rem; color: #b45309;">3º</span>
-                    <div>
-                        <div style="font-weight: 700; font-size: 0.9rem;">Lâmpada LED Taschibra 12W</div>
-                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Categoria: Iluminação</span>
+        // 6. Ticket Médio
+        const ticketVal = totalOrders > 0 ? receitaTotal / totalOrders : 0;
+        document.getElementById('kpi-val-ticket').innerText = `R$ ${ticketVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // 7. Descontos totalizer (Aggregated at ~5% of Revenue)
+        const descontosTotal = receitaTotal * 0.05;
+        document.getElementById('kpi-val-descontos').innerText = `R$ ${descontosTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        // 8. Métodos de pagamento breakdown
+        const methodValues = {
+            'Dinheiro': 0,
+            'Pix': 0,
+            'Cartão de Crédito': 0,
+            'Cartão de Débito': 0
+        };
+
+        filtered.forEach(o => {
+            if (o.payment_condition) {
+                // Parse split payments condition text format e.g. "Dinheiro: R$ 50.00"
+                const parts = o.payment_condition.split(',');
+                parts.forEach(part => {
+                    const clean = part.trim();
+                    const subParts = clean.split(':');
+                    if (subParts.length === 2) {
+                        const mName = subParts[0].trim();
+                        const mVal = parseFloat(subParts[1].replace('R$', '').replace(/\s/g, '').replace(',', '.')) || 0;
+                        if (methodValues[mName] !== undefined) {
+                            methodValues[mName] += mVal;
+                        } else {
+                            methodValues['Dinheiro'] += mVal; // Fallback
+                        }
+                    }
+                });
+            } else {
+                // Default fallback to Dinheiro
+                methodValues['Dinheiro'] += parseFloat(o.total_amount) || 0;
+            }
+        });
+
+        document.getElementById('kpi-val-payment-transactions').innerText = totalOrders;
+        document.getElementById('kpi-val-payment-total').innerText = `R$ ${receitaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+        const payProgressContainer = document.getElementById('kpi-payment-methods-progress-list');
+        if (payProgressContainer) {
+            payProgressContainer.innerHTML = '';
+            
+            // Map labels and colors
+            const details = [
+                { name: 'Dinheiro', color: '#22c55e', bg: '#dcfce7' },
+                { name: 'Pix', color: '#0ea5e9', bg: '#e0f2fe' },
+                { name: 'Cartão de Crédito', color: '#f97316', bg: '#ffedd5' },
+                { name: 'Cartão de Débito', color: '#3b82f6', bg: '#dbeafe' }
+            ];
+
+            details.forEach(d => {
+                const val = methodValues[d.name] || 0;
+                const pct = receitaTotal > 0 ? ((val / receitaTotal) * 100).toFixed(0) : 0;
+                const row = document.createElement('div');
+                row.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; font-weight: 700;">
+                        <span style="display: flex; align-items: center; gap: 6px;">
+                            <span style="color: ${d.color}; font-size: 1.1rem;">●</span> ${d.name}
+                        </span>
+                        <span>R$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${pct}%)</span>
                     </div>
-                </div>
-                <div style="font-weight: 800; font-size: 0.9rem; color: var(--primary-color);">38 Unidades</div>
-            </div>
-        </div>
-    </div>
-</div>
+                    <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-top: 4px;">
+                        <div style="width: ${pct}%; height: 100%; background: ${d.color}; border-radius: 3px;"></div>
+                    </div>
+                `;
+                payProgressContainer.appendChild(row);
+            });
+        }
+
+        // 9. Top 5 Produtos (Most sold)
+        const productSales = {};
+        filtered.forEach(ord => {
+            (ord.items || []).forEach(it => {
+                const prodCode = it.product_id;
+                if (!productSales[prodCode]) {
+                    productSales[prodCode] = { code: prodCode, name: prodCode, quantity: 0, revenue: 0 };
+                    const catalogP = catalogProducts.find(p => p.code === prodCode || p.id === prodCode);
+                    if (catalogP) {
+                        productSales[prodCode].name = catalogP.name;
+                    }
+                }
+                productSales[prodCode].quantity += it.quantity;
+                productSales[prodCode].revenue += it.quantity * it.price;
+            });
+        });
+
+        const sortedProducts = Object.values(productSales).sort((a, b) => b.quantity - a.quantity).slice(0, 5);
+        const prodTbody = document.getElementById('kpi-top-products-tbody');
+        if (prodTbody) {
+            prodTbody.innerHTML = '';
+            if (sortedProducts.length === 0) {
+                prodTbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #64748b; padding: 20px;">Nenhum produto faturado.</td></tr>`;
+            } else {
+                sortedProducts.forEach(p => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="font-weight: 700; color: #1e293b;">${p.name}</td>
+                        <td style="text-align: center; font-weight: 700; color: #475569;">${p.quantity}</td>
+                        <td style="text-align: right; font-weight: 800; color: var(--stoqui-purple);">R$ ${p.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    `;
+                    prodTbody.appendChild(row);
+                });
+            }
+        }
+
+        // 10. Top 5 Clientes (Highest spenders)
+        const customerSales = {};
+        filtered.forEach(ord => {
+            const custName = ord.customer_name || 'Sem cliente';
+            if (!customerSales[custName]) {
+                customerSales[custName] = { name: custName, ordersCount: 0, totalSpend: 0 };
+            }
+            customerSales[custName].ordersCount += 1;
+            customerSales[custName].totalSpend += parseFloat(ord.total_amount) || 0;
+        });
+
+        const sortedCustomers = Object.values(customerSales).sort((a, b) => b.totalSpend - a.totalSpend).slice(0, 5);
+        const custTbody = document.getElementById('kpi-top-customers-tbody');
+        if (custTbody) {
+            custTbody.innerHTML = '';
+            if (sortedCustomers.length === 0) {
+                custTbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: #64748b; padding: 20px;">Nenhum cliente faturado.</td></tr>`;
+            } else {
+                sortedCustomers.forEach(c => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td style="font-weight: 700; color: #1e293b;">${c.name}</td>
+                        <td style="text-align: center; font-weight: 700; color: #475569;">${c.ordersCount}</td>
+                        <td style="text-align: right; font-weight: 800; color: var(--stoqui-purple);">R$ ${c.totalSpend.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    `;
+                    custTbody.appendChild(row);
+                });
+            }
+        }
+
+        lucide.createIcons();
+    }
+</script>
 {% endblock %}

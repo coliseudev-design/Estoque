@@ -19,9 +19,13 @@ async def performance_view(request: Request):
     api_key = request.cookies.get("rep_api_key")
     
     kpis = await api_client.get_performance_kpis(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
+    products = await api_client.get_products(token=token, branch_id=branch_id, api_key=api_key)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     return templates.TemplateResponse("performance/index.html", {
         "request": request,
         "kpis": kpis,
+        "products": products,
+        "orders": orders,
         "rep_name": rep_name,
         "selected_branch_name": branch_name,
         "active_page": "performance"
