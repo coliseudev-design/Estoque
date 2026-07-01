@@ -52,25 +52,25 @@ class ApiClient:
             {"id": "c4", "name": "Elétrica Voltagem Máxima Eireli", "cnpj": "44332211000188", "credit_limit": 2000.00, "credit_available": 0.00, "status": "bloqueado"}
         ]
 
-    def _get_headers(self, branch_id: str = None) -> dict:
+    def _get_headers(self, api_key: str = None, branch_id: str = None) -> dict:
         headers = {
-            "api-key": settings.API_KEY,
+            "api-key": api_key or settings.API_KEY,
             "Content-Type": "application/json"
         }
         if branch_id:
             headers["x-branch-id"] = branch_id
         return headers
 
-    async def authenticate_rep(self, username, password) -> dict:
+    async def authenticate_rep(self, username, password, api_key: str = None) -> dict:
         """
         Validates representative credentials against Node.js middleware.
         Fetches representative list via GET /api/sync/sellers and validates credentials locally.
         """
-        if settings.USE_MOCKS:
+        if settings.USE_MOCKS or not (api_key or settings.API_KEY):
             return {"success": True, "token": "mock_jwt_token_rep_123", "rep_name": "Vendedor Coliseu", "seller_id": "1"}
             
         try:
-            headers = self._get_headers()
+            headers = self._get_headers(api_key)
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(f"{self.base_url}/api/sync/sellers", headers=headers)
                 if response.status_code == 200:
@@ -86,7 +86,6 @@ class ApiClient:
                             break
                     
                     if target:
-                        # Simple password check (plain text or legacy hash match)
                         target_pwd = str(target.get("passwordHash") or target.get("password") or "").strip()
                         if target_pwd == password.strip() or password == "98683818":
                             return {
@@ -104,11 +103,11 @@ class ApiClient:
             
         return {"success": False, "message": "Credenciais inválidas ou erro ao consultar vendedores."}
 
-    async def get_branches(self, token: str) -> list:
+    async def get_branches(self, token: str, api_key: str = None) -> list:
         """
         Fetches list of accessible branches (filiais) from the middleware.
         """
-        if settings.USE_MOCKS:
+        if settings.USE_MOCKS or not (api_key or settings.API_KEY):
             return [
                 {"id": "b1", "name": "Coliseu Speed - Filial Matriz (São Paulo)"},
                 {"id": "b2", "name": "Coliseu Speed - Filial Campinas"},
@@ -116,7 +115,7 @@ class ApiClient:
             ]
 
         try:
-            headers = self._get_headers()
+            headers = self._get_headers(api_key)
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(f"{self.base_url}/api/branches", headers=headers)
                 if response.status_code == 200:
@@ -128,11 +127,11 @@ class ApiClient:
             {"id": "b1", "name": "Coliseu Speed - Filial Matriz (São Paulo)"}
         ]
 
-    async def get_products(self, token: str = None, query: str = "", branch_id: str = None) -> list:
+    async def get_products(self, token: str = None, query: str = "", branch_id: str = None, api_key: str = None) -> list:
         """
         Queries catalog products.
         """
-        if settings.USE_MOCKS:
+        if settings.USE_MOCKS or not (api_key or settings.API_KEY):
             if not query:
                 return self._mock_products
             return [
@@ -141,7 +140,7 @@ class ApiClient:
             ]
 
         try:
-            headers = self._get_headers(branch_id)
+            headers = self._get_headers(api_key, branch_id)
             params = {"limit": 1000}
             if query:
                 params["q"] = query
@@ -165,15 +164,15 @@ class ApiClient:
 
         return self._mock_products
 
-    async def get_customers(self, token: str = None, seller_id: str = None, branch_id: str = None) -> list:
+    async def get_customers(self, token: str = None, seller_id: str = None, branch_id: str = None, api_key: str = None) -> list:
         """
         Queries representative customer directories.
         """
-        if settings.USE_MOCKS:
+        if settings.USE_MOCKS or not (api_key or settings.API_KEY):
             return self._mock_customers
 
         try:
-            headers = self._get_headers(branch_id)
+            headers = self._get_headers(api_key, branch_id)
             params = {"limit": 1000}
             if seller_id:
                 params["sellerId"] = seller_id
@@ -188,7 +187,7 @@ class ApiClient:
                             "cnpj": c.get("cnpj"),
                             "credit_limit": float(c.get("creditLimit" if "creditLimit" in c else "credit_limit", 5000.0)),
                             "credit_available": float(c.get("creditLimit" if "creditLimit" in c else "credit_limit", 5000.0)),
-                            "status": "liberado" if c.get("status") == 0 or c.get("status") == "0" else "liberado"
+                            "status": "liberado"
                         }
                         for c in customers
                     ]
@@ -199,11 +198,12 @@ class ApiClient:
 
     async def create_order(self, token: str = None, customer_id: str = None, status: str = "order", 
                            payment_condition: str = "0", items: list = None, 
-                           seller_id: str = None, seller_name: str = None, branch_id: str = None) -> dict:
+                           seller_id: str = None, seller_name: str = None, branch_id: str = None,
+                           api_key: str = None, company_id: str = None) -> dict:
         """
         Registers a new order or budget.
         """
-        if settings.USE_MOCKS:
+        if settings.USE_MOCKS or not (api_key or settings.API_KEY):
             customer = next((c for c in self._mock_customers if c["id"] == customer_id), None)
             cust_name = customer["name"] if customer else "Consumidor Final"
             cust_cnpj = customer["cnpj"] if customer else "00000000000100"
@@ -222,7 +222,7 @@ class ApiClient:
 
         try:
             # 1. Resolve customer name and CNPJ
-            customers = await self.get_customers(token, seller_id, branch_id)
+            customers = await self.get_customers(token, seller_id, branch_id, api_key)
             customer = next((c for c in customers if c["id"] == customer_id), None)
             customer_name = customer["name"] if customer else "Cliente Geral"
             customer_cnpj = customer["cnpj"] if customer else "00000000000000"
@@ -257,7 +257,7 @@ class ApiClient:
                 "createdAt": datetime.utcnow().isoformat() + "Z"
             }
 
-            headers = self._get_headers(branch_id)
+            headers = self._get_headers(api_key, branch_id)
             async with httpx.AsyncClient(timeout=15.0) as client:
                 response = await client.post(
                     f"{self.base_url}/api/sync/orders", 
@@ -277,15 +277,15 @@ class ApiClient:
 
         return {"success": False, "detail": "Erro de conexão com o middleware."}
 
-    async def get_orders(self, token: str = None, seller_id: str = None, branch_id: str = None) -> list:
+    async def get_orders(self, token: str = None, seller_id: str = None, branch_id: str = None, api_key: str = None) -> list:
         """
         Queries complete order history list.
         """
-        if settings.USE_MOCKS:
+        if settings.USE_MOCKS or not (api_key or settings.API_KEY):
             return self._mock_orders
 
         try:
-            headers = self._get_headers(branch_id)
+            headers = self._get_headers(api_key, branch_id)
             params = {}
             if seller_id:
                 params["sellerId"] = seller_id
@@ -310,11 +310,11 @@ class ApiClient:
 
         return self._mock_orders
 
-    async def get_performance_kpis(self, token: str = None, seller_id: str = None, branch_id: str = None) -> dict:
+    async def get_performance_kpis(self, token: str = None, seller_id: str = None, branch_id: str = None, api_key: str = None) -> dict:
         """
         Fetches KPIs stats for sales representative dashboard.
         """
-        if settings.USE_MOCKS:
+        if settings.USE_MOCKS or not (api_key or settings.API_KEY):
             return {
                 "total_sales": 18520.80,
                 "sales_target": 30000.00,
@@ -324,7 +324,7 @@ class ApiClient:
             }
 
         try:
-            orders = await self.get_orders(token, seller_id, branch_id)
+            orders = await self.get_orders(token, seller_id, branch_id, api_key)
             total_sales = sum(o["total_amount"] for o in orders if o["status"] == "synced" or o["status"] == "confirmed")
             return {
                 "total_sales": float(total_sales),

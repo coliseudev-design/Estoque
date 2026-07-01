@@ -34,8 +34,9 @@ async def list_orders(request: Request):
     branch_name = request.cookies.get("rep_branch_name")
     branch_id = request.cookies.get("rep_branch_id")
     seller_id = request.cookies.get("rep_seller_id")
+    api_key = request.cookies.get("rep_api_key")
     
-    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     return templates.TemplateResponse("orders/list.html", {
         "request": request,
         "orders": orders,
@@ -54,9 +55,10 @@ async def new_order_view(request: Request):
     branch_name = request.cookies.get("rep_branch_name")
     branch_id = request.cookies.get("rep_branch_id")
     seller_id = request.cookies.get("rep_seller_id")
+    api_key = request.cookies.get("rep_api_key")
     
-    products = await api_client.get_products(token=token, branch_id=branch_id)
-    customers = await api_client.get_customers(token=token, seller_id=seller_id, branch_id=branch_id)
+    products = await api_client.get_products(token=token, branch_id=branch_id, api_key=api_key)
+    customers = await api_client.get_customers(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     
     return templates.TemplateResponse("orders/new.html", {
         "request": request,
@@ -73,8 +75,9 @@ async def api_create_order(request: Request, payload: OrderCreateSchema):
     seller_id = request.cookies.get("rep_seller_id")
     seller_name = request.cookies.get("rep_name")
     branch_id = request.cookies.get("rep_branch_id")
+    api_key = request.cookies.get("rep_api_key")
+    company_id = request.cookies.get("rep_company_id")
     
-    # Call middleware API to insert order
     res = await api_client.create_order(
         token=token,
         customer_id=payload.customer_id,
@@ -83,7 +86,9 @@ async def api_create_order(request: Request, payload: OrderCreateSchema):
         items=[item.dict() for item in payload.items],
         seller_id=seller_id,
         seller_name=seller_name,
-        branch_id=branch_id
+        branch_id=branch_id,
+        api_key=api_key,
+        company_id=company_id
     )
     if not res.get("success", False):
         raise HTTPException(status_code=400, detail=res.get("detail", "Erro desconhecido faturamento."))
@@ -99,16 +104,15 @@ async def view_order(id: str, request: Request):
     branch_name = request.cookies.get("rep_branch_name")
     branch_id = request.cookies.get("rep_branch_id")
     seller_id = request.cookies.get("rep_seller_id")
+    api_key = request.cookies.get("rep_api_key")
+    company_id = request.cookies.get("rep_company_id")
     
-    # Query order from middleware database
-    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
         
-    # Query active integrations flags from SaaS Admin Panel
-    integrations = await admin_client.get_active_integrations()
-    
+    integrations = await admin_client.get_active_integrations(company_id=company_id)
     invoice_text = generate_order_invoice_text(order)
 
     return templates.TemplateResponse("orders/detail.html", {
@@ -121,28 +125,29 @@ async def view_order(id: str, request: Request):
         "active_page": "orders"
     })
 
-# Baixar PDF (servido como texto puro imitando um arquivo de PDF/Nota para teste)
 @router.get("/orders/{id}/pdf")
 async def download_order_pdf(id: str, request: Request):
     token = request.cookies.get("rep_token")
     branch_id = request.cookies.get("rep_branch_id")
     seller_id = request.cookies.get("rep_seller_id")
+    api_key = request.cookies.get("rep_api_key")
     
-    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     invoice_text = generate_order_invoice_text(order)
     return PlainTextResponse(content=invoice_text, headers={"Content-Disposition": f"attachment; filename=pedido_{id}.txt"})
 
-# WhatsApp trigger link generator
 @router.get("/orders/{id}/share/whatsapp")
 async def share_whatsapp(id: str, request: Request):
     token = request.cookies.get("rep_token")
     branch_id = request.cookies.get("rep_branch_id")
     seller_id = request.cookies.get("rep_seller_id")
+    api_key = request.cookies.get("rep_api_key")
+    company_id = request.cookies.get("rep_company_id")
     
-    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
@@ -150,26 +155,23 @@ async def share_whatsapp(id: str, request: Request):
     message = f"Olá, segue o resumo do seu pedido *#{id}* no valor total de R$ {order['total_amount']:.2f}. Acesse o link para conferir."
     url_encoded = urllib.parse.quote(message)
     
-    # Check WhatsApp API configs in Admin Panel
-    integrations = await admin_client.get_active_integrations()
+    integrations = await admin_client.get_active_integrations(company_id=company_id)
     phone = integrations.get("whatsapp", {}).get("configuration", {}).get("phone", "")
     
     return RedirectResponse(url=f"https://api.whatsapp.com/send?phone={phone}&text={url_encoded}")
 
-# Email mock trigger
 @router.post("/orders/{id}/share/email")
 async def share_email(id: str):
-    # Simulate sending SMTP
     return {"success": True, "message": "Email disparado via servidor SMTP cadastrado no Admin."}
 
-# Contract template mock generator
 @router.get("/orders/{id}/share/contract")
 async def share_contract(id: str, request: Request):
     token = request.cookies.get("rep_token")
     branch_id = request.cookies.get("rep_branch_id")
     seller_id = request.cookies.get("rep_seller_id")
+    api_key = request.cookies.get("rep_api_key")
     
-    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
@@ -188,14 +190,14 @@ Assinado digitalmente por ambas as partes.
 """
     return PlainTextResponse(content=contract_text.strip())
 
-# Fiscal NF-e transmit simulation
 @router.get("/orders/{id}/share/fiscal")
 async def share_fiscal(id: str, request: Request):
     token = request.cookies.get("rep_token")
     branch_id = request.cookies.get("rep_branch_id")
     seller_id = request.cookies.get("rep_seller_id")
+    api_key = request.cookies.get("rep_api_key")
     
-    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")

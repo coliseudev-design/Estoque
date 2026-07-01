@@ -305,3 +305,35 @@ def patch_company_status(
     company.status = 0 if payload.status == "active" else 1
     identity_db.commit()
     return {"id": company.id, "status": "active" if company.status == 0 else "inactive"}
+
+class KeyLookupRequest(BaseModel):
+    api_key: str
+
+@router.post("/api/companies/lookup-by-key")
+def lookup_company_by_key(
+    payload: KeyLookupRequest,
+    identity_db: Session = Depends(get_identity_db)
+):
+    api_key = payload.api_key.strip()
+    if not api_key:
+        return JSONResponse(status_code=400, content={"success": False, "detail": "API Key é obrigatória"})
+        
+    import hashlib
+    key_hash = hashlib.sha256(api_key.upper().encode('utf-8')).hexdigest()
+    
+    module = identity_db.query(CompanyModule)\
+        .filter(CompanyModule.api_key_hash == key_hash, CompanyModule.is_active == True)\
+        .first()
+        
+    if not module:
+        return JSONResponse(status_code=404, content={"success": False, "detail": "Chave de acesso inválida ou empresa inativa"})
+        
+    company = identity_db.query(Company).filter(Company.id == module.company_id).first()
+    if not company:
+        return JSONResponse(status_code=404, content={"success": False, "detail": "Empresa associada não encontrada"})
+        
+    return {
+        "success": True,
+        "company_id": str(company.id),
+        "company_name": company.name
+    }

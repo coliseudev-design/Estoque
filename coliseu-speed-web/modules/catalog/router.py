@@ -15,8 +15,9 @@ async def catalog_view(request: Request):
     rep_name = request.cookies.get("rep_name")
     branch_name = request.cookies.get("rep_branch_name")
     branch_id = request.cookies.get("rep_branch_id")
+    api_key = request.cookies.get("rep_api_key")
     
-    products = await api_client.get_products(token=token, branch_id=branch_id)
+    products = await api_client.get_products(token=token, branch_id=branch_id, api_key=api_key)
     return templates.TemplateResponse("catalog/list.html", {
         "request": request,
         "products": products,
@@ -32,5 +33,6 @@ async def api_catalog_query(
 ):
     token = request.cookies.get("rep_token")
     branch_id = request.cookies.get("rep_branch_id")
-    products = await api_client.get_products(token=token, query=q, branch_id=branch_id)
+    api_key = request.cookies.get("rep_api_key")
+    products = await api_client.get_products(token=token, query=q, branch_id=branch_id, api_key=api_key)
     return JSONResponse(content=products)

@@ -16,10 +16,11 @@ async def dashboard_view(request: Request):
     branch_name = request.cookies.get("rep_branch_name")
     branch_id = request.cookies.get("rep_branch_id")
     seller_id = request.cookies.get("rep_seller_id")
+    api_key = request.cookies.get("rep_api_key")
     
     # Query KPIs and sync statuses from middleware
-    kpis = await api_client.get_performance_kpis(token=token, seller_id=seller_id, branch_id=branch_id)
-    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    kpis = await api_client.get_performance_kpis(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id, api_key=api_key)
     sync_status = await api_client.get_sync_status()
 
     return templates.TemplateResponse("dashboard/index.html", {
