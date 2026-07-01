@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime
-from config.database import get_db
+from config.database import get_db, get_identity_db
 from config.security import get_current_user_web, get_current_user_api
 from modules.companies.models import Company, CompanyModule
 from modules.integrations.models import ApiIntegration
@@ -14,10 +14,17 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/integrations", response_class=HTMLResponse)
 def list_integrations(
     request: Request,
-    db: Session = Depends(get_db),
+    local_db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    integrations = db.query(ApiIntegration).join(Company).order_by(ApiIntegration.created_at.desc()).all()
+    # Fetch from local DB
+    integrations = local_db.query(ApiIntegration).order_by(ApiIntegration.created_at.desc()).all()
+    
+    # Load company details from central DB in memory
+    for integration in integrations:
+        integration.company = identity_db.query(Company).filter(Company.id == integration.company_id).first()
+        
     return templates.TemplateResponse("integrations/list.html", {
         "request": request,
         "integrations": integrations,
@@ -29,11 +36,11 @@ def list_integrations(
 def new_integration_form(
     request: Request,
     company_id: str = None,
-    db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    # Only show active companies with speed module
-    companies = db.query(Company)\
+    # Only show active companies with speed module from central DB
+    companies = identity_db.query(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
         .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
         .all()
@@ -54,11 +61,11 @@ def create_integration(
     api_key: str = Form(...),
     api_secret: str = Form(None),
     webhook_url: str = Form(None),
-    db: Session = Depends(get_db),
+    local_db: Session = Depends(get_db),
     current_user = Depends(get_current_user_web)
 ):
-    # Check if this type of integration already exists for this company
-    existing = db.query(ApiIntegration).filter(
+    # Check if this type of integration already exists for this company in local DB
+    existing = local_db.query(ApiIntegration).filter(
         ApiIntegration.company_id == company_id,
         ApiIntegration.api_type == api_type
     ).first()
@@ -71,7 +78,7 @@ def create_integration(
         existing.is_active = True
         existing.updated_at = datetime.utcnow()
     else:
-        # Create new integration
+        # Create new integration in local DB
         integration = ApiIntegration(
             company_id=company_id,
             api_type=api_type,
@@ -80,9 +87,9 @@ def create_integration(
             webhook_url=webhook_url,
             is_active=True
         )
-        db.add(integration)
+        local_db.add(integration)
         
-    db.commit()
+    local_db.commit()
 
     return RedirectResponse(
         url=f"/adm/companies/{company_id}",
@@ -93,10 +100,10 @@ def create_integration(
 def test_integration(
     company_id: str,
     integration_id: int,
-    db: Session = Depends(get_db),
+    local_db: Session = Depends(get_db),
     current_user = Depends(get_current_user_api)
 ):
-    integration = db.query(ApiIntegration).filter(
+    integration = local_db.query(ApiIntegration).filter(
         ApiIntegration.id == integration_id,
         ApiIntegration.company_id == company_id
     ).first()
@@ -114,6 +121,6 @@ def test_integration(
     
     # Update last tested timestamp
     integration.last_tested_at = datetime.utcnow()
-    db.commit()
+    local_db.commit()
 
     return {"success": success, "message": message, "timestamp": integration.last_tested_at}

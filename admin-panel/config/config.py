@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     # Database Settings
     # Use SQLite as fallback if PostgreSQL is not specified
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./coliseuspeed_admin.db")
+    IDENTITY_DATABASE_URL: str = os.getenv("IDENTITY_DATABASE_URL", "sqlite:///./coliseuspeed_admin.db")
     
     # Security Settings
     JWT_SECRET: str = os.getenv("JWT_SECRET", "747a7da7a7b9317b9c6a7880abcdef1234567890abcdef1234567890abcdef12")

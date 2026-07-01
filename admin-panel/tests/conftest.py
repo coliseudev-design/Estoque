@@ -8,7 +8,7 @@ import os
 # Adjust paths to make config and modules available to tests
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from config.database import Base, get_db
+from config.database import Base, get_db, get_identity_db
 from app import app
 
 # In-memory test database
@@ -37,6 +37,7 @@ def client(db_session):
             pass
             
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_identity_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()

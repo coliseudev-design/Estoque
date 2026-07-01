@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime
 import secrets
-from config.database import get_db
+from config.database import get_db, get_identity_db
 from config.security import get_current_user_web, get_current_user_api
 from modules.companies.models import Company, CompanyModule
 from modules.api_keys.models import ApiKey
@@ -15,13 +15,19 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/api-keys", response_class=HTMLResponse)
 def list_api_keys(
     request: Request,
-    db: Session = Depends(get_db),
+    local_db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    api_keys = db.query(ApiKey).join(Company).order_by(ApiKey.created_at.desc()).all()
+    # Fetch from local DB
+    api_keys = local_db.query(ApiKey).order_by(ApiKey.created_at.desc()).all()
     
-    # Only active companies with coliseu-speed
-    companies = db.query(Company)\
+    # Map companies centrally in memory
+    for key in api_keys:
+        key.company = identity_db.query(Company).filter(Company.id == key.company_id).first()
+        
+    # Only active companies with coliseu-speed centrally
+    companies = identity_db.query(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
         .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
         .all()
@@ -39,7 +45,7 @@ def list_api_keys(
 def generate_api_key_redirect(
     company_id: str = Form(...),
     key_name: str = Form(...),
-    db: Session = Depends(get_db),
+    local_db: Session = Depends(get_db),
     current_user = Depends(get_current_user_web)
 ):
     api_key = ApiKey(
@@ -48,15 +54,15 @@ def generate_api_key_redirect(
         secret=f"cs_sec_{secrets.token_hex(24)}",
         name=key_name
     )
-    db.add(api_key)
-    db.commit()
+    local_db.add(api_key)
+    local_db.commit()
     return RedirectResponse(url="/adm/api-keys", status_code=status.HTTP_303_SEE_OTHER)
 
 # AJAX endpoint to generate a new key
 @router.post("/api/companies/{company_id}/api-keys")
 def generate_api_key_api(
     company_id: str,
-    db: Session = Depends(get_db),
+    local_db: Session = Depends(get_db),
     current_user = Depends(get_current_user_api)
 ):
     api_key = ApiKey(
@@ -65,9 +71,9 @@ def generate_api_key_api(
         secret=f"cs_sec_{secrets.token_hex(24)}",
         name="Chave de Integração"
     )
-    db.add(api_key)
-    db.commit()
-    db.refresh(api_key)
+    local_db.add(api_key)
+    local_db.commit()
+    local_db.refresh(api_key)
     return api_key
 
 # AJAX endpoint to revoke key
@@ -75,10 +81,10 @@ def generate_api_key_api(
 def revoke_api_key_api(
     company_id: str,
     key_id: int,
-    db: Session = Depends(get_db),
+    local_db: Session = Depends(get_db),
     current_user = Depends(get_current_user_api)
 ):
-    key = db.query(ApiKey).filter(
+    key = local_db.query(ApiKey).filter(
         ApiKey.id == key_id,
         ApiKey.company_id == company_id
     ).first()
@@ -87,5 +93,5 @@ def revoke_api_key_api(
         return JSONResponse(status_code=404, content={"success": False, "detail": "Chave não encontrada"})
         
     key.is_active = False
-    db.commit()
+    local_db.commit()
     return {"success": True, "message": "Chave revogada com sucesso"}

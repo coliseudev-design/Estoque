@@ -75,7 +75,8 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
-      - DATABASE_URL=postgresql://${PG_USER:-coliseu_admin}:${PG_PASSWORD}@${PG_HOST:-coliseu-db}:5432/coliseu_identity
+      - DATABASE_URL=sqlite:////app/data/coliseuspeed_admin.db
+      - IDENTITY_DATABASE_URL=postgresql://${PG_USER:-coliseu_admin}:${PG_PASSWORD}@${PG_HOST:-coliseu-db}:5432/coliseu_identity
       - REDIS_URL=redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/0
       - JWT_SECRET=${JWT_ACCESS_SECRET:-747a7da7a7b9317b9c6a7880abcdef1234567890abcdef1234567890abcdef12}
       - SALES_API_URL=https://licencas.coliseusistemas.com.br
@@ -84,6 +85,8 @@ services:
     depends_on:
       speed-middleware:
         condition: service_started
+    volumes:
+      - admin_panel_data:/app/data
     networks:
       - coolify
 
@@ -91,5 +94,5 @@ services:
 networks:
   coolify:
     external: true
-
-
+volumes:
+  admin_panel_data:

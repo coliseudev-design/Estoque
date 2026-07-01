@@ -3,37 +3,38 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from config.database import get_db
+from config.database import get_db, get_identity_db
 from config.security import get_current_user_web, get_current_user_api
-from modules.companies.models import Company, CompanyModule
+from modules.companies.models import Company, CompanyDetails, CompanyModule
 from modules.licenses.models import License
 from modules.instances.models import Instance
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-def get_stats_data(db: Session):
-    # Only fetch companies that have the 'coliseu-speed' module activated and active (Status=1)
-    active_companies = db.query(Company)\
+def get_stats_data(local_db: Session, identity_db: Session):
+    # Active companies from central DB
+    active_companies = identity_db.query(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
         .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, Company.status == 1)\
         .count()
         
-    # Active licenses (devices) for speed companies (Status=1)
-    active_licenses = db.query(License)\
+    # Active licenses (devices) from central DB
+    active_licenses = identity_db.query(License)\
         .join(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
-        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, License.status == 1)\
+        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, License.status_code == 1)\
         .count()
         
-    # Revoked licenses (devices) (Status=2)
-    expired_licenses = db.query(License)\
+    # Revoked licenses (devices) from central DB
+    expired_licenses = identity_db.query(License)\
         .join(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
-        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, License.status == 2)\
+        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, License.status_code == 2)\
         .count()
         
-    online_instances = db.query(Instance).filter(Instance.status == "online").count()
+    # Online instances from local DB
+    online_instances = local_db.query(Instance).filter(Instance.status == "online").count()
     
     return {
         "active_companies": active_companies,
@@ -45,21 +46,26 @@ def get_stats_data(db: Session):
 @router.get("/", response_class=HTMLResponse)
 def get_dashboard(
     request: Request,
-    db: Session = Depends(get_db),
+    local_db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    stats = get_stats_data(db)
+    stats = get_stats_data(local_db, identity_db)
     
-    # Fetch recent companies (last 5) filtered by speed module
-    recent_companies = db.query(Company)\
+    # Fetch recent companies from central DB
+    recent_companies = identity_db.query(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
         .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
         .order_by(Company.created_at.desc())\
         .limit(5)\
         .all()
+        
+    # Load details locally
+    for company in recent_companies:
+        company.details = local_db.query(CompanyDetails).filter(CompanyDetails.company_id == company.id).first()
     
-    # Fetch recently accessed licenses (devices)
-    recent_licenses = db.query(License)\
+    # Fetch recently accessed licenses (devices) from central DB
+    recent_licenses = identity_db.query(License)\
         .join(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
         .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
@@ -71,15 +77,16 @@ def get_dashboard(
         "request": request,
         "stats": stats,
         "recent_companies": recent_companies,
-        "expiring_licenses": recent_licenses, # map to recently active devices in the dashboard
+        "expiring_licenses": recent_licenses,
         "current_user": current_user,
         "active_page": "dashboard"
     })
 
 @router.get("/api/dashboard/stats")
 def api_dashboard_stats(
-    db: Session = Depends(get_db),
+    local_db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_api)
 ):
-    stats = get_stats_data(db)
+    stats = get_stats_data(local_db, identity_db)
     return stats

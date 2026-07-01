@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import datetime
 import uuid
-from config.database import get_db
+from config.database import get_db, get_identity_db
 from config.security import get_current_user_web, get_current_user_api
 from utils.license_validator import validate_license_on_sales
 from modules.companies.models import Company
@@ -16,11 +16,11 @@ templates = Jinja2Templates(directory="templates")
 @router.get("/licenses", response_class=HTMLResponse)
 def list_licenses(
     request: Request,
-    db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    # Retrieve devices joined with companies
-    licenses = db.query(License).join(Company).order_by(License.activation_date.desc()).all()
+    # Retrieve devices joined with companies from central DB
+    licenses = identity_db.query(License).join(Company).order_by(License.activation_date.desc()).all()
     return templates.TemplateResponse("licenses/list.html", {
         "request": request,
         "licenses": licenses,
@@ -32,10 +32,10 @@ def list_licenses(
 def new_license_form(
     request: Request,
     company_id: str = None,
-    db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    companies = db.query(Company).filter(Company.status == 1).all() # 1=Active
+    companies = identity_db.query(Company).filter(Company.status == 1).all() # 1=Active in central DB
     return templates.TemplateResponse("licenses/form.html", {
         "request": request,
         "companies": companies,
@@ -50,13 +50,13 @@ async def create_license(
     company_id: str = Form(...),
     license_key: str = Form(...),
     product_type: str = Form("coliseu_speed"),
-    db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    companies = db.query(Company).filter(Company.status == 1).all()
+    companies = identity_db.query(Company).filter(Company.status == 1).all()
     
-    # Check if this activation key is already listed
-    existing = db.query(License).filter(License.license_key == license_key).first()
+    # Check if this activation key is already listed in central devices table
+    existing = identity_db.query(License).filter(License.license_key == license_key).first()
     if existing:
         return templates.TemplateResponse("licenses/form.html", {
             "request": request,
@@ -81,19 +81,19 @@ async def create_license(
             "flash_type": "error"
         })
 
-    # Insert a new device/license record linked to the company
+    # Insert a new device/license record linked to the company in central DB
     new_lic = License(
         id=str(uuid.uuid4()),
         company_id=company_id,
         license_key=license_key,
-        status=1, # 1 = Active
+        status_code=1, # 1 = Active
         activation_date=datetime.utcnow(),
         last_access=datetime.utcnow(),
         model="Dispositivo Faturamento",
         os="Web/Mobile"
     )
-    db.add(new_lic)
-    db.commit()
+    identity_db.add(new_lic)
+    identity_db.commit()
 
     return RedirectResponse(
         url=f"/adm/companies/{company_id}",
@@ -104,11 +104,11 @@ async def create_license(
 def api_validate_license(
     id: str,
     license_id: str,
-    db: Session = Depends(get_db),
+    identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_api)
 ):
     # Fetch license from central devices table
-    license = db.query(License).filter(License.id == license_id, License.company_id == id).first()
+    license = identity_db.query(License).filter(License.id == license_id, License.company_id == id).first()
     if not license:
         return JSONResponse(status_code=404, content={"valid": False, "detail": "Licença não encontrada"})
         
