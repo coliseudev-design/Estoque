@@ -44,6 +44,37 @@
         color: var(--stoqui-purple);
     }
 
+    /* Responsive Grid for Orders Filter Pills */
+    .orders-filter-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 14px;
+    }
+    @media (max-width: 768px) {
+        .orders-filter-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 6px !important;
+        }
+        .orders-filter-grid .date-filter-pill {
+            padding: 6px 4px !important;
+            font-size: 0.7rem !important;
+            justify-content: center !important;
+            text-align: center !important;
+            border-radius: 8px !important;
+            gap: 3px !important;
+            min-height: 30px !important;
+            height: 30px !important;
+            white-space: nowrap !important;
+        }
+        .orders-filter-grid .date-filter-pill i {
+            width: 12px !important;
+            height: 12px !important;
+        }
+    }
+
     /* Grouping date headers */
     .date-group-header {
         font-size: 0.82rem;
@@ -174,7 +205,7 @@
     </div>
 
     <!-- Date range Navigation Pills -->
-    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px;">
+    <div class="orders-filter-grid">
         <button type="button" id="date-pill-custom" class="date-filter-pill" onclick="posSetDateFilter('custom')">
             <i data-lucide="calendar" style="width: 14px; height: 14px;"></i> Personalizado
         </button>
