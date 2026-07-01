@@ -34,21 +34,21 @@
 
     /* Helper styles for responsive layouts */
     .desktop-only {
-        display: none !important;
+        display: none;
     }
     .mobile-only {
-        display: block !important;
+        display: block;
     }
 
     @media (min-width: 768px) {
         .desktop-only {
-            display: block !important;
+            display: block;
         }
         .desktop-only.stoqui-split-layout {
-            display: grid !important;
+            display: grid;
         }
         .mobile-only {
-            display: none !important;
+            display: none;
         }
     }
 
@@ -402,13 +402,14 @@
             </div>
         </section>
 
-        <!-- ETAPA 3: CLIENTE + ENTREGA -->
+        <!-- ETAPA 3: CLIENTE + ENTREGA + RESUMO DETALHADO (MERGED STOQUI-STYLE) -->
         <section id="step-3" class="step-container" style="display: none;">
             <h3 style="font-size: 0.9rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="user" style="width: 16px; height: 16px;"></i> Cliente
             </h3>
             
-            <div class="customer-picker-card" onclick="posOpenModal('select-customer-modal')" style="border-radius: 8px; border: 1.5px solid var(--border-color); padding: 12px;">
+            <!-- Customer Selector Trigger Card redirects to inline Step 3.5 -->
+            <div class="customer-picker-card" onclick="advanceStep(3.5)" style="border-radius: 8px; border: 1.5px solid var(--border-color); padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #ffffff;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div id="sel-cust-avatar" class="customer-avatar" style="background: var(--stoqui-purple);">👤</div>
                     <div>
@@ -440,31 +441,10 @@
             </div>
 
             <div id="delivery-details-panel" style="display: none; margin-top: 10px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">
-                <input type="text" id="delivery-address-input" class="form-control" style="min-height: 38px; padding: 6px;" placeholder="Digite o logradouro completo de entrega">
+                <input type="text" id="delivery-address-input" class="form-control" style="min-height: 38px; padding: 6px;" placeholder="Digite o logradouro completo de entrega" oninput="posUpdateWizardDOMs()">
             </div>
 
-            <button type="button" onclick="advanceStep(4)" class="btn-stoqui" style="margin-top: 24px;">
-                <span>Continuar para pagamento →</span>
-            </button>
-        </section>
-
-        <!-- ETAPA 4: RESUMO DETALHADO -->
-        <section id="step-4" class="step-container" style="display: none;">
-            <div class="customer-picker-card" onclick="posOpenModal('select-customer-modal')" style="margin-bottom: 16px; border-radius: 8px; padding: 12px;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div id="sel-cust-avatar-step4" class="customer-avatar" style="background: var(--stoqui-purple);">👤</div>
-                    <div>
-                        <h4 id="sel-cust-name-step4" style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">Outro</h4>
-                        <span style="font-size: 0.78rem; color: var(--text-secondary);">Alterar cliente</span>
-                    </div>
-                </div>
-                <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
-            </div>
-
-            <h3 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px;">Entrega</h3>
-            <div id="delivery-summary-box" style="font-size: 0.88rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;"></div>
-
-            <h3 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+            <h3 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-top: 24px; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
                 <i data-lucide="menu" style="width: 14px; height: 14px;"></i> Observações
             </h3>
             <textarea id="order-notes" class="form-control" style="min-height: 70px; padding: 8px; font-size: 0.82rem; margin-bottom: 16px; border-radius: 8px;" placeholder="Adicione observações sobre este pedido..." maxlength="500"></textarea>
@@ -483,6 +463,41 @@
 
             <button type="button" onclick="advanceStep(5)" class="btn-stoqui">
                 <span>Continuar para pagamento →</span>
+            </button>
+        </section>
+
+        <!-- ETAPA 3.5: SELECIONAR CLIENTE (INLINE WIZARD PAGE) -->
+        <section id="step-3-5" class="step-container" style="display: none;">
+            <div style="margin-bottom: 16px;">
+                <input 
+                    type="text" 
+                    id="customer-modal-search" 
+                    class="form-control" 
+                    placeholder="Nome ou telefone do cliente..." 
+                    oninput="posOnModalCustomerSearch(this.value)"
+                    style="border-radius: 8px; min-height: 44px;"
+                >
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 80px;">
+                <!-- Outro (Não informar cliente) option -->
+                <div class="customer-picker-card" onclick="posSelectCustomer({id: 'temp-1', name: 'Outro', cnpj: 'Não informado', status: 'liberado', phone: ''})" style="border-radius: 8px; border: 1.5px solid var(--border-color); padding: 12px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: #ffffff;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="customer-avatar" style="background: #94a3b8; color: #fff;">👤</div>
+                        <div>
+                            <h4 style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Outro</h4>
+                            <span style="font-size: 0.78rem; color: var(--text-secondary);">Não informar cliente</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Dynamic customer list -->
+                <div id="modal-customer-list" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            </div>
+
+            <!-- Floating plus button to register customer -->
+            <button type="button" class="float-add-btn" onclick="posOpenModal('new-customer-modal')">
+                <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
             </button>
         </section>
 
@@ -588,31 +603,6 @@
     </div>
 </div>
 
-<!-- Modal 1: Selecionar Cliente Search -->
-<div id="select-customer-modal" class="modal-overlay">
-    <div class="modal-content">
-        <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-            <h3 style="font-weight: 800; font-size: 1rem;">👤 Selecionar Cliente</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="posCloseModal('select-customer-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
-                <span>Fechar</span>
-            </button>
-        </div>
-        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px;">
-            <input 
-                type="text" 
-                id="customer-modal-search" 
-                class="form-control" 
-                placeholder="Busque por nome, CPF/CNPJ ou Telefone..." 
-                oninput="posOnModalCustomerSearch(this.value)"
-            >
-            <button type="button" class="btn btn-secondary" onclick="posOpenModal('new-customer-modal')" style="width: auto; min-height: 40px; padding: 0 10px; background: var(--stoqui-purple); color: #fff; border: none;">
-                <span>+ Novo</span>
-            </button>
-        </div>
-        <div id="modal-customer-list" style="padding: 12px 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px;"></div>
-    </div>
-</div>
-
 <!-- Modal 2: Novo Cliente Fast Registration -->
 <div id="new-customer-modal" class="modal-overlay">
     <div class="modal-content" style="max-height: 90vh;">
@@ -708,7 +698,7 @@
     const products = JSON.parse(document.getElementById('products-json-data').textContent || '[]');
 
     // State properties
-    let currentStep = 1; // 1: empty/catalog, 2: cart lists, 3: cliente/entrega, 4: resumo, 5: pagamentos list, 5.1: pagamentos grid, 5.2: keypad input, 7: sucesso
+    let currentStep = 1; // 1: empty/catalog, 2: cart lists, 3: cliente/entrega/resumo, 3.5: select customer inline, 5: pagamentos list, 5.1: pagamentos grid, 5.2: keypad input, 7: sucesso
     let posCart = [];
     let selectedCustomer = null;
     let deliveryType = 'pickup';
@@ -728,17 +718,12 @@
 
     // Define custom local modal handlers to isolate script execution order
     function posOpenModal(id) {
-        if (id === 'select-customer-modal') {
-            const searchEl = document.getElementById('customer-modal-search');
-            if (searchEl) searchEl.value = '';
-            posRenderCustomerList(customers);
-        } else if (id === 'catalog-picker-modal') {
+        if (id === 'catalog-picker-modal') {
             const searchEl = document.getElementById('catalog-modal-search');
             if (searchEl) searchEl.value = '';
             posRenderModalCatalogGrid(products);
         }
         
-        // Base modal trigger fallback
         const modal = document.getElementById(id);
         if (modal) {
             modal.classList.add('open');
@@ -775,10 +760,10 @@
             // Back from Step 3 returns to cart (Step 2 on mobile or Step 1 on desktop split view)
             const isMobile = window.innerWidth < 768;
             setStep(isMobile ? 2 : 1);
-        } else if (currentStep === 4) {
+        } else if (currentStep === 3.5) {
             setStep(3);
         } else if (currentStep === 5) {
-            setStep(4);
+            setStep(3);
         } else if (currentStep === 5.1) {
             setStep(5);
         } else if (currentStep === 5.2) {
@@ -788,6 +773,7 @@
 
     // Dynamic step rendering utility to avoid element selection errors
     function getStepElementId(step) {
+        if (step === 3.5) return 'step-3-5';
         if (step === 5.1) return 'step-5-grid';
         if (step === 5.2) return 'step-5-keypad';
         return 'step-' + Math.floor(step);
@@ -813,8 +799,8 @@
                 titleSpan.innerText = 'Novo pedido';
             } else if (step === 3) {
                 titleSpan.innerText = 'Novo pedido';
-            } else if (step === 4) {
-                titleSpan.innerText = 'Novo pedido';
+            } else if (step === 3.5) {
+                titleSpan.innerText = 'Selecionar cliente';
             } else if (step === 5 || step === 5.1 || step === 5.2) {
                 titleSpan.innerText = 'Pagamentos';
             } else if (step === 7) {
@@ -830,8 +816,10 @@
                 if (arrowIcon) arrowIcon.style.display = 'inline-block';
                 if (closeIcon) closeIcon.style.display = 'none';
 
-                if (step === 3 || step === 4) {
+                if (step === 3) {
                     titleSpan.innerText = 'Novo pedido';
+                } else if (step === 3.5) {
+                    titleSpan.innerText = 'Selecionar cliente';
                 } else if (step === 5 || step === 5.1 || step === 5.2) {
                     titleSpan.innerText = 'Pagamentos';
                 } else if (step === 7) {
@@ -1032,8 +1020,7 @@
     // ── Cliente + Entrega Selection ──
     function posSelectCustomer(cust) {
         selectedCustomer = cust;
-        posCloseModal('select-customer-modal');
-        posUpdateWizardDOMs();
+        setStep(3);
     }
 
     function posOnModalCustomerSearch(query) {
@@ -1054,16 +1041,18 @@
             card.onclick = () => posSelectCustomer(c);
             const initials = c.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
             card.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
                     <div class="customer-avatar" style="background: var(--stoqui-purple);">${initials}</div>
-                    <div>
+                    <div style="flex: 1;">
                         <h4 style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">${c.name}</h4>
                         <span style="font-size: 0.75rem; color: var(--text-secondary);">${c.cnpj}</span>
                     </div>
+                    <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
                 </div>
             `;
             container.appendChild(card);
         });
+        lucide.createIcons();
     }
 
     function posSetDeliveryType(type) {
@@ -1532,18 +1521,11 @@
             if (nameEl) nameEl.innerText = selectedCustomer.name;
             
             const subtitleEl = document.getElementById('sel-cust-subtitle');
-            if (subtitleEl) subtitleEl.innerText = `CNPJ/CPF: ${selectedCustomer.cnpj}`;
-            
-            // Step 4 mirroring
-            const avatar4 = document.getElementById('sel-cust-avatar-step4');
-            if (avatar4) avatar4.innerText = initials;
-            
-            const name4 = document.getElementById('sel-cust-name-step4');
-            if (name4) name4.innerText = selectedCustomer.name;
+            if (subtitleEl) subtitleEl.innerText = selectedCustomer.cnpj === 'Não informado' ? 'Não informado' : `CNPJ/CPF: ${selectedCustomer.cnpj}`;
         }
 
-        // 4. Step 4 Summary Totals
-        if (currentStep === 4) {
+        // 4. Step 3 Merged Summary totals
+        if (currentStep === 3) {
             const summaryBox = document.getElementById('delivery-summary-box');
             if (summaryBox) {
                 if (deliveryType === 'pickup') {
