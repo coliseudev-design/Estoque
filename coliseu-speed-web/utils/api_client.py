@@ -46,10 +46,10 @@ class ApiClient:
         ]
         
         self._mock_customers = [
-            {"id": "c1", "name": "Antônio da Silva ME", "cnpj": "12345678000199", "credit_limit": 5000.00, "credit_available": 3579.50, "status": "liberado"},
-            {"id": "c2", "name": "Supermercado Pão e Mel Ltda", "cnpj": "98765432000100", "credit_limit": 15000.00, "credit_available": 8200.00, "status": "liberado"},
-            {"id": "c3", "name": "Construtora Alfa Engenharia Ltda", "cnpj": "11223344000122", "credit_limit": 50000.00, "credit_available": 50000.00, "status": "liberado"},
-            {"id": "c4", "name": "Elétrica Voltagem Máxima Eireli", "cnpj": "44332211000188", "credit_limit": 2000.00, "credit_available": 0.00, "status": "bloqueado"}
+            {"id": "1", "name": "Antônio da Silva ME", "cnpj": "12345678000199", "credit_limit": 5000.00, "credit_available": 3579.50, "status": "liberado"},
+            {"id": "2", "name": "Supermercado Pão e Mel Ltda", "cnpj": "98765432000100", "credit_limit": 15000.00, "credit_available": 8200.00, "status": "liberado"},
+            {"id": "3", "name": "Construtora Alfa Engenharia Ltda", "cnpj": "11223344000122", "credit_limit": 50000.00, "credit_available": 50000.00, "status": "liberado"},
+            {"id": "4", "name": "Elétrica Voltagem Máxima Eireli", "cnpj": "44332211000188", "credit_limit": 2000.00, "credit_available": 0.00, "status": "bloqueado"}
         ]
 
     def _get_headers(self, api_key: str = None, branch_id: str = None) -> dict:

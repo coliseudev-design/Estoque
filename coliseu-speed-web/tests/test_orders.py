@@ -1,7 +1,7 @@
 def test_order_creation_credit_limit_validation(client):
     # Test order with client that exceeds credit limit
     payload = {
-        "customer_id": "c4", # Elétrica Voltagem (credit limit 0, blocked)
+        "customer_id": "4", # Elétrica Voltagem (credit limit 0, blocked)
         "status": "order",
         "payment_condition": "dinheiro",
         "items": [

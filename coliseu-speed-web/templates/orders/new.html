@@ -632,7 +632,7 @@
         <section id="step-5-grid" class="step-container" style="display: none;">
             <!-- Informational alert matching Screenshot 2 -->
             <div style="background: #f1f5f9; border-radius: 8px; padding: 12px 16px; font-size: 0.82rem; color: #475569; display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border: 1.5px solid var(--border-color);">
-                <i data-lucide="info" style="width: 16px; height: 16px; color: var(--stoqui-purple-light);"></i>
+                <i data-lucide="info" style="width: 16px; height: 16px; color: var(--stoqui-purple-light); margin-right: 4px;"></i>
                 <span>Para pagamento parcelado ou fiado, é necessário adicionar um cliente ao pedido.</span>
             </div>
 
@@ -886,6 +886,7 @@
         }
     }
 
+    // Close Modal helper
     function posCloseModal(id) {
         const modal = document.getElementById(id);
         if (modal) {
@@ -895,10 +896,7 @@
 
     // Load initial configurations
     window.addEventListener('DOMContentLoaded', () => {
-        // Pre-render catalog list initially
         posRenderCatalogProducts(products);
-        
-        // Auto-configure viewport responsive state on boot
         const isMobile = window.innerWidth < 768;
         if (isMobile) {
             currentStep = 1;
@@ -920,7 +918,6 @@
         } else if (currentStep === 5) {
             setStep(3);
         } else if (currentStep === 5.1) {
-            // Back from grid view (Step 5.1) goes to review list (Step 5) if payments exist, otherwise to Step 3
             if (paymentsList.length > 0) {
                 setStep(5);
             } else {
@@ -994,13 +991,11 @@
             if (splitLayout) splitLayout.style.display = 'none';
             if (singleLayout) singleLayout.style.display = 'block';
             
-            // Toggle sub-containers inside wizard
             document.querySelectorAll('.step-container').forEach(c => c.style.display = 'none');
             const stepId = getStepElementId(step);
             const stepEl = document.getElementById(stepId);
             if (stepEl) stepEl.style.display = 'block';
         } else {
-            // Desktop
             if (step === 1 || step === 2) {
                 if (splitLayout) splitLayout.style.display = 'grid';
                 if (singleLayout) singleLayout.style.display = 'none';
@@ -1015,14 +1010,12 @@
             }
         }
 
-        // Pre-populate customer list when entering selection step 3.5
         if (step === 3.5) {
             const searchEl = document.getElementById('customer-modal-search');
             if (searchEl) searchEl.value = '';
             posRenderCustomerList(customers);
         }
 
-        // Pre-render list in grid view (Step 5.1)
         if (step === 5.1) {
             const displayEl = document.getElementById('step-5-grid-remaining-display');
             if (displayEl) displayEl.innerText = `R$ ${posGetBalanceRemaining().toFixed(2)}`;
@@ -1036,21 +1029,18 @@
         setStep(next);
     }
 
-    // Trigger forms from desktop split layout cart
     function posOnCheckoutFormsTrigger() {
         setStep(3);
     }
 
-    // Dynamic direct navigation to payment species grid or review list
     function posOnCheckoutContinuePayments() {
         if (paymentsList.length === 0) {
-            setStep(5.1); // Direct to species grid
+            setStep(5.1);
         } else {
-            setStep(5); // Direct to review list
+            setStep(5);
         }
     }
 
-    // Toggle Somente com estoque filter
     function posToggleStockFilter() {
         posOnlyInStock = !posOnlyInStock;
         const btn = document.getElementById('btn-toggle-stock');
@@ -1063,11 +1053,9 @@
             btn.style.color = 'var(--text-secondary)';
             btn.style.background = '#ffffff';
         }
-        // Apply filter to catalog listing
         posOnCatalogSearch(document.getElementById('catalog-search-input').value);
     }
 
-    // ── Catalog Product Searching ──
     function posOnCatalogSearch(query) {
         let filtered = products.filter(p => 
             p.name.toLowerCase().includes(query.toLowerCase()) || 
@@ -1132,7 +1120,6 @@
         }
         showToast('Produto adicionado ao carrinho.');
         
-        // Auto-advance step on mobile when first item added
         const isMobile = window.innerWidth < 768;
         if (isMobile && currentStep === 1) {
             setStep(2);
@@ -1153,7 +1140,6 @@
         }
     }
 
-    // Toggle inline editing form
     function posToggleInlineEdit(id) {
         const item = posCart.find(i => i.id === id);
         if (item) {
@@ -1186,7 +1172,6 @@
             item.isEditing = false;
         }
         
-        // Handle mobile fallback empty transitions
         const isMobile = window.innerWidth < 768;
         if (isMobile && posCart.length === 0) {
             setStep(1);
@@ -1205,7 +1190,6 @@
         }
     }
 
-    // ── Cliente + Entrega Selection ──
     function posSelectCustomer(cust) {
         selectedCustomer = cust;
         setStep(3);
@@ -1263,7 +1247,6 @@
         posUpdateWizardDOMs();
     }
 
-    // ── Financial overrides ──
     function posOnCouponSelect(val) {
         if (val === 'COLISEU5') {
             discountAmount = posGetSubtotal() * 0.05;
@@ -1275,7 +1258,6 @@
         posUpdateWizardDOMs();
     }
 
-    // Open overrides popover
     function posOpenEditValuePopover(fieldName, label, currentValue) {
         const fieldNameInput = document.getElementById('edit-value-field-name');
         if (fieldNameInput) fieldNameInput.value = fieldName;
@@ -1306,7 +1288,6 @@
         posUpdateWizardDOMs();
     }
 
-    // ── Split Payments Keypad actions ──
     function posOpenPaymentKeypad(methodName, iconName, colorVal, bgVal) {
         currentSelectingPaymentMethod = methodName;
         currentSelectingPaymentIcon = iconName;
@@ -1327,7 +1308,6 @@
         setStep(5.2);
     }
 
-    // POS keypad numeric inputs
     function posOnKeypadDigit(digit) {
         keypadTypedVal += digit;
         const val = parseFloat(keypadTypedVal || "0") / 100;
@@ -1343,7 +1323,6 @@
     }
 
     function posConfirmAddPaymentMethod() {
-        // Resolve value from display formatting
         const displayEl = document.getElementById('edit-payment-amount-display');
         if (!displayEl) return;
         
@@ -1370,15 +1349,11 @@
         });
 
         showToast(`Pagamento em ${currentSelectingPaymentMethod} adicionado.`);
-        
-        // Go to review list (Step 5)
         setStep(5);
     }
 
     function removePaymentItem(index) {
         paymentsList.splice(index, 1);
-        
-        // If payments become empty, automatically return to species selection grid
         if (paymentsList.length === 0) {
             setStep(5.1);
         } else {
@@ -1386,13 +1361,19 @@
         }
     }
 
-    // ERP checkout faturamento integration
     async function posOnConcluirCheckout() {
         const btn = document.getElementById('btn-concluir-order');
         if (btn) btn.disabled = true;
 
+        // Resolve integer customer ID. If Outro or null, fallback to first mock customer "1" (or "c1" parsed to "1")
+        let custId = "1";
+        if (selectedCustomer && selectedCustomer.id) {
+            // Remove the mock "c" prefix if present
+            custId = selectedCustomer.id.replace('c', '').replace('temp-1', '1');
+        }
+
         const payload = {
-            customer_id: selectedCustomer ? selectedCustomer.id : 'temp-1',
+            customer_id: custId,
             status: 'order',
             payment_condition: paymentsList.map(p => `${p.method}: R$ ${p.amount.toFixed(2)}`).join(', '),
             items: posCart.map(i => ({
@@ -1447,7 +1428,6 @@
         window.location.href = '/orders';
     }
 
-    // Modal search catalog items
     function posOnModalCatalogSearch(query) {
         const filtered = products.filter(p => 
             p.name.toLowerCase().includes(query.toLowerCase()) || 
@@ -1486,7 +1466,6 @@
         });
     }
 
-    // Address CEP pre-fill
     async function posOnCepQuery(cep) {
         const val = cep.trim().replace(/\D/g, '');
         if (val.length === 8) {
@@ -1524,7 +1503,6 @@
         posCloseModal('new-customer-modal');
         showToast('Cliente cadastrado e selecionado com sucesso!');
 
-        // Reset fields
         document.getElementById('new-cust-name').value = '';
         document.getElementById('new-cust-doc').value = '';
         document.getElementById('new-cust-phone').value = '';
@@ -1549,7 +1527,6 @@
         posUpdateWizardDOMs();
     }
 
-    // ── Calculations ──
     function posGetSubtotal() {
         return posCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }
@@ -1566,14 +1543,12 @@
         return posGetTotal() - posGetTotalPaid();
     }
 
-    // ── DOM update compiler ──
     function posUpdateWizardDOMs() {
         const sub = posGetSubtotal();
         const total = posGetTotal();
         const paid = posGetTotalPaid();
         const balance = posGetBalanceRemaining();
 
-        // 1. Desktop Cart pane updates
         const cartContainer = document.getElementById('cart-rows-container');
         const cartEmptyPlaceholder = document.getElementById('cart-empty-placeholder');
         const clearCartBtn = document.getElementById('btn-clear-cart');
@@ -1605,7 +1580,7 @@
                     row.style.background = '#ffffff';
                     row.style.border = '1px solid var(--border-color)';
                     row.style.borderRadius = '8px';
-                    row.style.padding = '8px 12px'; // Reduced padding
+                    row.style.padding = '8px 12px';
                     row.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="display: flex; align-items: center; gap: 8px;">
@@ -1649,7 +1624,6 @@
             }
         }
 
-        // 2. Mobile Cart updates (Step 2 list)
         const mobileContainer = document.getElementById('mobile-cart-items-list');
         if (mobileContainer) {
             mobileContainer.innerHTML = '';
@@ -1658,7 +1632,7 @@
                 card.style.background = '#ffffff';
                 card.style.border = '1px solid var(--border-color)';
                 card.style.borderRadius = '12px';
-                card.style.padding = '10px 14px'; // Reduced padding
+                card.style.padding = '10px 14px';
                 card.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -1708,14 +1682,12 @@
             });
         }
 
-        // Mobile bottom totalizer bar text
         const mobileBottomQty = document.getElementById('mobile-bottom-qty');
         if (mobileBottomQty) mobileBottomQty.innerText = `${posCart.length} ${posCart.length > 1 ? 'itens' : 'item'} · Total`;
         
         const mobileBottomTotal = document.getElementById('mobile-bottom-total');
         if (mobileBottomTotal) mobileBottomTotal.innerText = `R$ ${sub.toFixed(2)}`;
 
-        // 3. Cliente representation
         if (selectedCustomer) {
             const initials = selectedCustomer.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
             const avatarEl = document.getElementById('sel-cust-avatar');
@@ -1728,7 +1700,6 @@
             if (subtitleEl) subtitleEl.innerText = selectedCustomer.cnpj === 'Não informado' ? 'Não informado' : `CNPJ/CPF: ${selectedCustomer.cnpj}`;
         }
 
-        // 4. Step 3 Merged Summary totals
         if (currentStep === 3) {
             const summaryBox = document.getElementById('delivery-summary-box');
             if (summaryBox) {
@@ -1789,7 +1760,6 @@
             }
         }
 
-        // 5. Step 5 Pagamentos review updates
         if (currentStep === 5 || currentStep === 5.1 || currentStep === 5.2) {
             const step5Val = document.getElementById('step-5-total-val');
             if (step5Val) step5Val.innerText = `R$ ${total.toFixed(2)}`;
@@ -1821,7 +1791,6 @@
                 });
             }
 
-            // Bottom dynamic review footer matching Screenshot 3/4
             const actionArea = document.getElementById('split-payments-action-area');
             if (actionArea) {
                 if (balance > 0.01) {
