@@ -23,12 +23,12 @@
         max-width: 100% !important;
     }
 
-    /* Stoqui Design Tokens */
+    /* Stoqui Design Tokens - Changed from Purple to Blue */
     :root {
-        --stoqui-purple: #7C3AED;
-        --stoqui-purple-light: #A78BFA;
-        --stoqui-purple-dark: #6D28D9;
-        --stoqui-purple-bg: #F5F3FF;
+        --stoqui-purple: #1D4ED8; /* Solid Blue */
+        --stoqui-purple-light: #3B82F6; /* Bright Blue */
+        --stoqui-purple-dark: #1E40AF; /* Royal Blue */
+        --stoqui-purple-bg: #EFF6FF; /* Very light Blue bg */
         --stoqui-gray-bg: #F8FAFC;
     }
 
@@ -69,13 +69,13 @@
 
     /* Stoqui Header Navigation bar */
     .stoqui-header {
-        padding: 18px 24px;
+        padding: 12px 24px;
         border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         gap: 16px;
         background: #ffffff;
-        height: 68px;
+        height: 60px;
     }
     .stoqui-header-btn {
         background: none;
@@ -95,7 +95,7 @@
         color: var(--stoqui-purple);
     }
     .stoqui-header-title {
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         font-weight: 800;
         color: #0f172a;
     }
@@ -105,19 +105,19 @@
         display: grid;
         grid-template-columns: 1.3fr 0.7fr;
         flex: 1;
-        height: calc(100vh - 68px);
+        height: calc(100vh - 60px);
     }
     .stoqui-split-left {
-        padding: 24px;
+        padding: 16px;
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 12px;
         background: var(--stoqui-gray-bg);
         border-right: 1px solid var(--border-color);
         overflow-y: auto;
     }
     .stoqui-split-right {
-        padding: 24px;
+        padding: 16px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -125,12 +125,12 @@
         overflow-y: auto;
     }
 
-    /* Product card item list */
+    /* Product card item list - Reduced Padding */
     .stoqui-product-card {
         background: #ffffff;
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 16px;
+        border-radius: 8px;
+        padding: 10px 14px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -139,7 +139,7 @@
     }
     .stoqui-product-card:hover {
         border-color: var(--stoqui-purple);
-        box-shadow: 0 4px 12px rgba(124, 92, 246, 0.06);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06);
     }
 
     /* Inline cart edit view */
@@ -147,11 +147,11 @@
         background: var(--stoqui-gray-bg);
         border: 1px dashed var(--stoqui-purple-light);
         border-radius: 8px;
-        padding: 12px;
-        margin-top: 10px;
+        padding: 10px;
+        margin-top: 8px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
     }
 
     /* Active Purple buttons */
@@ -160,7 +160,7 @@
         color: #ffffff;
         font-weight: 700;
         border-radius: 8px;
-        min-height: 48px;
+        min-height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -168,9 +168,9 @@
         border: none;
         width: 100%;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(124, 92, 246, 0.2);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
         transition: var(--transition);
-        font-size: 0.95rem;
+        font-size: 0.92rem;
     }
     .btn-stoqui:hover {
         background: var(--stoqui-purple-dark);
@@ -186,11 +186,11 @@
     .stoqui-wizard-body {
         max-width: 680px;
         margin: 0 auto;
-        padding: 24px;
+        padding: 20px;
         width: 100%;
         flex: 1;
         overflow-y: auto;
-        height: calc(100vh - 68px);
+        height: calc(100vh - 60px);
     }
 
     /* Keypad grid input */
@@ -233,7 +233,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 15px rgba(124, 92, 246, 0.4);
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4);
         cursor: pointer;
         z-index: 100;
         transition: var(--transition);
@@ -282,19 +282,24 @@
         
         <!-- Left Panel: Product search and grid -->
         <div class="stoqui-split-left">
-            <div class="input-wrapper" style="box-shadow: 0 2px 8px rgba(0,0,0,0.02); margin-bottom: 8px;">
-                <span class="icon">🔍</span>
-                <input 
-                    type="text" 
-                    id="catalog-search-input" 
-                    class="form-control" 
-                    placeholder="Pesquise por nome, ou leia o código de barras..." 
-                    oninput="posOnCatalogSearch(this.value)"
-                    style="border-color: var(--stoqui-purple-light); font-size: 0.95rem; min-height: 48px; border-radius: 8px;"
-                >
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="input-wrapper" style="flex: 1; box-shadow: 0 2px 8px rgba(0,0,0,0.02); margin-bottom: 0;">
+                    <span class="icon">🔍</span>
+                    <input 
+                        type="text" 
+                        id="catalog-search-input" 
+                        class="form-control" 
+                        placeholder="Pesquise por nome, ou leia o código de barras..." 
+                        oninput="posOnCatalogSearch(this.value)"
+                        style="border-color: var(--stoqui-purple-light); font-size: 0.95rem; min-height: 44px; border-radius: 8px;"
+                    >
+                </div>
+                <button type="button" id="btn-toggle-stock" onclick="posToggleStockFilter()" class="btn btn-secondary" style="min-height: 44px; width: auto; font-size: 0.85rem; padding: 0 14px; border-radius: 8px; border: 1.5px solid var(--border-color); display: flex; align-items: center; gap: 6px; white-space: nowrap; font-weight: 700; background: #ffffff; color: var(--text-secondary);">
+                    <span>🔘</span> Somente com estoque
+                </button>
             </div>
             
-            <div id="catalog-products-list" style="display: flex; flex-direction: column; gap: 12px;">
+            <div id="catalog-products-list" style="display: flex; flex-direction: column; gap: 8px;">
                 <!-- Filled dynamically -->
             </div>
         </div>
@@ -302,29 +307,29 @@
         <!-- Right Panel: Fixed Shopping Cart -->
         <div class="stoqui-split-right">
             <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-                    <h3 id="cart-title-text" style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Carrinho (0 itens)</h3>
-                    <button type="button" onclick="posClearCart()" id="btn-clear-cart" class="btn btn-secondary btn-sm" style="display: none; min-height: 32px; width: auto; color: var(--stoqui-purple); background: none; border: none; font-weight: 700;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+                    <h3 id="cart-title-text" style="font-size: 1rem; font-weight: 800; color: #0f172a;">Carrinho (0 itens)</h3>
+                    <button type="button" onclick="posClearCart()" id="btn-clear-cart" class="btn btn-secondary btn-sm" style="display: none; min-height: 28px; width: auto; color: var(--stoqui-purple); background: none; border: none; font-weight: 700; padding: 0 4px;">
                         <i data-lucide="trash" style="width: 14px; height: 14px; margin-right: 4px;"></i> Limpar
                     </button>
                 </div>
 
                 <!-- Dynamic Cart rows list -->
-                <div id="cart-rows-container" style="display: flex; flex-direction: column; gap: 12px;">
+                <div id="cart-rows-container" style="display: flex; flex-direction: column; gap: 8px;">
                     <!-- Empty cart fallback -->
-                    <div id="cart-empty-placeholder" style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
-                        <i data-lucide="shopping-cart" style="width: 48px; height: 48px; margin: 0 auto 12px auto; color: #94a3b8; stroke-width: 1.5;"></i>
-                        <h4 style="font-weight: 700; font-size: 0.95rem; color: #334155;">Carrinho vazio</h4>
-                        <p style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">Pesquise e adicione produtos ao lado para começar</p>
+                    <div id="cart-empty-placeholder" style="text-align: center; padding: 40px 10px; color: var(--text-secondary);">
+                        <i data-lucide="shopping-cart" style="width: 40px; height: 40px; margin: 0 auto 10px auto; color: #94a3b8; stroke-width: 1.5;"></i>
+                        <h4 style="font-weight: 700; font-size: 0.9rem; color: #334155;">Carrinho vazio</h4>
+                        <p style="font-size: 0.78rem; color: #64748b; margin-top: 2px;">Pesquise e adicione produtos ao lado para começar</p>
                     </div>
                 </div>
             </div>
 
             <!-- Cart bottom totals and Continue trigger -->
-            <div style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <span style="font-size: 1.1rem; font-weight: 700; color: #334155;">Total</span>
-                    <span id="cart-total-val" style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">R$ 0</span>
+            <div style="border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 14px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                    <span style="font-size: 1rem; font-weight: 700; color: #334155;">Total</span>
+                    <span id="cart-total-val" style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">R$ 0</span>
                 </div>
                 
                 <button type="button" id="btn-continue-step3" onclick="advanceStep(3)" class="btn-stoqui" disabled>
@@ -340,14 +345,14 @@
         
         <!-- ETAPA 1: PRODUTOS (MOBILE ONLY - Carrinho Vazio) -->
         <section id="step-1" class="mobile-only step-container" style="display: none;">
-            <div style="margin-bottom: 24px;">
-                <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">Produtos</h3>
+            <div style="margin-bottom: 18px;">
+                <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Produtos</h3>
             </div>
             
-            <div class="empty-cart-state" style="text-align: center; padding: 80px 20px;" onclick="openModal('catalog-picker-modal')">
-                <i data-lucide="shopping-cart" style="width: 64px; height: 64px; margin: 0 auto 16px auto; color: #94a3b8; stroke-width: 1.5;"></i>
-                <h4 style="font-weight: 800; font-size: 1.15rem; color: #334155; margin-bottom: 8px;">Nenhum produto adicionado</h4>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">Adicione produtos para começar</p>
+            <div class="empty-cart-state" style="text-align: center; padding: 60px 10px;" onclick="openModal('catalog-picker-modal')">
+                <i data-lucide="shopping-cart" style="width: 56px; height: 56px; margin: 0 auto 12px auto; color: #94a3b8; stroke-width: 1.5;"></i>
+                <h4 style="font-weight: 800; font-size: 1.05rem; color: #334155; margin-bottom: 6px;">Nenhum produto adicionado</h4>
+                <p style="color: var(--text-secondary); font-size: 0.85rem;">Adicione produtos para começar</p>
             </div>
 
             <!-- Floating plus button -->
@@ -369,15 +374,15 @@
 
         <!-- ETAPA 2: PRODUTOS (MOBILE ONLY - Com Itens no Carrinho) -->
         <section id="step-2" class="mobile-only step-container" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">Produtos</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">Produtos</h3>
                 <button type="button" onclick="posClearCart()" class="btn btn-secondary btn-sm" style="color: var(--stoqui-purple); background: none; border: none; font-weight: 700; padding: 4px;">
                     Limpar
                 </button>
             </div>
 
             <!-- List of cards items -->
-            <div id="mobile-cart-items-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 100px;"></div>
+            <div id="mobile-cart-items-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 100px;"></div>
 
             <!-- Floating plus button -->
             <button type="button" class="float-add-btn" onclick="openModal('catalog-picker-modal')">
@@ -398,82 +403,82 @@
 
         <!-- ETAPA 3: CLIENTE + ENTREGA -->
         <section id="step-3" class="step-container" style="display: none;">
-            <h3 style="font-size: 0.95rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <h3 style="font-size: 0.9rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="user" style="width: 16px; height: 16px;"></i> Cliente
             </h3>
             
-            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="border-radius: 8px; border: 1.5px solid var(--border-color); padding: 14px;">
+            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="border-radius: 8px; border: 1.5px solid var(--border-color); padding: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div id="sel-cust-avatar" class="customer-avatar" style="background: var(--stoqui-purple);">👤</div>
                     <div>
-                        <h4 id="sel-cust-name" style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Outro</h4>
-                        <span id="sel-cust-subtitle" style="font-size: 0.8rem; color: var(--text-secondary);">Selecione o cliente</span>
+                        <h4 id="sel-cust-name" style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">Outro</h4>
+                        <span id="sel-cust-subtitle" style="font-size: 0.78rem; color: var(--text-secondary);">Selecione o cliente</span>
                     </div>
                 </div>
                 <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
             </div>
 
-            <h3 style="font-size: 0.95rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-top: 28px; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <h3 style="font-size: 0.9rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-top: 24px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="truck" style="width: 16px; height: 16px;"></i> Entrega
             </h3>
 
-            <div class="delivery-radio-card selected" id="delivery-opt-pickup" onclick="posSetDeliveryType('pickup')" style="border-radius: 8px;">
+            <div class="delivery-radio-card selected" id="delivery-opt-pickup" onclick="posSetDeliveryType('pickup')" style="border-radius: 8px; padding: 12px;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Retirada no local</div>
-                    <span style="font-size: 0.78rem; color: var(--text-secondary);">Cliente retira na loja</span>
+                    <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">Retirada no local</div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Cliente retira na loja</span>
                 </div>
-                <i data-lucide="store" style="width: 24px; height: 24px; color: var(--stoqui-purple);"></i>
+                <i data-lucide="store" style="width: 20px; height: 20px; color: var(--stoqui-purple);"></i>
             </div>
 
-            <div class="delivery-radio-card" id="delivery-opt-ship" onclick="posSetDeliveryType('ship')" style="border-radius: 8px;">
+            <div class="delivery-radio-card" id="delivery-opt-ship" onclick="posSetDeliveryType('ship')" style="border-radius: 8px; padding: 12px;">
                 <div style="flex: 1;">
-                    <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Entrega</div>
-                    <span style="font-size: 0.78rem; color: var(--text-secondary);">Entregamos no endereço</span>
+                    <div style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">Entrega</div>
+                    <span style="font-size: 0.75rem; color: var(--text-secondary);">Entregamos no endereço</span>
                 </div>
-                <i data-lucide="truck" style="width: 24px; height: 24px; color: var(--stoqui-purple);"></i>
+                <i data-lucide="truck" style="width: 20px; height: 20px; color: var(--stoqui-purple);"></i>
             </div>
 
-            <div id="delivery-details-panel" style="display: none; margin-top: 12px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+            <div id="delivery-details-panel" style="display: none; margin-top: 10px; background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px;">
                 <input type="text" id="delivery-address-input" class="form-control" style="min-height: 38px; padding: 6px;" placeholder="Digite o logradouro completo de entrega">
             </div>
 
-            <button type="button" onclick="advanceStep(4)" class="btn-stoqui" style="margin-top: 30px;">
+            <button type="button" onclick="advanceStep(4)" class="btn-stoqui" style="margin-top: 24px;">
                 <span>Continuar para pagamento →</span>
             </button>
         </section>
 
         <!-- ETAPA 4: RESUMO DETALHADO -->
         <section id="step-4" class="step-container" style="display: none;">
-            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="margin-bottom: 20px; border-radius: 8px;">
+            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="margin-bottom: 16px; border-radius: 8px; padding: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div id="sel-cust-avatar-step4" class="customer-avatar" style="background: var(--stoqui-purple);">👤</div>
                     <div>
-                        <h4 id="sel-cust-name-step4" style="font-weight: 700; color: var(--text-primary); font-size: 0.95rem;">Outro</h4>
-                        <span style="font-size: 0.8rem; color: var(--text-secondary);">Alterar cliente</span>
+                        <h4 id="sel-cust-name-step4" style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">Outro</h4>
+                        <span style="font-size: 0.78rem; color: var(--text-secondary);">Alterar cliente</span>
                     </div>
                 </div>
                 <i data-lucide="chevron-right" style="color: var(--text-secondary);"></i>
             </div>
 
-            <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px;">Entrega</h3>
-            <div id="delivery-summary-box" style="font-size: 0.9rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;"></div>
+            <h3 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px;">Entrega</h3>
+            <div id="delivery-summary-box" style="font-size: 0.88rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;"></div>
 
-            <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+            <h3 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
                 <i data-lucide="menu" style="width: 14px; height: 14px;"></i> Observações
             </h3>
-            <textarea id="order-notes" class="form-control" style="min-height: 80px; padding: 8px; font-size: 0.85rem; margin-bottom: 20px; border-radius: 8px;" placeholder="Adicione observações sobre este pedido..." maxlength="500"></textarea>
+            <textarea id="order-notes" class="form-control" style="min-height: 70px; padding: 8px; font-size: 0.82rem; margin-bottom: 16px; border-radius: 8px;" placeholder="Adicione observações sobre este pedido..." maxlength="500"></textarea>
 
-            <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+            <h3 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
                 <i data-lucide="tag" style="width: 14px; height: 14px;"></i> Cupom
             </h3>
-            <select id="coupon-select" class="form-control" style="margin-bottom: 24px; border-radius: 8px;" onchange="posOnCouponSelect(this.value)">
+            <select id="coupon-select" class="form-control" style="margin-bottom: 20px; border-radius: 8px;" onchange="posOnCouponSelect(this.value)">
                 <option value="none">Selecione um cupom</option>
                 <option value="COLISEU5">COLISEU5 (5% Desconto)</option>
                 <option value="DESCONTO10">DESCONTO10 (R$ 10,00 Desconto)</option>
             </select>
 
-            <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Resumo do pedido:</h3>
-            <div id="financial-summary-list" style="margin-bottom: 24px; background: #fafafa; border-radius: 8px; padding: 16px; border: 1px solid var(--border-color);"></div>
+            <h3 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 10px;">Resumo do pedido:</h3>
+            <div id="financial-summary-list" style="margin-bottom: 20px; background: #fafafa; border-radius: 8px; padding: 12px; border: 1px solid var(--border-color);"></div>
 
             <button type="button" onclick="advanceStep(5)" class="btn-stoqui">
                 <span>Continuar para pagamento →</span>
@@ -482,13 +487,13 @@
 
         <!-- ETAPA 5: PAGAMENTOS (Múltiplas Formas e Saldo) -->
         <section id="step-5" class="step-container" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
-                <span style="font-size: 1.1rem; font-weight: 700; color: #334155;">TOTAL A PAGAR:</span>
-                <span id="step-5-total-val" style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">R$ 0,00</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                <span style="font-size: 1rem; font-weight: 700; color: #334155;">TOTAL A PAGAR:</span>
+                <span id="step-5-total-val" style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">R$ 0,00</span>
             </div>
 
             <!-- List of added split payments -->
-            <div id="split-payments-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;"></div>
+            <div id="split-payments-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;"></div>
 
             <!-- Mid split payments selector trigger -->
             <div id="split-payments-action-area"></div>
@@ -496,7 +501,7 @@
 
         <!-- ETAPA 5.1: MÉTODOS DISPONÍVEIS LIST GRID -->
         <section id="step-5-grid" class="step-container" style="display: none;">
-            <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 16px;">
+            <h3 style="font-size: 0.9rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">
                 Adicionar pagamento
             </h3>
             <div class="payment-grid">
@@ -529,13 +534,13 @@
 
         <!-- ETAPA 5.2: TECLADO DE VALOR RECEBIDO -->
         <section id="step-5-keypad" class="step-container" style="display: none;">
-            <div style="text-align: center; margin-bottom: 24px;">
-                <span style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Valor Recebido</span>
-                <div style="font-size: 2.5rem; font-weight: 800; color: var(--stoqui-purple); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <span style="font-size: 0.82rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Valor Recebido</span>
+                <div style="font-size: 2.2rem; font-weight: 800; color: var(--stoqui-purple); margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 4px;">
                     R$ <span id="edit-payment-amount-display" style="font-weight: 800;">0,00</span>
                 </div>
-                <div id="keypad-balance-text" style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 6px;"></div>
-                <div id="keypad-total-text" style="font-size: 0.82rem; color: var(--stoqui-purple-light); margin-top: 4px;"></div>
+                <div id="keypad-balance-text" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;"></div>
+                <div id="keypad-total-text" style="font-size: 0.78rem; color: var(--stoqui-purple-light); margin-top: 2px;"></div>
             </div>
 
             <!-- Stoqui Numeric Keypad -->
@@ -554,7 +559,7 @@
                 <button type="button" class="keypad-key" onclick="posOnKeypadBackspace()" style="color: var(--danger);"><i data-lucide="delete" style="width: 20px; height: 20px; display: inline;"></i></button>
             </div>
 
-            <button type="button" onclick="posConfirmAddPaymentMethod()" class="btn-stoqui" style="margin-top: 20px;">
+            <button type="button" onclick="posConfirmAddPaymentMethod()" class="btn-stoqui" style="margin-top: 16px;">
                 <span>Adicionar</span>
             </button>
         </section>
@@ -562,13 +567,13 @@
         <!-- ETAPA 7: SUCESSO -->
         <section id="step-7" class="step-container" style="text-align: center; display: none;">
             <div class="checkmark-circle" style="background: rgba(34, 197, 94, 0.08); color: #22c55e;">✓</div>
-            <h2 style="font-weight: 800; font-size: 1.5rem; color: var(--text-primary); margin-bottom: 6px;">Pagamento concluído!</h2>
-            <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 30px;">O pagamento foi registrado com sucesso</p>
+            <h2 style="font-weight: 800; font-size: 1.35rem; color: var(--text-primary); margin-bottom: 4px;">Pagamento concluído!</h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 24px;">O pagamento foi registrado com sucesso</p>
 
-            <div style="background: #fafafa; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; text-align: left; margin-bottom: 30px;">
-                <h4 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Detalhes do pagamento</h4>
-                <div id="success-payments-details-list" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px;"></div>
-                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 12px; font-size: 0.9rem; font-weight: 800; color: var(--text-primary);">
+            <div style="background: #fafafa; border: 1px solid var(--border-color); border-radius: 12px; padding: 12px; text-align: left; margin-bottom: 24px;">
+                <h4 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 10px;">Detalhes do pagamento</h4>
+                <div id="success-payments-details-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;"></div>
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed var(--border-color); padding-top: 10px; font-size: 0.88rem; font-weight: 800; color: var(--text-primary);">
                     <span>Total pago</span>
                     <span id="success-total-paid">R$ 0,00</span>
                 </div>
@@ -585,13 +590,13 @@
 <!-- Modal 1: Selecionar Cliente Search -->
 <div id="select-customer-modal" class="modal-overlay">
     <div class="modal-content">
-        <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-            <h3 style="font-weight: 800; font-size: 1.05rem;">👤 Selecionar Cliente</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('select-customer-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
+        <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <h3 style="font-weight: 800; font-size: 1rem;">👤 Selecionar Cliente</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('select-customer-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
                 <span>Fechar</span>
             </button>
         </div>
-        <div style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px;">
+        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 8px;">
             <input 
                 type="text" 
                 id="customer-modal-search" 
@@ -599,51 +604,51 @@
                 placeholder="Busque por nome, CPF/CNPJ ou Telefone..." 
                 oninput="posOnModalCustomerSearch(this.value)"
             >
-            <button type="button" class="btn btn-secondary" onclick="openModal('new-customer-modal')" style="width: auto; min-height: 44px; padding: 0 12px; background: var(--stoqui-purple); color: #fff; border: none;">
+            <button type="button" class="btn btn-secondary" onclick="openModal('new-customer-modal')" style="width: auto; min-height: 40px; padding: 0 10px; background: var(--stoqui-purple); color: #fff; border: none;">
                 <span>+ Novo</span>
             </button>
         </div>
-        <div id="modal-customer-list" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px;"></div>
+        <div id="modal-customer-list" style="padding: 12px 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px;"></div>
     </div>
 </div>
 
 <!-- Modal 2: Novo Cliente Fast Registration -->
 <div id="new-customer-modal" class="modal-overlay">
     <div class="modal-content" style="max-height: 90vh;">
-        <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-            <h3 style="font-weight: 800; font-size: 1.05rem;">👤 Novo Cliente Rápido</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('new-customer-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
+        <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <h3 style="font-weight: 800; font-size: 1rem;">👤 Novo Cliente Rápido</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('new-customer-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
                 <span>Fechar</span>
             </button>
         </div>
-        <form onsubmit="posOnSaveNewCustomer(event)" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex: 1;">
+        <form onsubmit="posOnSaveNewCustomer(event)" style="padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1;">
             <div class="form-group">
-                <label class="form-label" style="font-weight: 700;">Nome Completo / Razão Social *</label>
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Nome Completo / Razão Social *</label>
                 <input type="text" id="new-cust-name" class="form-control" required placeholder="Ex: José da Silva">
             </div>
             <div class="form-group">
-                <label class="form-label" style="font-weight: 700;">CPF / CNPJ *</label>
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">CPF / CNPJ *</label>
                 <input type="text" id="new-cust-doc" class="form-control" required placeholder="Ex: 12345678909">
             </div>
             <div class="form-group">
-                <label class="form-label" style="font-weight: 700;">Telefone *</label>
+                <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Telefone *</label>
                 <input type="text" id="new-cust-phone" class="form-control" required placeholder="Ex: 11999998888">
             </div>
             <div class="form-group">
-                <label class="form-label">E-mail</label>
+                <label class="form-label" style="font-size: 0.85rem;">E-mail</label>
                 <input type="email" id="new-cust-email" class="form-control" placeholder="Ex: jose@email.com">
             </div>
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px;">
                 <div class="form-group">
-                    <label class="form-label">CEP</label>
+                    <label class="form-label" style="font-size: 0.85rem;">CEP</label>
                     <input type="text" id="new-cust-cep" class="form-control" placeholder="00000000" oninput="posOnCepQuery(this.value)">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Endereço (Rua/Avenida)</label>
+                    <label class="form-label" style="font-size: 0.85rem;">Endereço (Rua/Avenida)</label>
                     <input type="text" id="new-cust-street" class="form-control" placeholder="Nome do logradouro">
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary btn-stoqui" style="width: 100%; margin-top: 10px;">
+            <button type="submit" class="btn btn-primary btn-stoqui" style="width: 100%; margin-top: 8px;">
                 <span>+ Salvar e Selecionar</span>
             </button>
         </form>
@@ -653,17 +658,17 @@
 <!-- Modal 3: Edit Resumo values popover -->
 <div id="edit-values-modal" class="modal-overlay">
     <div class="modal-content" style="max-height: 60vh;">
-        <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-            <h3 id="edit-value-modal-title" style="font-weight: 800; font-size: 1.05rem;">Editar Valor</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('edit-values-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
+        <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <h3 id="edit-value-modal-title" style="font-weight: 800; font-size: 1rem;">Editar Valor</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('edit-values-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
                 <span>Fechar</span>
             </button>
         </div>
-        <form onsubmit="posOnSaveEditValue(event)" style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+        <form onsubmit="posOnSaveEditValue(event)" style="padding: 12px 16px; display: flex; flex-direction: column; gap: 12px;">
             <input type="hidden" id="edit-value-field-name">
             <div class="form-group">
-                <label id="edit-value-field-label" class="form-label" style="font-weight: 700;">Valor (R$)</label>
-                <input type="number" step="0.01" id="edit-value-input" class="form-control" required style="font-size: 1.2rem; font-weight: 700; text-align: center;">
+                <label id="edit-value-field-label" class="form-label" style="font-weight: 700; font-size: 0.85rem;">Valor (R$)</label>
+                <input type="number" step="0.01" id="edit-value-input" class="form-control" required style="font-size: 1.15rem; font-weight: 700; text-align: center;">
             </div>
             <button type="submit" class="btn btn-primary btn-stoqui" style="width: 100%;">
                 <span>Salvar Alteração</span>
@@ -675,13 +680,13 @@
 <!-- Modal 4: Catálogo Picker (Mobile-Only modal to search and add items) -->
 <div id="catalog-picker-modal" class="modal-overlay">
     <div class="modal-content">
-        <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
-            <h3 style="font-weight: 800; font-size: 1.05rem;">📋 Catálogo de Produtos</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('catalog-picker-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
+        <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <h3 style="font-weight: 800; font-size: 1rem;">📋 Catálogo de Produtos</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('catalog-picker-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
                 <span>Fechar</span>
             </button>
         </div>
-        <div style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+        <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color);">
             <input 
                 type="text" 
                 id="catalog-modal-search" 
@@ -690,7 +695,7 @@
                 oninput="posOnModalCatalogSearch(this.value)"
             >
         </div>
-        <div id="modal-catalog-grid" class="catalog-grid" style="padding: 16px; flex: 1; overflow-y: auto;">
+        <div id="modal-catalog-grid" class="catalog-grid" style="padding: 12px 16px; flex: 1; overflow-y: auto;">
             <!-- Render dynamically -->
         </div>
     </div>
@@ -707,6 +712,7 @@
     let selectedCustomer = null;
     let deliveryType = 'pickup';
     let deliveryAddress = '';
+    let posOnlyInStock = false;
     
     // Financial components
     let discountAmount = 0;
@@ -836,12 +842,32 @@
         setStep(next);
     }
 
+    // Toggle Somente com estoque filter
+    function posToggleStockFilter() {
+        posOnlyInStock = !posOnlyInStock;
+        const btn = document.getElementById('btn-toggle-stock');
+        if (posOnlyInStock) {
+            btn.style.borderColor = 'var(--stoqui-purple)';
+            btn.style.color = 'var(--stoqui-purple)';
+            btn.style.background = 'var(--stoqui-purple-bg)';
+        } else {
+            btn.style.borderColor = 'var(--border-color)';
+            btn.style.color = 'var(--text-secondary)';
+            btn.style.background = '#ffffff';
+        }
+        // Apply filter to catalog listing
+        posOnCatalogSearch(document.getElementById('catalog-search-input').value);
+    }
+
     // ── Catalog Product Searching ──
     function posOnCatalogSearch(query) {
-        const filtered = products.filter(p => 
+        let filtered = products.filter(p => 
             p.name.toLowerCase().includes(query.toLowerCase()) || 
             p.code.toLowerCase().includes(query.toLowerCase())
         );
+        if (posOnlyInStock) {
+            filtered = filtered.filter(p => p.stock > 0);
+        }
         posRenderCatalogProducts(filtered);
     }
 
@@ -860,14 +886,14 @@
             card.className = 'stoqui-product-card';
             card.onclick = () => posAddToCart(p);
             card.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <span style="font-size: 1.5rem;">📦</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.35rem;">📦</span>
                     <div>
-                        <h4 style="font-weight: 700; color: #0f172a; font-size: 0.95rem;">${p.name}</h4>
-                        <span style="font-size: 0.75rem; color: var(--text-secondary);">Código: ${p.code} | Estoque: ${p.stock}</span>
+                        <h4 style="font-weight: 700; color: #0f172a; font-size: 0.9rem;">${p.name}</h4>
+                        <span style="font-size: 0.72rem; color: var(--text-secondary);">Código: ${p.code} | Estoque: ${p.stock}</span>
                     </div>
                 </div>
-                <div style="font-weight: 800; color: #0f172a; font-size: 1.05rem;">R$ ${p.price.toFixed(2)}</div>
+                <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">R$ ${p.price.toFixed(2)}</div>
             `;
             list.appendChild(card);
         });
@@ -1053,6 +1079,21 @@
         openModal('edit-values-modal');
     }
 
+    // Modal helpers
+    const originalOpenModal = openModal;
+    openModal = function(id) {
+        if (id === 'select-customer-modal') {
+            const searchEl = document.getElementById('customer-modal-search');
+            if (searchEl) searchEl.value = '';
+            posRenderCustomerList(customers);
+        } else if (id === 'catalog-picker-modal') {
+            const searchEl = document.getElementById('catalog-modal-search');
+            if (searchEl) searchEl.value = '';
+            posRenderModalCatalogGrid(products);
+        }
+        originalOpenModal(id);
+    };
+
     function posOnSaveEditValue(e) {
         e.preventDefault();
         const fieldName = document.getElementById('edit-value-field-name').value;
@@ -1235,21 +1276,6 @@
         });
     }
 
-    // Modal helpers
-    const originalOpenModal = openModal;
-    openModal = function(id) {
-        if (id === 'select-customer-modal') {
-            const searchEl = document.getElementById('customer-modal-search');
-            if (searchEl) searchEl.value = '';
-            posRenderCustomerList(customers);
-        } else if (id === 'catalog-picker-modal') {
-            const searchEl = document.getElementById('catalog-modal-search');
-            if (searchEl) searchEl.value = '';
-            posRenderModalCatalogGrid(products);
-        }
-        originalOpenModal(id);
-    };
-
     // Address CEP pre-fill
     async function posOnCepQuery(cep) {
         const val = cep.trim().replace(/\D/g, '');
@@ -1369,18 +1395,18 @@
                     row.style.background = '#ffffff';
                     row.style.border = '1px solid var(--border-color)';
                     row.style.borderRadius = '8px';
-                    row.style.padding = '12px';
+                    row.style.padding = '8px 12px'; // Reduced padding
                     row.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span>📦</span>
                                 <div>
-                                    <h4 style="font-weight: 700; font-size: 0.9rem; color: #0f172a;">${item.name}</h4>
+                                    <h4 style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">${item.name}</h4>
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <button type="button" onclick="posToggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 16px; height: 16px;"></i></button>
-                                <button type="button" onclick="posRemoveCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
+                                <button type="button" onclick="posToggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer; padding: 2px;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                                <button type="button" onclick="posRemoveCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 2px;"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i></button>
                             </div>
                         </div>
                         
@@ -1388,26 +1414,23 @@
                         <div class="cart-inline-edit">
                             <div style="display: flex; gap: 10px;">
                                 <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                    <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
-                                    <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
+                                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">Qtd</label>
+                                    <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 28px; padding: 4px;" value="${item.quantity}">
                                 </div>
                                 <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                                    <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
-                                    <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                                    <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">Preço (R$)</label>
+                                    <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 28px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
                                 </div>
                             </div>
-                            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                                <button type="button" onclick="posToggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
-                                <button type="button" onclick="posSaveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
+                            <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px;">
+                                <button type="button" onclick="posToggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 24px; width: auto; font-size: 0.72rem; padding: 0 8px;">Cancelar</button>
+                                <button type="button" onclick="posSaveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 24px; width: auto; font-size: 0.72rem; background: var(--stoqui-purple); color: #fff; border: none; padding: 0 8px;">Confirmar</button>
                             </div>
                         </div>
                         ` : `
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.85rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.8rem;">
                             <span style="color: var(--text-secondary); font-weight: 600;">${item.quantity} × R$ ${item.price.toFixed(2)}</span>
                             <span style="font-weight: 800; color: #0f172a;">R$ ${(item.price * item.quantity).toFixed(2)}</span>
-                        </div>
-                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px; font-weight: 600;">
-                            ${item.stock} em estoque
                         </div>
                         `}
                     `;
@@ -1425,18 +1448,18 @@
                 card.style.background = '#ffffff';
                 card.style.border = '1px solid var(--border-color)';
                 card.style.borderRadius = '12px';
-                card.style.padding = '16px';
+                card.style.padding = '10px 14px'; // Reduced padding
                 card.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 1.5rem;">📦</span>
+                            <span style="font-size: 1.35rem;">📦</span>
                             <div>
-                                <h4 style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">${item.name}</h4>
+                                <h4 style="font-weight: 700; font-size: 0.88rem; color: #0f172a;">${item.name}</h4>
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" onclick="posToggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 18px; height: 18px;"></i></button>
-                            <button type="button" onclick="posRemoveCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 18px; height: 18px;"></i></button>
+                            <button type="button" onclick="posToggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer; padding: 2px;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                            <button type="button" onclick="posRemoveCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 2px;"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i></button>
                         </div>
                     </div>
     
@@ -1444,33 +1467,30 @@
                     <div class="cart-inline-edit">
                         <div style="display: flex; gap: 10px;">
                             <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
-                                <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
+                                <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">Qtd</label>
+                                <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 28px; padding: 4px;" value="${item.quantity}">
                             </div>
                             <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
-                                <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                                <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">Preço (R$)</label>
+                                <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 28px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
                             </div>
                         </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                            <button type="button" onclick="posToggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
-                            <button type="button" onclick="posSaveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
+                        <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px;">
+                            <button type="button" onclick="posToggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 24px; width: auto; font-size: 0.72rem; padding: 0 8px;">Cancelar</button>
+                            <button type="button" onclick="posSaveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 24px; width: auto; font-size: 0.72rem; background: var(--stoqui-purple); color: #fff; border: none; padding: 0 8px;">Confirmar</button>
                         </div>
                     </div>
                     ` : `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.88rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.82rem;">
                         <div class="cart-item-qty">
                             <button type="button" class="qty-btn" onclick="posOnAdjustQty('${item.id}', -1)">-</button>
                             <span style="font-weight: 700; min-width: 20px; text-align: center;">${item.quantity}</span>
                             <button type="button" class="qty-btn" onclick="posOnAdjustQty('${item.id}', 1)">+</button>
                         </div>
                         <div style="text-align: right;">
-                            <span style="font-size: 0.78rem; color: var(--text-secondary);">× R$ ${item.price.toFixed(2)}</span>
-                            <div style="font-weight: 800; color: var(--stoqui-purple); font-size: 1.05rem;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">× R$ ${item.price.toFixed(2)}</span>
+                            <div style="font-weight: 800; color: var(--stoqui-purple); font-size: 0.95rem;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
                         </div>
-                    </div>
-                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 6px; font-weight: 600;">
-                        ${item.stock} em estoque
                     </div>
                     `}
             `;
@@ -1526,39 +1546,39 @@
             if (finList) {
                 finList.innerHTML = `
                     ${posCart.map(i => `
-                    <div class="table-card-row" style="margin-bottom: 8px; font-size: 0.9rem;">
+                    <div class="table-card-row" style="margin-bottom: 6px; font-size: 0.85rem;">
                         <span>${i.quantity}x ${i.name}</span>
                         <span>R$ ${(i.price * i.quantity).toFixed(2)}</span>
                     </div>
                     `).join('')}
     
-                    <div class="table-card-row" style="border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px; font-size: 0.88rem; color: var(--text-secondary);">
+                    <div class="table-card-row" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px; font-size: 0.82rem; color: var(--text-secondary);">
                         <span>Subtotal</span>
                         <span>R$ ${sub.toFixed(2)}</span>
                     </div>
                     
-                    <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
+                    <div class="table-card-row" style="margin-top: 6px; font-size: 0.82rem; color: var(--text-secondary);">
                         <span style="display: flex; align-items: center; gap: 4px;">
-                            Frete <button type="button" onclick="posOpenEditValuePopover('freight', 'Editar Valor do Frete', ${freightAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                            Frete <button type="button" onclick="posOpenEditValuePopover('freight', 'Editar Valor do Frete', ${freightAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 12px; height: 12px;"></i></button>
                         </span>
                         <span>R$ ${freightAmount.toFixed(2)}</span>
                     </div>
     
-                    <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
+                    <div class="table-card-row" style="margin-top: 6px; font-size: 0.82rem; color: var(--text-secondary);">
                         <span style="display: flex; align-items: center; gap: 4px;">
-                            Taxa de venda <button type="button" onclick="posOpenEditValuePopover('tax', 'Editar Taxa de Venda', ${saleTaxAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                            Taxa de venda <button type="button" onclick="posOpenEditValuePopover('tax', 'Editar Taxa de Venda', ${saleTaxAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 12px; height: 12px;"></i></button>
                         </span>
                         <span>R$ ${saleTaxAmount.toFixed(2)}</span>
                     </div>
     
-                    <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
+                    <div class="table-card-row" style="margin-top: 6px; font-size: 0.82rem; color: var(--text-secondary);">
                         <span style="display: flex; align-items: center; gap: 4px;">
-                            Desconto <button type="button" onclick="posOpenEditValuePopover('discount', 'Editar Desconto do Pedido', ${discountAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                            Desconto <button type="button" onclick="posOpenEditValuePopover('discount', 'Editar Desconto do Pedido', ${discountAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 12px; height: 12px;"></i></button>
                         </span>
                         <span style="color: var(--danger); font-weight: 700;">- R$ ${discountAmount.toFixed(2)}</span>
                     </div>
     
-                    <div class="table-card-row" style="border-top: 2px solid var(--stoqui-purple); padding-top: 10px; margin-top: 10px; font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">
+                    <div class="table-card-row" style="border-top: 2px solid var(--stoqui-purple); padding-top: 8px; margin-top: 8px; font-size: 1.15rem; font-weight: 800; color: var(--text-primary);">
                         <span>Total</span>
                         <span style="color: var(--stoqui-purple);">R$ ${total.toFixed(2)}</span>
                     </div>
@@ -1579,18 +1599,18 @@
                     card.style.background = '#ffffff';
                     card.style.border = '1px solid var(--border-color)';
                     card.style.borderRadius = '8px';
-                    card.style.padding = '12px 16px';
+                    card.style.padding = '10px 14px';
                     card.style.display = 'flex';
                     card.style.justifyContent = 'space-between';
                     card.style.alignItems = 'center';
                     card.innerHTML = `
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span style="color: var(--stoqui-purple);">💵</span>
-                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${p.method}</span>
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.88rem;">${p.method}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <span style="font-weight: 800; color: #0f172a;">R$ ${p.amount.toFixed(2)}</span>
-                            <button type="button" onclick="removePaymentItem(${idx})" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 4px;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+                            <button type="button" onclick="removePaymentItem(${idx})" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 4px;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
                         </div>
                     `;
                     splitList.appendChild(card);
@@ -1602,11 +1622,11 @@
             if (actionArea) {
                 if (balance > 0.01) {
                     actionArea.innerHTML = `
-                        <button type="button" onclick="advanceStep(5.1)" class="btn-stoqui" style="background: none; border: 2px dashed var(--stoqui-purple); color: var(--stoqui-purple); box-shadow: none; margin-bottom: 20px;">
+                        <button type="button" onclick="advanceStep(5.1)" class="btn-stoqui" style="background: none; border: 2px dashed var(--stoqui-purple); color: var(--stoqui-purple); box-shadow: none; margin-bottom: 16px;">
                             <i data-lucide="plus" style="width: 18px; height: 18px;"></i> <span>Adicionar pagamento</span>
                         </button>
                         
-                        <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; color: var(--danger); font-weight: 700; font-size: 0.9rem; margin-bottom: 20px;">
+                        <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; color: var(--danger); font-weight: 700; font-size: 0.88rem; margin-bottom: 16px;">
                             <span>Faltam:</span>
                             <span>R$ ${balance.toFixed(2)}</span>
                         </div>
