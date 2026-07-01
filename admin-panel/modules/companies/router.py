@@ -24,10 +24,11 @@ def list_companies(
     identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    # Only fetch companies that have the 'coliseu-speed' module activated and active (Status=1)
+    # Only fetch companies that have the 'coliseu-speed' module activated and active (Status=0)
     companies = identity_db.query(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
-        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
+        .filter(CompanyModule.module_slug.in_(["coliseu-speed", "coliseuspeed"]), CompanyModule.is_active == True)\
+        .filter(Company.status == 0)\
         .order_by(Company.created_at.desc())\
         .all()
 
@@ -105,7 +106,7 @@ def create_company(
         id=company_id,
         name=name,
         email=email,
-        status=1 # 1=Active
+        status=0 # 0=Active in central DB
     )
     identity_db.add(company)
     
@@ -300,7 +301,7 @@ def patch_company_status(
     if not company:
         return JSONResponse(status_code=404, content={"detail": "Empresa não encontrada"})
         
-    # status codes: 1 = Active, 2 = Suspended / Inactive in legacy backend
-    company.status = 1 if payload.status == "active" else 2
+    # status codes: 0 = Active, 1 = Suspended in central DB
+    company.status = 0 if payload.status == "active" else 1
     identity_db.commit()
-    return {"id": company.id, "status": "active" if company.status == 1 else "inactive"}
+    return {"id": company.id, "status": "active" if company.status == 0 else "inactive"}

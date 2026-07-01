@@ -24,7 +24,7 @@ class License(Base):
 
     @property
     def status(self) -> str:
-        return "active" if self.status_code == 1 else "inactive"
+        return "active" if self.status_code == 0 else "inactive"
 
     @property
     def product_type(self) -> str:

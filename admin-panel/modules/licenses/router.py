@@ -35,7 +35,7 @@ def new_license_form(
     identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    companies = identity_db.query(Company).filter(Company.status == 1).all() # 1=Active in central DB
+    companies = identity_db.query(Company).filter(Company.status == 0).all() # 0 = Active in central DB
     return templates.TemplateResponse("licenses/form.html", {
         "request": request,
         "companies": companies,
@@ -53,7 +53,7 @@ async def create_license(
     identity_db: Session = Depends(get_identity_db),
     current_user = Depends(get_current_user_web)
 ):
-    companies = identity_db.query(Company).filter(Company.status == 1).all()
+    companies = identity_db.query(Company).filter(Company.status == 0).all()
     
     # Check if this activation key is already listed in central devices table
     existing = identity_db.query(License).filter(License.license_key == license_key).first()
@@ -86,7 +86,7 @@ async def create_license(
         id=str(uuid.uuid4()),
         company_id=company_id,
         license_key=license_key,
-        status_code=1, # 1 = Active
+        status_code=0, # 0 = Active in C# enum
         activation_date=datetime.utcnow(),
         last_access=datetime.utcnow(),
         model="Dispositivo Faturamento",
@@ -112,7 +112,7 @@ def api_validate_license(
     if not license:
         return JSONResponse(status_code=404, content={"valid": False, "detail": "Licença não encontrada"})
         
-    is_valid = license.status_code == 1 # 1 = Active in legacy enum
+    is_valid = license.status_code == 0 # 0 = Active in C# enum
 
     return {
         "valid": is_valid,

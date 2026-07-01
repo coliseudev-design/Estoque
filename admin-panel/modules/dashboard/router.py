@@ -13,24 +13,24 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 def get_stats_data(local_db: Session, identity_db: Session):
-    # Active companies from central DB
+    # Active companies from central DB (Status=0)
     active_companies = identity_db.query(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
-        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, Company.status == 1)\
+        .filter(CompanyModule.module_slug.in_(["coliseu-speed", "coliseuspeed"]), CompanyModule.is_active == True, Company.status == 0)\
         .count()
         
-    # Active licenses (devices) from central DB
+    # Active licenses (devices) from central DB (Status=0)
     active_licenses = identity_db.query(License)\
         .join(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
-        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, License.status_code == 1)\
+        .filter(CompanyModule.module_slug.in_(["coliseu-speed", "coliseuspeed"]), CompanyModule.is_active == True, License.status_code == 0)\
         .count()
         
-    # Revoked licenses (devices) from central DB
+    # Revoked licenses (devices) from central DB (Status=2)
     expired_licenses = identity_db.query(License)\
         .join(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
-        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True, License.status_code == 2)\
+        .filter(CompanyModule.module_slug.in_(["coliseu-speed", "coliseuspeed"]), CompanyModule.is_active == True, License.status_code == 2)\
         .count()
         
     # Online instances from local DB
@@ -55,7 +55,7 @@ def get_dashboard(
     # Fetch recent companies from central DB
     recent_companies = identity_db.query(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
-        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
+        .filter(CompanyModule.module_slug.in_(["coliseu-speed", "coliseuspeed"]), CompanyModule.is_active == True)\
         .order_by(Company.created_at.desc())\
         .limit(5)\
         .all()
@@ -68,7 +68,7 @@ def get_dashboard(
     recent_licenses = identity_db.query(License)\
         .join(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
-        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
+        .filter(CompanyModule.module_slug.in_(["coliseu-speed", "coliseuspeed"]), CompanyModule.is_active == True)\
         .order_by(License.last_access.desc())\
         .limit(5)\
         .all()

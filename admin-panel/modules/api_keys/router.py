@@ -29,7 +29,7 @@ def list_api_keys(
     # Only active companies with coliseu-speed centrally
     companies = identity_db.query(Company)\
         .join(CompanyModule, Company.id == CompanyModule.company_id)\
-        .filter(CompanyModule.module_slug == "coliseu-speed", CompanyModule.is_active == True)\
+        .filter(CompanyModule.module_slug.in_(["coliseu-speed", "coliseuspeed"]), CompanyModule.is_active == True)\
         .all()
 
     return templates.TemplateResponse("api_keys/list.html", {
