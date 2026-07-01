@@ -72,7 +72,12 @@ def seed_admin_user():
                 role=0
             )
             db.add(admin)
-            db.commit()
+        else:
+            print(f"Ensuring default administrator credentials: {admin_email}")
+            user.password_hash = get_password_hash(admin_password)
+            user.is_active = True
+            user.role = 0
+        db.commit()
     finally:
         db.close()
 
