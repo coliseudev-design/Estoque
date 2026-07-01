@@ -1,111 +1,520 @@
 {% extends "base.html" %}
 
 {% block title %}Histórico de Pedidos — ColiseuSpeed Force{% endblock %}
-{% block header_title %}Histórico de Pedidos{% endblock %}
-{% block header_subtitle %}Monitore e consulte pedidos e orçamentos faturados pelo representante{% endblock %}
 
 {% block content %}
-<!-- Desktop View (Tabela) -->
-<div class="card table-container">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h2 style="font-size: 1.1rem; font-weight: 800;">Lista de Lançamentos</h2>
-    </div>
+<style>
+    /* Hide base.html main-header to take complete control of styling */
+    .main-header {
+        display: none !important;
+    }
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Nº Lançamento</th>
-                <th>Cliente</th>
-                <th>CNPJ</th>
-                <th>Valor Total</th>
-                <th>Tipo</th>
-                <th>Status ERP</th>
-                <th style="text-align: right;">Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for order in orders %}
-            <tr>
-                <td style="font-weight: 700;">#{{ order.id }}</td>
-                <td style="font-weight: 600; color: var(--text-primary);">{{ order.customer_name }}</td>
-                <td>{{ order.customer_cnpj }}</td>
-                <td style="font-weight: 700; color: var(--primary-color);">R$ {{ "%.2f"|format(order.total_amount) }}</td>
-                <td>
-                    <span class="badge" style="background: rgba(33,150,243,0.06); color: var(--primary-color); padding: 4px 8px; border-radius: 8px;">
-                        {{ 'Pedido' if order.status != 'budget' else 'Orçamento' }}
-                    </span>
-                </td>
-                <td>
-                    {% if order.erp_order_id %}
-                    <span class="badge" style="background: rgba(16,185,129,0.08); color: var(--success); padding: 4px 8px; border-radius: 8px;">
-                        Integrado ({{ order.erp_order_id }})
-                    </span>
-                    {% elif order.status == 'budget' %}
-                    <span class="badge" style="background: rgba(148,163,184,0.08); color: var(--text-secondary); padding: 4px 8px; border-radius: 8px;">
-                        Orçamento
-                    </span>
-                    {% else %}
-                    <span class="badge" style="background: rgba(245,158,11,0.08); color: var(--warning); padding: 4px 8px; border-radius: 8px;">
-                        Pendente Sync
-                    </span>
-                    {% endif %}
-                </td>
-                <td style="text-align: right;">
-                    <a href="/orders/{{ order.id }}" class="btn btn-secondary btn-sm" style="padding: 6px 10px;">
-                        <i data-lucide="eye" style="width: 14px; height: 14px;"></i>
-                        <span>Ver Ficha</span>
-                    </a>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="7" style="text-align: center; padding: 30px; color: var(--text-muted);">
-                    Nenhum pedido ou orçamento lançado.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    /* Design Tokens */
+    :root {
+        --stoqui-purple: #1D4ED8; /* Solid Blue matching PDV theme */
+        --stoqui-purple-light: #3B82F6;
+        --stoqui-purple-bg: #EFF6FF;
+        --stoqui-gray-bg: #F8FAFC;
+    }
 
-<!-- Mobile View (Cards responsivos empilhados) -->
-<div class="responsive-cards">
-    {% for order in orders %}
-    <div class="table-card">
-        <div class="table-card-row">
-            <span class="table-card-subtitle" style="font-weight: 700;">#{{ order.id }} - {{ 'Pedido' if order.status != 'budget' else 'Orçamento' }}</span>
-            <span class="table-card-subtitle">{{ order.customer_cnpj }}</span>
-        </div>
-        <div class="table-card-title">{{ order.customer_name }}</div>
-        <div class="table-card-row" style="margin-top: 4px; align-items: center;">
-            <span class="table-card-amount">R$ {{ "%.2f"|format(order.total_amount) }}</span>
-            <div>
-                {% if order.erp_order_id %}
-                <span class="badge" style="background: rgba(16,185,129,0.08); color: var(--success); padding: 4px 8px; border-radius: 8px; font-size: 0.75rem;">
-                    Integrado
-                </span>
-                {% elif order.status == 'budget' %}
-                <span class="badge" style="background: rgba(148,163,184,0.08); color: var(--text-secondary); padding: 4px 8px; border-radius: 8px; font-size: 0.75rem;">
-                    Orçamento
-                </span>
-                {% else %}
-                <span class="badge" style="background: rgba(245,158,11,0.08); color: var(--warning); padding: 4px 8px; border-radius: 8px; font-size: 0.75rem;">
-                    Pendente
-                </span>
-                {% endif %}
+    /* Date Filter Pills styling */
+    .date-filter-pill {
+        background: #ffffff;
+        color: #475569;
+        border: 1.5px solid var(--border-color);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.82rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: var(--transition);
+        white-space: nowrap;
+    }
+    .date-filter-pill.active {
+        background: var(--stoqui-purple) !important;
+        color: #ffffff !important;
+        border-color: var(--stoqui-purple) !important;
+    }
+    .date-filter-pill:hover:not(.active) {
+        background: var(--stoqui-purple-bg);
+        border-color: var(--stoqui-purple-light);
+        color: var(--stoqui-purple);
+    }
+
+    /* Grouping date headers */
+    .date-group-header {
+        font-size: 0.82rem;
+        text-transform: lowercase;
+        color: var(--text-secondary);
+        font-weight: 800;
+        margin: 20px 0 10px 0;
+        padding-left: 4px;
+    }
+
+    /* Order Compact Cards Grid */
+    .orders-layout-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    @media (min-width: 768px) {
+        .orders-layout-grid {
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        }
+    }
+
+    .order-compact-card {
+        background: #ffffff;
+        border: 1.5px solid var(--border-color);
+        border-radius: 12px;
+        padding: 14px 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: var(--transition);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+    }
+    .order-compact-card:hover {
+        border-color: var(--stoqui-purple);
+        box-shadow: 0 4px 12px rgba(29, 78, 216, 0.05);
+        transform: translateY(-1px);
+    }
+
+    /* Badges styles */
+    .badge-status {
+        font-weight: 800;
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        text-transform: capitalize;
+        text-align: center;
+        display: inline-block;
+    }
+    .badge-status.aprovado {
+        background: #DCFCE7;
+        color: #15803D;
+    }
+    .badge-status.pendente {
+        background: #FEF3C7;
+        color: #D97706;
+    }
+    .badge-status.orcamento {
+        background: #F1F5F9;
+        color: #475569;
+    }
+
+    /* Floating circle button */
+    .float-add-btn {
+        position: fixed;
+        bottom: 80px;
+        right: 30px;
+        background: var(--stoqui-purple);
+        color: #ffffff;
+        border: none;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(29, 78, 216, 0.35);
+        cursor: pointer;
+        z-index: 100;
+        transition: var(--transition);
+    }
+    .float-add-btn:hover {
+        background: #1E40AF;
+        transform: scale(1.05);
+    }
+
+    /* Custom overlay indicators selection */
+    .chk-indicator {
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    .delivery-radio-card.selected .chk-indicator {
+        display: flex !important;
+    }
+    .delivery-radio-card.selected {
+        border-color: var(--stoqui-purple) !important;
+        background: var(--stoqui-purple-bg) !important;
+    }
+</style>
+
+<!-- JSON script safe serialization -->
+<script id="orders-json-data" type="application/json">
+    {{ orders | tojson }}
+</script>
+
+<div style="padding: 4px 8px;">
+    
+    <!-- Custom Header section matching layout exactly -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+        <h1 style="font-size: 1.45rem; font-weight: 800; color: #0f172a; margin: 0;">Pedidos</h1>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <!-- Compact Search Bar -->
+            <div class="input-wrapper" style="box-shadow: none; margin-bottom: 0; min-height: 38px; border-radius: 8px; width: 220px; display: flex; align-items: center; border: 1.5px solid var(--border-color); padding: 0 10px; background: #ffffff;">
+                <i data-lucide="search" style="width: 16px; height: 16px; color: #94a3b8; margin-right: 6px;"></i>
+                <input type="text" id="order-search-input" placeholder="Pesquise..." oninput="posOnOrderSearch(this.value)" style="border: none; outline: none; background: none; font-size: 0.85rem; width: 100%; height: 100%;">
             </div>
-        </div>
-        <div class="table-card-actions">
-            <a href="/orders/{{ order.id }}" class="btn btn-secondary" style="width: 100%; min-height: 44px; display: inline-flex;">
-                <i data-lucide="eye" style="width: 16px; height: 16px;"></i>
-                <span>Ver Ficha</span>
-            </a>
+            <!-- Filter Trigger Button -->
+            <button type="button" onclick="posOpenFilterModal()" style="border: 1.5px solid var(--border-color); background: #ffffff; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569; transition: var(--transition);">
+                <i data-lucide="sliders-horizontal" style="width: 18px; height: 18px;"></i>
+            </button>
+            <!-- Menu Dot Button -->
+            <button type="button" style="border: 1.5px solid var(--border-color); background: #ffffff; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569;">
+                <i data-lucide="more-vertical" style="width: 18px; height: 18px;"></i>
+            </button>
         </div>
     </div>
-    {% else %}
-    <div style="text-align: center; color: var(--text-muted); padding: 40px;">
-        Nenhum pedido ou orçamento lançado.
+
+    <!-- Date range Navigation Pills -->
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px;">
+        <button type="button" id="date-pill-custom" class="date-filter-pill" onclick="posSetDateFilter('custom')">
+            <i data-lucide="calendar" style="width: 14px; height: 14px;"></i> Personalizado
+        </button>
+        <button type="button" id="date-pill-all" class="date-filter-pill active" onclick="posSetDateFilter('all')">
+            Todos
+        </button>
+        <button type="button" id="date-pill-month" class="date-filter-pill" onclick="posSetDateFilter('month')">
+            Este mês
+        </button>
+        <button type="button" id="date-pill-week" class="date-filter-pill" onclick="posSetDateFilter('week')">
+            Esta semana
+        </button>
+        <button type="button" id="date-pill-30days" class="date-filter-pill" onclick="posSetDateFilter('30days')">
+            Últimos 30 dias
+        </button>
     </div>
-    {% endfor %}
+
+    <!-- Counters pill representation -->
+    <div style="font-size: 0.85rem; color: #64748b; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 6px; padding-left: 2px;">
+        <span id="order-count-display">0 pedidos</span>, <span id="order-total-display">R$ 0,00 total</span>
+        <span style="background: #EFF6FF; color: var(--stoqui-purple); font-size: 0.65rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; margin-left: 2px;">Pro</span>
+    </div>
+
+    <!-- List dynamic grouping container -->
+    <div id="orders-grouped-list-container" style="margin-bottom: 100px;">
+        <!-- Group sections and compact grids loaded by script -->
+    </div>
+
+    <!-- Floating Action Button for new orders -->
+    <a href="/orders/new" class="float-add-btn" style="text-decoration: none;">
+        <i data-lucide="plus" style="width: 28px; height: 28px; color: #ffffff;"></i>
+    </a>
+
 </div>
+
+<!-- Filters Selector Popover Modal -->
+<div id="filters-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px; max-height: 90vh;">
+        <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <div>
+                <h3 style="font-weight: 800; font-size: 1.1rem; color: #0f172a; margin: 0;">Filtros</h3>
+                <span style="font-size: 0.78rem; color: var(--text-secondary);">Selecione os filtros para refinar sua busca</span>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="posCloseModal('filters-modal')" style="min-height: 32px; width: auto; padding: 0 10px; border-radius: 8px;">
+                <span>Fechar</span>
+            </button>
+        </div>
+        
+        <div style="padding: 20px; display: flex; flex-direction: column; gap: 20px;">
+            <div>
+                <h4 style="font-weight: 800; font-size: 0.9rem; color: #334155; margin-bottom: 12px;">Status do pedido</h4>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- All -->
+                    <div class="delivery-radio-card selected" id="lbl-status-all" onclick="posSetStatusFilter('all')">
+                        <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">Todos os status</span>
+                        <span class="chk-indicator" style="color: var(--stoqui-purple);"><i data-lucide="check" style="width: 18px; height: 18px;"></i></span>
+                    </div>
+                    <!-- Novo -->
+                    <div class="delivery-radio-card" id="lbl-status-novo" onclick="posSetStatusFilter('novo')">
+                        <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">Novo</span>
+                        <span class="chk-indicator" style="color: var(--stoqui-purple);"><i data-lucide="check" style="width: 18px; height: 18px;"></i></span>
+                    </div>
+                    <!-- Pendente -->
+                    <div class="delivery-radio-card" id="lbl-status-pendente" onclick="posSetStatusFilter('pendente')">
+                        <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">Pendente</span>
+                        <span class="chk-indicator" style="color: var(--stoqui-purple);"><i data-lucide="check" style="width: 18px; height: 18px;"></i></span>
+                    </div>
+                    <!-- Aprovado -->
+                    <div class="delivery-radio-card" id="lbl-status-aprovado" onclick="posSetStatusFilter('aprovado')">
+                        <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">Aprovado</span>
+                        <span class="chk-indicator" style="color: var(--stoqui-purple);"><i data-lucide="check" style="width: 18px; height: 18px;"></i></span>
+                    </div>
+                    <!-- Preparação -->
+                    <div class="delivery-radio-card" id="lbl-status-preparacao" onclick="posSetStatusFilter('preparacao')">
+                        <span style="font-weight: 700; font-size: 0.88rem; color: var(--text-primary);">Preparação</span>
+                        <span class="chk-indicator" style="color: var(--stoqui-purple);"><i data-lucide="check" style="width: 18px; height: 18px;"></i></span>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="button" onclick="posApplyFilters()" class="btn-stoqui" style="margin-top: 10px;">
+                <span>Aplicar</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Extract base orders list
+    const originalOrders = JSON.parse(document.getElementById('orders-json-data').textContent || '[]');
+
+    // Active filters
+    let searchVal = "";
+    let selectedDateFilter = "all"; // all, month, week, 30days, custom
+    let selectedStatusFilter = "all"; // all, novo, pendente, aprovado, preparacao
+
+    // Boot initial state
+    window.addEventListener('DOMContentLoaded', () => {
+        posRenderFilteredOrders();
+    });
+
+    function posOpenFilterModal() {
+        const modal = document.getElementById('filters-modal');
+        if (modal) modal.classList.add('open');
+    }
+
+    function posCloseModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) modal.classList.remove('open');
+    }
+
+    // Handles text searching
+    function posOnOrderSearch(val) {
+        searchVal = val.toLowerCase().trim();
+        posRenderFilteredOrders();
+    }
+
+    // Handle date pills
+    function posSetDateFilter(type) {
+        selectedDateFilter = type;
+        
+        // Toggle active style
+        document.querySelectorAll('.date-filter-pill').forEach(btn => btn.classList.remove('active'));
+        
+        let activeBtn = document.getElementById('date-pill-all');
+        if (type === 'custom') activeBtn = document.getElementById('date-pill-custom');
+        else if (type === 'month') activeBtn = document.getElementById('date-pill-month');
+        else if (type === 'week') activeBtn = document.getElementById('date-pill-week');
+        else if (type === '30days') activeBtn = document.getElementById('date-pill-30days');
+        
+        if (activeBtn) activeBtn.classList.add('active');
+        posRenderFilteredOrders();
+    }
+
+    // Handle status selector
+    function posSetStatusFilter(statusType) {
+        selectedStatusFilter = statusType;
+        
+        // Toggle selected cards styles
+        const labels = ['all', 'novo', 'pendente', 'aprovado', 'preparacao'];
+        labels.forEach(lbl => {
+            const el = document.getElementById(`lbl-status-${lbl}`);
+            if (el) {
+                if (lbl === statusType) el.classList.add('selected');
+                else el.classList.remove('selected');
+            }
+        });
+    }
+
+    function posApplyFilters() {
+        posCloseModal('filters-modal');
+        posRenderFilteredOrders();
+    }
+
+    // Grouping helper
+    function posGroupOrdersByDate(ordersList) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+        const groups = {};
+
+        ordersList.forEach(o => {
+            let dateStr = "anterior";
+            if (o.created_at) {
+                const parts = o.created_at.split('T');
+                if (parts.length > 0) {
+                    const ymd = parts[0];
+                    if (ymd === todayStr) {
+                        dateStr = "hoje";
+                    } else if (ymd === yesterdayStr) {
+                        dateStr = "ontem";
+                    } else {
+                        const dParts = ymd.split('-');
+                        if (dParts.length === 3) {
+                            dateStr = `${dParts[2]}/${dParts[1]}/${dParts[0]}`;
+                        }
+                    }
+                }
+            }
+            
+            if (!groups[dateStr]) {
+                groups[dateStr] = [];
+            }
+            groups[dateStr].push(o);
+        });
+
+        return groups;
+    }
+
+    // Main dynamic compiler
+    function posRenderFilteredOrders() {
+        const container = document.getElementById('orders-grouped-list-container');
+        if (!container) return;
+
+        // Apply filters
+        let filtered = [...originalOrders];
+
+        // 1. Text Search Filter
+        if (searchVal) {
+            filtered = filtered.filter(o => 
+                o.id.toString().includes(searchVal) ||
+                (o.customer_name && o.customer_name.toLowerCase().includes(searchVal)) ||
+                (o.customer_cnpj && o.customer_cnpj.includes(searchVal))
+            );
+        }
+
+        // 2. Status Filter
+        if (selectedStatusFilter !== 'all') {
+            filtered = filtered.filter(o => {
+                const status = (o.erp_order_id ? 'aprovado' : (o.status === 'budget' ? 'orcamento' : 'pendente')).toLowerCase();
+                // Preparação maps to pendente for now as legacy integration sync
+                if (selectedStatusFilter === 'preparacao') return status === 'pendente';
+                return status === selectedStatusFilter;
+            });
+        }
+
+        // 3. Date range Filter
+        const now = new Date();
+        if (selectedDateFilter === 'month') {
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            filtered = filtered.filter(o => o.created_at && new Date(o.created_at) >= startOfMonth);
+        } else if (selectedDateFilter === 'week') {
+            const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+            filtered = filtered.filter(o => o.created_at && new Date(o.created_at) >= startOfWeek);
+        } else if (selectedDateFilter === '30days') {
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            filtered = filtered.filter(o => o.created_at && new Date(o.created_at) >= thirtyDaysAgo);
+        }
+
+        // Update Counter statistics
+        const totalSum = filtered.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
+        document.getElementById('order-count-display').innerText = `${filtered.length} ${filtered.length === 1 ? 'pedido' : 'pedidos'}`;
+        document.getElementById('order-total-display').innerText = `R$ ${totalSum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} total`;
+
+        container.innerHTML = '';
+        if (filtered.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+                    <i data-lucide="history" style="width: 48px; height: 48px; color: #94a3b8; stroke-width: 1.5; margin: 0 auto 12px auto;"></i>
+                    <h4 style="font-weight: 700; color: #334155; font-size: 0.95rem;">Nenhum pedido encontrado</h4>
+                    <p style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">Tente alterar os filtros aplicados</p>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+
+        // Group filtered list by dates
+        const grouped = posGroupOrdersByDate(filtered);
+
+        // Group sequence ordering: 'hoje', 'ontem', then specific dates ordered descending
+        const sortedGroupKeys = Object.keys(grouped).sort((a, b) => {
+            if (a === 'hoje') return -1;
+            if (b === 'hoje') return 1;
+            if (a === 'ontem') return -1;
+            if (b === 'ontem') return 1;
+            
+            // Format d/m/y keys back to Date for comparison
+            const parseKey = (k) => {
+                const parts = k.split('/');
+                return parts.length === 3 ? new Date(parts[2], parts[1]-1, parts[0]) : new Date(0);
+            };
+            return parseKey(b) - parseKey(a);
+        });
+
+        sortedGroupKeys.forEach(dateLabel => {
+            // Group Header section
+            const header = document.createElement('h3');
+            header.className = 'date-group-header';
+            header.innerText = dateLabel;
+            container.appendChild(header);
+
+            // Group Grid container
+            const grid = document.createElement('div');
+            grid.className = 'orders-layout-grid';
+
+            const items = grouped[dateLabel];
+            items.forEach(order => {
+                const card = document.createElement('div');
+                card.className = 'order-compact-card';
+                card.onclick = () => window.location.href = `/orders/${order.id}`;
+
+                // Resolve values
+                const customerName = order.customer_name || 'Sem cliente';
+                const totalText = (parseFloat(order.total_amount) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                // Payment conditions
+                let payBadge = '📁 Sem pagamento';
+                if (order.payment_condition) {
+                    // Extract first condition description format
+                    payBadge = `💳 ${order.payment_condition.split(',')[0].split(':')[0]}`;
+                }
+
+                // Resolve timing
+                let timeText = '--:--';
+                if (order.created_at) {
+                    const parts = order.created_at.split('T');
+                    if (parts.length > 1) {
+                        timeText = parts[1].substring(0, 5);
+                    }
+                }
+
+                // Status Badge details
+                let badgeClass = 'badge-status pendente';
+                let statusLabel = 'pendente';
+                if (order.erp_order_id) {
+                    badgeClass = 'badge-status aprovado';
+                    statusLabel = 'aprovado';
+                } else if (order.status === 'budget') {
+                    badgeClass = 'badge-status orcamento';
+                    statusLabel = 'orçamento';
+                }
+
+                card.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <div style="background: var(--stoqui-purple-bg); color: var(--stoqui-purple); width: 44px; height: 44px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 800;">
+                            <i data-lucide="shopping-bag" style="width: 16px; height: 16px; margin-bottom: 1px;"></i>
+                            <span>#${order.id}</span>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 3px;">
+                            <h4 style="font-weight: 700; color: #0f172a; font-size: 0.88rem; margin: 0;">${customerName}</h4>
+                            <div style="font-weight: 800; color: #0f172a; font-size: 1.05rem;">R$ ${totalText}</div>
+                            <span style="font-size: 0.76rem; color: #64748b; display: flex; align-items: center; gap: 4px;">${payBadge}</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                        <span style="font-size: 0.75rem; color: #64748b;">${timeText}</span>
+                        <span class="${badgeClass}">${statusLabel}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            container.appendChild(grid);
+        });
+
+        lucide.createIcons();
+    }
+</script>
 {% endblock %}
