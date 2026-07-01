@@ -5,10 +5,10 @@
 {% block header_subtitle %}Acompanhe o status de integração de dados em tempo real{% endblock %}
 
 {% block content %}
-<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px;">
+<div class="pos-layout" style="height: auto; gap: 20px;">
     
     <!-- Sync Status Panel -->
-    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; padding: 24px;">
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; padding: 24px; margin-bottom: 0;">
         <div>
             <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 20px; color: var(--primary-dark);">Status de Integração</h3>
             
@@ -35,7 +35,7 @@
     </div>
 
     <!-- Sync Logs Console -->
-    <div class="card" style="padding: 24px;">
+    <div class="card" style="padding: 24px; margin-bottom: 0;">
         <h3 style="font-weight: 800; font-size: 1.1rem; margin-bottom: 16px; color: var(--primary-dark);">Logs Operacionais Recentes</h3>
         
         <div style="background: #0f172a; border: 1.5px solid #1e293b; color: #a7f3d0; padding: 16px; border-radius: 10px; font-family: monospace; font-size: 0.82rem; height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
