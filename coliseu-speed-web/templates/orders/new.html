@@ -13,6 +13,26 @@
         --stoqui-gray-bg: #F8FAFC;
     }
 
+    /* Helper styles for responsive layouts */
+    .desktop-only {
+        display: none !important;
+    }
+    .mobile-only {
+        display: block !important;
+    }
+
+    @media (min-width: 768px) {
+        .desktop-only {
+            display: block !important;
+        }
+        .desktop-only.stoqui-split-layout {
+            display: grid !important;
+        }
+        .mobile-only {
+            display: none !important;
+        }
+    }
+
     /* Outer wrapper */
     .stoqui-container {
         max-width: 1200px;
@@ -25,6 +45,7 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        position: relative;
     }
 
     /* Stoqui Header Navigation bar */
@@ -62,26 +83,17 @@
     /* Split layout desktop pane */
     .stoqui-split-layout {
         display: grid;
-        grid-template-columns: 1fr;
+        grid-template-columns: 1.3fr 0.7fr;
         flex: 1;
     }
-    @media (min-width: 768px) {
-        .stoqui-split-layout {
-            grid-template-columns: 1.3fr 0.7fr;
-        }
-        .stoqui-split-left {
-            border-right: 1px solid var(--border-color);
-        }
-    }
-
     .stoqui-split-left {
         padding: 24px;
         display: flex;
         flex-direction: column;
         gap: 20px;
         background: var(--stoqui-gray-bg);
+        border-right: 1px solid var(--border-color);
     }
-
     .stoqui-split-right {
         padding: 24px;
         display: flex;
@@ -135,6 +147,7 @@
         cursor: pointer;
         box-shadow: 0 4px 12px rgba(124, 92, 246, 0.2);
         transition: var(--transition);
+        font-size: 0.95rem;
     }
     .btn-stoqui:hover {
         background: var(--stoqui-purple-dark);
@@ -150,8 +163,9 @@
     .stoqui-wizard-body {
         max-width: 680px;
         margin: 0 auto;
-        padding: 40px 24px;
+        padding: 24px;
         width: 100%;
+        flex: 1;
     }
 
     /* Keypad grid input */
@@ -179,6 +193,45 @@
         border-color: var(--stoqui-purple);
         color: var(--stoqui-purple);
     }
+
+    /* Floating purple plus button for mobile */
+    .float-add-btn {
+        position: fixed;
+        bottom: 90px;
+        right: 20px;
+        background: var(--stoqui-purple);
+        color: #ffffff;
+        border: none;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 15px rgba(124, 92, 246, 0.4);
+        cursor: pointer;
+        z-index: 100;
+        transition: var(--transition);
+    }
+    .float-add-btn:hover {
+        background: var(--stoqui-purple-dark);
+        transform: scale(1.05);
+    }
+
+    /* Mobile bottom totals bar */
+    .mobile-bottom-bar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #ffffff;
+        border-top: 1px solid var(--border-color);
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 99;
+    }
 </style>
 
 <div class="stoqui-container">
@@ -191,8 +244,8 @@
         <span class="stoqui-header-title" id="header-title">Registrar pedido</span>
     </header>
 
-    <!-- ETAPAS 1 & 2: REGISTRAR PEDIDO (Dual Pane Split) -->
-    <div id="pane-split-checkout" class="stoqui-split-layout">
+    <!-- ETAPAS 1 & 2: REGISTRAR PEDIDO (Dual Pane Split - DESKTOP ONLY) -->
+    <div id="pane-split-checkout" class="desktop-only stoqui-split-layout">
         
         <!-- Left Panel: Product search and grid -->
         <div class="stoqui-split-left">
@@ -249,9 +302,67 @@
 
     </div>
 
-    <!-- SINGLE PANEL WIZARD (Etapas 3 a 7) -->
-    <div id="pane-single-checkout" class="stoqui-wizard-body" style="display: none;">
+    <!-- WIZARD AREA (Steps 3 to 7 on Desktop, Steps 1 to 7 on Mobile) -->
+    <div id="pane-single-checkout" class="stoqui-wizard-body">
         
+        <!-- ETAPA 1: PRODUTOS (MOBILE ONLY - Carrinho Vazio) -->
+        <section id="step-1" class="mobile-only step-container">
+            <div style="margin-bottom: 24px;">
+                <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">Produtos</h3>
+            </div>
+            
+            <div class="empty-cart-state" style="text-align: center; padding: 80px 20px;" onclick="openModal('catalog-picker-modal')">
+                <i data-lucide="shopping-cart" style="width: 64px; height: 64px; margin: 0 auto 16px auto; color: #94a3b8; stroke-width: 1.5;"></i>
+                <h4 style="font-weight: 800; font-size: 1.15rem; color: #334155; margin-bottom: 8px;">Nenhum produto adicionado</h4>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">Adicione produtos para começar</p>
+            </div>
+
+            <!-- Floating plus button -->
+            <button type="button" class="float-add-btn" onclick="openModal('catalog-picker-modal')">
+                <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
+            </button>
+
+            <!-- Sticky footer bottom bar -->
+            <div class="mobile-bottom-bar">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Total do pedido</span>
+                    <strong style="font-size: 1.2rem; color: #0f172a;">R$ 0</strong>
+                </div>
+                <button type="button" class="btn-stoqui" disabled>
+                    <span>Continuar →</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ETAPA 2: PRODUTOS (MOBILE ONLY - Com Itens no Carrinho) -->
+        <section id="step-2" class="mobile-only step-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">Produtos</h3>
+                <button type="button" onclick="clearCart()" class="btn btn-secondary btn-sm" style="color: var(--stoqui-purple); background: none; border: none; font-weight: 700; padding: 4px;">
+                    Limpar
+                </button>
+            </div>
+
+            <!-- List of cards items -->
+            <div id="mobile-cart-items-list" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 100px;"></div>
+
+            <!-- Floating plus button -->
+            <button type="button" class="float-add-btn" onclick="openModal('catalog-picker-modal')">
+                <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
+            </button>
+
+            <!-- Sticky footer bottom bar active -->
+            <div class="mobile-bottom-bar">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span id="mobile-bottom-qty" style="font-size: 0.85rem; color: var(--text-secondary);">1 item · Total</span>
+                    <strong id="mobile-bottom-total" style="font-size: 1.25rem; color: #0f172a;">R$ 0</strong>
+                </div>
+                <button type="button" onclick="advanceStep(3)" class="btn-stoqui">
+                    <span>Continuar →</span>
+                </button>
+            </div>
+        </section>
+
         <!-- ETAPA 3: CLIENTE + ENTREGA -->
         <section id="step-3" class="step-container">
             <h3 style="font-size: 0.95rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
@@ -388,7 +499,7 @@
             <div style="text-align: center; margin-bottom: 24px;">
                 <span style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Valor Recebido</span>
                 <div style="font-size: 2.5rem; font-weight: 800; color: var(--stoqui-purple); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                    R$ <input type="number" id="edit-payment-amount-input" style="border: none; background: none; outline: none; font-size: 2.5rem; font-weight: 800; color: var(--stoqui-purple); max-width: 200px; text-align: center;" value="0.00" step="0.01">
+                    R$ <span id="edit-payment-amount-display" style="font-weight: 800;">0,00</span>
                 </div>
                 <div id="keypad-balance-text" style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 6px;"></div>
                 <div id="keypad-total-text" style="font-size: 0.82rem; color: var(--stoqui-purple-light); margin-top: 4px;"></div>
@@ -528,6 +639,30 @@
     </div>
 </div>
 
+<!-- Modal 4: Catálogo Picker (Mobile-Only modal to search and add items) -->
+<div id="catalog-picker-modal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header" style="padding: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
+            <h3 style="font-weight: 800; font-size: 1.05rem;">📋 Catálogo de Produtos</h3>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('catalog-picker-modal')" style="min-height: 36px; width: auto; padding: 0 12px;">
+                <span>Fechar</span>
+            </button>
+        </div>
+        <div style="padding: 16px; border-bottom: 1px solid var(--border-color);">
+            <input 
+                type="text" 
+                id="catalog-modal-search" 
+                class="form-control" 
+                placeholder="Busque produto por nome ou SKU..." 
+                oninput="onModalCatalogSearch(this.value)"
+            >
+        </div>
+        <div id="modal-catalog-grid" class="catalog-grid" style="padding: 16px; flex: 1; overflow-y: auto;">
+            <!-- Render dynamically -->
+        </div>
+    </div>
+</div>
+
 <script>
     // Data structures compiled from JINJA
     const customers = [
@@ -560,7 +695,7 @@
     ];
 
     // State properties
-    let currentStep = 1; // 1: catalog catalog, 3: cliente/entrega, 4: resumo, 5: pagamentos summary, 5.1: pagamentos grid selector, 5.2: keypad input
+    let currentStep = 1; // 1: empty/catalog, 2: cart lists, 3: cliente/entrega, 4: resumo, 5: pagamentos list, 5.1: pagamentos grid, 5.2: keypad input
     let localCart = [];
     let selectedCustomer = null;
     let deliveryType = 'pickup';
@@ -581,17 +716,25 @@
     window.addEventListener('DOMContentLoaded', () => {
         // Pre-render catalog list initially
         renderCatalogProducts(products);
-        setStep(1);
+        
+        // Auto-configure viewport responsive state on boot
+        const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            currentStep = 1;
+        }
+        setStep(currentStep);
     });
 
-    // ── Header back control ──
+    // Handle back clicks cleanly
     function onHeaderBack() {
         if (currentStep === 1) {
             window.location.href = '/orders';
         } else if (currentStep === 2) {
-            setStep(1);
+            clearCart();
         } else if (currentStep === 3) {
-            setStep(1);
+            // Back from Step 3 returns to cart (Step 2 on mobile or Step 1 on desktop split view)
+            const isMobile = window.innerWidth < 768;
+            setStep(isMobile ? 2 : 1);
         } else if (currentStep === 4) {
             setStep(3);
         } else if (currentStep === 5) {
@@ -606,50 +749,65 @@
     function setStep(step) {
         currentStep = step;
 
+        const isMobile = window.innerWidth < 768;
         const splitLayout = document.getElementById('pane-split-checkout');
         const singleLayout = document.getElementById('pane-single-checkout');
+        
         const backBtn = document.getElementById('header-back-btn');
         const backIcon = backBtn.querySelector('i');
         const titleSpan = document.getElementById('header-title');
 
-        // Toggle back icon layout
-        if (step === 1) {
-            backIcon.setAttribute('data-lucide', 'x');
-            titleSpan.innerText = 'Registrar pedido';
-        } else {
+        // Dynamic Header titles matching current state
+        if (isMobile) {
             backIcon.setAttribute('data-lucide', 'arrow-left');
+            if (step === 1 || step === 2) {
+                titleSpan.innerText = 'Novo pedido';
+            } else if (step === 3) {
+                titleSpan.innerText = 'Novo pedido';
+            } else if (step === 4) {
+                titleSpan.innerText = 'Novo pedido';
+            } else if (step === 5 || step === 5.1 || step === 5.2) {
+                titleSpan.innerText = 'Pagamentos';
+            } else if (step === 7) {
+                titleSpan.innerText = 'Pagamento concluído';
+            }
+        } else {
+            // Desktop behavior
+            if (step === 1 || step === 2) {
+                backIcon.setAttribute('data-lucide', 'x');
+                titleSpan.innerText = 'Registrar pedido';
+            } else {
+                backIcon.setAttribute('data-lucide', 'arrow-left');
+                if (step === 3 || step === 4) {
+                    titleSpan.innerText = 'Novo pedido';
+                } else if (step === 5 || step === 5.1 || step === 5.2) {
+                    titleSpan.innerText = 'Pagamentos';
+                } else if (step === 7) {
+                    titleSpan.innerText = 'Pagamento concluído';
+                }
+            }
         }
 
-        // Toggle dual vs single pane displays
-        if (step === 1 || step === 2) {
-            splitLayout.style.display = 'grid';
-            singleLayout.style.display = 'none';
-        } else {
+        // Toggle layout panels display
+        if (isMobile) {
             splitLayout.style.display = 'none';
             singleLayout.style.display = 'block';
-        }
-
-        // Toggle active wizard sub-steps
-        document.querySelectorAll('.step-container').forEach(c => c.style.display = 'none');
-
-        if (step === 3) {
-            titleSpan.innerText = 'Novo pedido';
-            document.getElementById('step-3').style.display = 'block';
-        } else if (step === 4) {
-            titleSpan.innerText = 'Novo pedido';
-            document.getElementById('step-4').style.display = 'block';
-        } else if (step === 5) {
-            titleSpan.innerText = 'Pagamentos';
-            document.getElementById('step-5').style.display = 'block';
-        } else if (step === 5.1) {
-            titleSpan.innerText = 'Pagamentos';
-            document.getElementById('step-5-grid').style.display = 'block';
-        } else if (step === 5.2) {
-            titleSpan.innerText = `Pagamento: ${currentSelectingPaymentMethod}`;
-            document.getElementById('step-5-keypad').style.display = 'block';
-        } else if (step === 7) {
-            titleSpan.innerText = 'Pagamento concluído';
-            document.getElementById('step-7').style.display = 'block';
+            
+            // Toggle sub-containers inside wizard
+            document.querySelectorAll('.step-container').forEach(c => c.style.display = 'none');
+            document.getElementById('step-' + (step >= 5 ? step : Math.floor(step))).style.display = 'block';
+        } else {
+            // Desktop
+            if (step === 1 || step === 2) {
+                splitLayout.style.display = 'grid';
+                singleLayout.style.display = 'none';
+            } else {
+                splitLayout.style.display = 'none';
+                singleLayout.style.display = 'block';
+                
+                document.querySelectorAll('.step-container').forEach(c => c.style.display = 'none');
+                document.getElementById('step-' + (step >= 5 ? step : Math.floor(step))).style.display = 'block';
+            }
         }
 
         updateWizardDOMs();
@@ -660,7 +818,7 @@
         setStep(next);
     }
 
-    // ── Cart and products search ──
+    // ── Catalog Product Searching ──
     function onCatalogSearch(query) {
         const filtered = products.filter(p => 
             p.name.toLowerCase().includes(query.toLowerCase()) || 
@@ -719,17 +877,29 @@
             });
         }
         showToast('Produto adicionado ao carrinho.');
-        updateWizardDOMs();
+        
+        // Auto-advance step on mobile when first item added
+        const isMobile = window.innerWidth < 768;
+        if (isMobile && currentStep === 1) {
+            setStep(2);
+        } else {
+            updateWizardDOMs();
+        }
     }
 
     function clearCart() {
         if (confirm('Deseja limpar todo o carrinho?')) {
             localCart = [];
-            updateWizardDOMs();
+            const isMobile = window.innerWidth < 768;
+            if (isMobile) {
+                setStep(1);
+            } else {
+                updateWizardDOMs();
+            }
         }
     }
 
-    // Toggle inline edit popover
+    // Toggle inline editing form
     function toggleInlineEdit(id) {
         const item = localCart.find(i => i.id === id);
         if (item) {
@@ -761,12 +931,24 @@
             item.price = newPrice;
             item.isEditing = false;
         }
-        updateWizardDOMs();
+        
+        // Handle mobile fallback empty transitions
+        const isMobile = window.innerWidth < 768;
+        if (isMobile && localCart.length === 0) {
+            setStep(1);
+        } else {
+            updateWizardDOMs();
+        }
     }
 
     function removeCartItem(id) {
         localCart = localCart.filter(i => i.id !== id);
-        updateWizardDOMs();
+        const isMobile = window.innerWidth < 768;
+        if (isMobile && localCart.length === 0) {
+            setStep(1);
+        } else {
+            updateWizardDOMs();
+        }
     }
 
     // ── Cliente + Entrega Selection ──
@@ -823,7 +1005,7 @@
         updateWizardDOMs();
     }
 
-    // ── Resumo Financeiro overrides ──
+    // ── Financial overrides ──
     function onCouponSelect(val) {
         if (val === 'COLISEU5') {
             discountAmount = getSubtotal() * 0.05;
@@ -859,41 +1041,45 @@
         updateWizardDOMs();
     }
 
-    // ── Split Payments Keypad and actions ──
+    // ── Split Payments Keypad actions ──
     function openPaymentKeypad(methodName, iconName) {
         currentSelectingPaymentMethod = methodName;
         currentSelectingPaymentIcon = iconName;
         keypadTypedVal = "";
         
         const balance = getBalanceRemaining();
-        document.getElementById('edit-payment-amount-input').value = balance.toFixed(2);
+        document.getElementById('edit-payment-amount-display').innerText = balance.toFixed(2);
         document.getElementById('keypad-balance-text').innerText = `Faltam: R$ ${balance.toFixed(2)}`;
         document.getElementById('keypad-total-text').innerText = `R$ ${getTotal().toFixed(2)}`;
 
         setStep(5.2);
     }
 
+    // POS keypad numeric inputs
     function onKeypadDigit(digit) {
         keypadTypedVal += digit;
         const val = parseFloat(keypadTypedVal || "0") / 100;
-        document.getElementById('edit-payment-amount-input').value = val.toFixed(2);
+        document.getElementById('edit-payment-amount-display').innerText = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function onKeypadBackspace() {
         keypadTypedVal = keypadTypedVal.slice(0, -1);
         const val = parseFloat(keypadTypedVal || "0") / 100;
-        document.getElementById('edit-payment-amount-input').value = val.toFixed(2);
+        document.getElementById('edit-payment-amount-display').innerText = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function confirmAddPaymentMethod() {
-        const val = parseFloat(document.getElementById('edit-payment-amount-input').value) || 0;
+        // Resolve value from display formatting
+        const displayStr = document.getElementById('edit-payment-amount-display').innerText.replace(/\./g, '').replace(',', '.');
+        const val = parseFloat(displayStr) || 0;
+        
         if (val <= 0) {
             showToast('Valor digitado deve ser maior que zero!', 'error');
             return;
         }
 
         const balance = getBalanceRemaining();
-        if (val > balance) {
+        if (val > (balance + 0.01)) {
             showToast('Valor adicionado excede o saldo restante!', 'error');
             return;
         }
@@ -913,11 +1099,10 @@
         updateWizardDOMs();
     }
 
-    // Faturamento dynamic integration
+    // ERP checkout faturamento integration
     async function onConcluirCheckout() {
         const btn = document.getElementById('btn-concluir-order');
-        btn.disabled = true;
-        btn.innerText = 'Processando...';
+        if (btn) btn.disabled = true;
 
         const payload = {
             customer_id: selectedCustomer ? selectedCustomer.id : 'temp-1',
@@ -938,7 +1123,6 @@
             });
             const data = await response.json();
             if (response.ok && data.success) {
-                // Success: fill success details and advance to Step 7
                 const successContainer = document.getElementById('success-payments-details-list');
                 successContainer.innerHTML = '';
                 paymentsList.forEach(p => {
@@ -961,13 +1145,64 @@
         } catch(e) {
             showToast('Erro de conexão com o servidor ERP.', 'error');
         } finally {
-            btn.disabled = false;
+            if (btn) btn.disabled = false;
         }
     }
 
     function finalizeSuccessFlow() {
         window.location.href = '/orders';
     }
+
+    // Modal search catalog items
+    function onModalCatalogSearch(query) {
+        const filtered = products.filter(p => 
+            p.name.toLowerCase().includes(query.toLowerCase()) || 
+            p.code.toLowerCase().includes(query.toLowerCase())
+        );
+        renderModalCatalogGrid(filtered);
+    }
+
+    function renderModalCatalogGrid(items) {
+        const grid = document.getElementById('modal-catalog-grid');
+        grid.innerHTML = '';
+        if (items.length === 0) {
+            grid.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">Nenhum produto encontrado.</div>';
+            return;
+        }
+
+        items.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'stoqui-product-card';
+            card.onclick = () => {
+                addToCart(p);
+                closeModal('catalog-picker-modal');
+            };
+            card.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 1.3rem;">📦</span>
+                    <div>
+                        <h4 style="font-weight: 700; color: #0f172a; font-size: 0.9rem;">${p.name}</h4>
+                        <span style="font-size: 0.72rem; color: var(--text-secondary);">Código: ${p.code} | Estoque: ${p.stock}</span>
+                    </div>
+                </div>
+                <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">R$ ${p.price.toFixed(2)}</div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // Modal select customers list trigger
+    const originalOpenModal = openModal;
+    openModal = function(id) {
+        if (id === 'select-customer-modal') {
+            document.getElementById('customer-modal-search').value = '';
+            renderCustomerList(customers);
+        } else if (id === 'catalog-picker-modal') {
+            document.getElementById('catalog-modal-search').value = '';
+            renderModalCatalogGrid(products);
+        }
+        originalOpenModal(id);
+    };
 
     // ── Calculations ──
     function getSubtotal() {
@@ -986,20 +1221,19 @@
         return getTotal() - getTotalPaid();
     }
 
-    // ── Render layouts update ──
+    // ── DOM update compiler ──
     function updateWizardDOMs() {
         const sub = getSubtotal();
         const total = getTotal();
         const paid = getTotalPaid();
         const balance = getBalanceRemaining();
 
-        // 1. Desktop Cart
+        // 1. Desktop Cart pane updates
         const cartContainer = document.getElementById('cart-rows-container');
         const cartEmptyPlaceholder = document.getElementById('cart-empty-placeholder');
         const clearCartBtn = document.getElementById('btn-clear-cart');
         const continueBtn = document.getElementById('btn-continue-step3');
 
-        // Clean dynamic rows
         cartContainer.querySelectorAll('.stoqui-cart-row-item').forEach(e => e.remove());
 
         if (localCart.length === 0) {
@@ -1050,7 +1284,7 @@
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 10px;">
                             <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
-                            <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple);">Confirmar</button>
+                            <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
                         </div>
                     </div>
                     ` : `
@@ -1067,7 +1301,71 @@
             });
         }
 
-        // 2. Cliente represent
+        // 2. Mobile Cart updates (Step 2 list)
+        const mobileContainer = document.getElementById('mobile-cart-items-list');
+        mobileContainer.innerHTML = '';
+        localCart.forEach(item => {
+            const card = document.createElement('div');
+            card.style.background = '#ffffff';
+            card.style.border = '1px solid var(--border-color)';
+            card.style.borderRadius = '12px';
+            card.style.padding = '16px';
+            card.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 1.5rem;">📦</span>
+                        <div>
+                            <h4 style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">${item.name}</h4>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 18px; height: 18px;"></i></button>
+                        <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 18px; height: 18px;"></i></button>
+                    </div>
+                </div>
+
+                ${item.isEditing ? `
+                <div class="cart-inline-edit">
+                    <div style="display: flex; gap: 10px;">
+                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                            <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
+                            <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
+                        </div>
+                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                            <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
+                            <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
+                        <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
+                    </div>
+                </div>
+                ` : `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.88rem;">
+                    <div class="cart-item-qty">
+                        <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', -1)">-</button>
+                        <span style="font-weight: 700; min-width: 20px; text-align: center;">${item.quantity}</span>
+                        <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', 1)">+</button>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-size: 0.78rem; color: var(--text-secondary);">× R$ ${item.price.toFixed(2)}</span>
+                        <div style="font-weight: 800; color: var(--stoqui-purple); font-size: 1.05rem;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.72rem; color: #64748b; margin-top: 6px; font-weight: 600;">
+                    ${item.stock} em estoque
+                </div>
+                `}
+            `;
+            mobileContainer.appendChild(card);
+        });
+
+        // Mobile bottom totalizer bar text
+        document.getElementById('mobile-bottom-qty').innerText = `${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'} · Total`;
+        document.getElementById('mobile-bottom-total').innerText = `R$ ${sub.toFixed(2)}`;
+
+        // 3. Cliente representation
         if (selectedCustomer) {
             const initials = selectedCustomer.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
             document.getElementById('sel-cust-avatar').innerText = initials;
@@ -1079,7 +1377,7 @@
             document.getElementById('sel-cust-name-step4').innerText = selectedCustomer.name;
         }
 
-        // 3. Step 4 Summary Totals
+        // 4. Step 4 Summary Totals
         if (currentStep === 4) {
             const summaryBox = document.getElementById('delivery-summary-box');
             if (deliveryType === 'pickup') {
@@ -1136,8 +1434,8 @@
             `;
         }
 
-        // 4. Step 5 Pagamentos split representation
-        if (currentStep === 5) {
+        // 5. Step 5 Pagamentos split updates
+        if (currentStep === 5 || currentStep === 5.1 || currentStep === 5.2) {
             document.getElementById('step-5-total-val').innerText = `R$ ${total.toFixed(2)}`;
 
             const splitList = document.getElementById('split-payments-list');
@@ -1164,7 +1462,7 @@
                 splitList.appendChild(card);
             });
 
-            // Action area based on remaining balance
+            // Action area calculations
             const actionArea = document.getElementById('split-payments-action-area');
             if (balance > 0.01) {
                 actionArea.innerHTML = `
@@ -1193,17 +1491,20 @@
         lucide.createIcons();
     }
 
-    // Modal helpers
+    // Modal customer search list pre-fill
     const originalOpenModal = openModal;
     openModal = function(id) {
         if (id === 'select-customer-modal') {
             document.getElementById('customer-modal-search').value = '';
             renderCustomerList(customers);
+        } else if (id === 'catalog-picker-modal') {
+            document.getElementById('catalog-modal-search').value = '';
+            renderModalCatalogGrid(products);
         }
         originalOpenModal(id);
     };
 
-    // Save CEP address query details
+    // Address CEP pre-fill
     async function onCepQuery(cep) {
         const val = cep.trim().replace(/\D/g, '');
         if (val.length === 8) {
@@ -1247,6 +1548,22 @@
         document.getElementById('new-cust-email').value = '';
         document.getElementById('new-cust-cep').value = '';
         document.getElementById('new-cust-street').value = '';
+    }
+
+    function onAdjustQty(id, delta) {
+        const item = localCart.find(i => i.id === id);
+        if (!item) return;
+
+        item.quantity += delta;
+        if (item.quantity > item.stock) {
+            showToast('Quantidade em estoque excedida!', 'error');
+            item.quantity = item.stock;
+        }
+        if (item.quantity <= 0) {
+            removeCartItem(id);
+            return;
+        }
+        updateWizardDOMs();
     }
 </script>
 {% endblock %}
