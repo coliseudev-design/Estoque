@@ -93,11 +93,15 @@
             <i data-lucide="shopping-cart"></i>
             <span>Vender</span>
         </a>
+        <a href="/performance" class="mobile-nav-item {% if active_page == 'performance' %}active{% endif %}">
+            <i data-lucide="bar-chart-3"></i>
+            <span>Dashboard</span>
+        </a>
         <a href="/orders" class="mobile-nav-item {% if active_page == 'orders' %}active{% endif %}">
             <i data-lucide="history"></i>
             <span>Pedidos</span>
         </a>
-        <a href="/settings" class="mobile-nav-item {% if active_page in ['settings', 'sync', 'performance'] %}active{% endif %}">
+        <a href="/settings" class="mobile-nav-item {% if active_page in ['settings', 'sync'] %}active{% endif %}">
             <i data-lucide="menu"></i>
             <span>Mais</span>
         </a>

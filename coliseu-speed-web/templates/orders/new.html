@@ -297,6 +297,11 @@
         gap: 8px;
         z-index: 99;
     }
+    @media (max-width: 768px) {
+        .mobile-bottom-bar {
+            bottom: 60px !important;
+        }
+    }
 
     /* Dynamic Payments Method Grid - Stoqui Style */
     .stoqui-payment-methods-grid {
@@ -484,7 +489,7 @@
             </div>
 
             <!-- List of cards items -->
-            <div id="mobile-cart-items-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 100px;"></div>
+            <div id="mobile-cart-items-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 180px;"></div>
 
             <!-- Floating plus button -->
             <button type="button" class="float-add-btn" onclick="posOpenModal('catalog-picker-modal')">
