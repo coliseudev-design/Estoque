@@ -754,20 +754,16 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0,0,0,0.5);
-    backdrop-filter: blur(4px);
-    display: flex;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(5px);
+    display: none; /* Hide by default */
     align-items: center;
     justify-content: center;
-    z-index: 1000;
-    opacity: 0;
-    pointer-events: none;
-    transition: var(--transition);
+    z-index: 2100 !important; /* Always on top of everything including sidebar */
 }
 
 .modal-overlay.open {
-    opacity: 1;
-    pointer-events: auto;
+    display: flex !important; /* Show when open */
 }
 
 .modal-content {
@@ -779,14 +775,14 @@ body {
     border-radius: 12px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    transform: scale(0.9);
-    transition: transform var(--transition-duration, 300ms) var(--transition-timing, ease-in-out);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
     overflow: hidden;
+    animation: stoquiModalPopup 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.modal-overlay.open .modal-content {
-    transform: scale(1);
+@keyframes stoquiModalPopup {
+    from { transform: scale(0.92); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 
 /* Mobile Navigation Bar */
@@ -897,6 +893,10 @@ body {
 
 /* Responsividade Geral para Celulares (iPhone e outros) */
 @media (max-width: 768px) {
+    html, body {
+        height: 100dvh !important;
+        overflow: hidden !important;
+    }
     body {
         display: block !important;
     }
@@ -939,7 +939,10 @@ body {
     }
     .main-wrapper {
         margin-left: 0 !important;
-        padding-bottom: 75px; /* Evita que o conteúdo seja cortado pelo menu inferior */
+        height: calc(100dvh - 60px) !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 20px !important;
     }
     .main-header {
         padding: 12px 16px;
