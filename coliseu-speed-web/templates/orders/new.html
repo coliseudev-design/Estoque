@@ -4,6 +4,25 @@
 
 {% block content %}
 <style>
+    /* Hide base.html sidebar and header to make the PDV full screen */
+    .sidebar {
+        display: none !important;
+    }
+    .main-header {
+        display: none !important;
+    }
+    .main-wrapper {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    .main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
     /* Stoqui Design Tokens */
     :root {
         --stoqui-purple: #7C3AED;
@@ -303,10 +322,10 @@
     </div>
 
     <!-- WIZARD AREA (Steps 3 to 7 on Desktop, Steps 1 to 7 on Mobile) -->
-    <div id="pane-single-checkout" class="stoqui-wizard-body">
+    <div id="pane-single-checkout" class="stoqui-wizard-body" style="display: none;">
         
         <!-- ETAPA 1: PRODUTOS (MOBILE ONLY - Carrinho Vazio) -->
-        <section id="step-1" class="mobile-only step-container">
+        <section id="step-1" class="mobile-only step-container" style="display: none;">
             <div style="margin-bottom: 24px;">
                 <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">Produtos</h3>
             </div>
@@ -335,7 +354,7 @@
         </section>
 
         <!-- ETAPA 2: PRODUTOS (MOBILE ONLY - Com Itens no Carrinho) -->
-        <section id="step-2" class="mobile-only step-container">
+        <section id="step-2" class="mobile-only step-container" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">Produtos</h3>
                 <button type="button" onclick="clearCart()" class="btn btn-secondary btn-sm" style="color: var(--stoqui-purple); background: none; border: none; font-weight: 700; padding: 4px;">
@@ -364,7 +383,7 @@
         </section>
 
         <!-- ETAPA 3: CLIENTE + ENTREGA -->
-        <section id="step-3" class="step-container">
+        <section id="step-3" class="step-container" style="display: none;">
             <h3 style="font-size: 0.95rem; font-weight: 800; color: #334155; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
                 <i data-lucide="user" style="width: 16px; height: 16px;"></i> Cliente
             </h3>
@@ -410,7 +429,7 @@
         </section>
 
         <!-- ETAPA 4: RESUMO DETALHADO -->
-        <section id="step-4" class="step-container">
+        <section id="step-4" class="step-container" style="display: none;">
             <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="margin-bottom: 20px; border-radius: 8px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div id="sel-cust-avatar-step4" class="customer-avatar" style="background: var(--stoqui-purple);">👤</div>
@@ -448,7 +467,7 @@
         </section>
 
         <!-- ETAPA 5: PAGAMENTOS (Múltiplas Formas e Saldo) -->
-        <section id="step-5" class="step-container">
+        <section id="step-5" class="step-container" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
                 <span style="font-size: 1.1rem; font-weight: 700; color: #334155;">TOTAL A PAGAR:</span>
                 <span id="step-5-total-val" style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">R$ 0,00</span>
@@ -462,7 +481,7 @@
         </section>
 
         <!-- ETAPA 5.1: MÉTODOS DISPONÍVEIS LIST GRID -->
-        <section id="step-5-grid" class="step-container">
+        <section id="step-5-grid" class="step-container" style="display: none;">
             <h3 style="font-size: 0.95rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 16px;">
                 Adicionar pagamento
             </h3>
@@ -495,7 +514,7 @@
         </section>
 
         <!-- ETAPA 5.2: TECLADO DE VALOR RECEBIDO -->
-        <section id="step-5-keypad" class="step-container">
+        <section id="step-5-keypad" class="step-container" style="display: none;">
             <div style="text-align: center; margin-bottom: 24px;">
                 <span style="font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 800;">Valor Recebido</span>
                 <div style="font-size: 2.5rem; font-weight: 800; color: var(--stoqui-purple); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;">
@@ -527,7 +546,7 @@
         </section>
 
         <!-- ETAPA 7: SUCESSO -->
-        <section id="step-7" class="step-container" style="text-align: center;">
+        <section id="step-7" class="step-container" style="text-align: center; display: none;">
             <div class="checkmark-circle" style="background: rgba(34, 197, 94, 0.08); color: #22c55e;">✓</div>
             <h2 style="font-weight: 800; font-size: 1.5rem; color: var(--text-primary); margin-bottom: 6px;">Pagamento concluído!</h2>
             <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 30px;">O pagamento foi registrado com sucesso</p>
@@ -695,7 +714,7 @@
     ];
 
     // State properties
-    let currentStep = 1; // 1: empty/catalog, 2: cart lists, 3: cliente/entrega, 4: resumo, 5: pagamentos list, 5.1: pagamentos grid, 5.2: keypad input
+    let currentStep = 1; // 1: empty/catalog, 2: cart lists, 3: cliente/entrega, 4: resumo, 5: pagamentos list, 5.1: pagamentos grid, 5.2: keypad input, 7: sucesso
     let localCart = [];
     let selectedCustomer = null;
     let deliveryType = 'pickup';
@@ -744,6 +763,13 @@
         } else if (currentStep === 5.2) {
             setStep(5.1);
         }
+    }
+
+    // Dynamic step rendering utility to avoid element selection errors
+    function getStepElementId(step) {
+        if (step === 5.1) return 'step-5-grid';
+        if (step === 5.2) return 'step-5-keypad';
+        return 'step-' + Math.floor(step);
     }
 
     function setStep(step) {
@@ -795,7 +821,9 @@
             
             // Toggle sub-containers inside wizard
             document.querySelectorAll('.step-container').forEach(c => c.style.display = 'none');
-            document.getElementById('step-' + (step >= 5 ? step : Math.floor(step))).style.display = 'block';
+            const stepId = getStepElementId(step);
+            const stepEl = document.getElementById(stepId);
+            if (stepEl) stepEl.style.display = 'block';
         } else {
             // Desktop
             if (step === 1 || step === 2) {
@@ -806,7 +834,9 @@
                 singleLayout.style.display = 'block';
                 
                 document.querySelectorAll('.step-container').forEach(c => c.style.display = 'none');
-                document.getElementById('step-' + (step >= 5 ? step : Math.floor(step))).style.display = 'block';
+                const stepId = getStepElementId(step);
+                const stepEl = document.getElementById(stepId);
+                if (stepEl) stepEl.style.display = 'block';
             }
         }
 
@@ -1204,306 +1234,6 @@
         originalOpenModal(id);
     };
 
-    // ── Calculations ──
-    function getSubtotal() {
-        return localCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    }
-    function getTotal() {
-        const sub = getSubtotal();
-        let disc = discountAmount;
-        if (disc > sub) disc = sub;
-        return sub - disc + freightAmount + saleTaxAmount;
-    }
-    function getTotalPaid() {
-        return paymentsList.reduce((sum, p) => sum + p.amount, 0);
-    }
-    function getBalanceRemaining() {
-        return getTotal() - getTotalPaid();
-    }
-
-    // ── DOM update compiler ──
-    function updateWizardDOMs() {
-        const sub = getSubtotal();
-        const total = getTotal();
-        const paid = getTotalPaid();
-        const balance = getBalanceRemaining();
-
-        // 1. Desktop Cart pane updates
-        const cartContainer = document.getElementById('cart-rows-container');
-        const cartEmptyPlaceholder = document.getElementById('cart-empty-placeholder');
-        const clearCartBtn = document.getElementById('btn-clear-cart');
-        const continueBtn = document.getElementById('btn-continue-step3');
-
-        cartContainer.querySelectorAll('.stoqui-cart-row-item').forEach(e => e.remove());
-
-        if (localCart.length === 0) {
-            cartEmptyPlaceholder.style.display = 'block';
-            clearCartBtn.style.display = 'none';
-            continueBtn.disabled = true;
-            document.getElementById('cart-title-text').innerText = 'Carrinho (0 itens)';
-            document.getElementById('cart-total-val').innerText = 'R$ 0';
-        } else {
-            cartEmptyPlaceholder.style.display = 'none';
-            clearCartBtn.style.display = 'block';
-            continueBtn.disabled = false;
-            document.getElementById('cart-title-text').innerText = `Carrinho (${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'})`;
-            document.getElementById('cart-total-val').innerText = `R$ ${sub.toFixed(2)}`;
-
-            localCart.forEach(item => {
-                const row = document.createElement('div');
-                row.className = 'stoqui-cart-row-item';
-                row.style.background = '#ffffff';
-                row.style.border = '1px solid var(--border-color)';
-                row.style.borderRadius = '8px';
-                row.style.padding = '12px';
-                row.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span>📦</span>
-                            <div>
-                                <h4 style="font-weight: 700; font-size: 0.9rem; color: #0f172a;">${item.name}</h4>
-                            </div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 16px; height: 16px;"></i></button>
-                            <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
-                        </div>
-                    </div>
-                    
-                    ${item.isEditing ? `
-                    <div class="cart-inline-edit">
-                        <div style="display: flex; gap: 10px;">
-                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
-                                <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
-                            </div>
-                            <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
-                                <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
-                            </div>
-                        </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                            <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
-                            <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
-                        </div>
-                    </div>
-                    ` : `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.85rem;">
-                        <span style="color: var(--text-secondary); font-weight: 600;">${item.quantity} × R$ ${item.price.toFixed(2)}</span>
-                        <span style="font-weight: 800; color: #0f172a;">R$ ${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px; font-weight: 600;">
-                        ${item.stock} em estoque
-                    </div>
-                    `}
-                `;
-                cartContainer.appendChild(row);
-            });
-        }
-
-        // 2. Mobile Cart updates (Step 2 list)
-        const mobileContainer = document.getElementById('mobile-cart-items-list');
-        mobileContainer.innerHTML = '';
-        localCart.forEach(item => {
-            const card = document.createElement('div');
-            card.style.background = '#ffffff';
-            card.style.border = '1px solid var(--border-color)';
-            card.style.borderRadius = '12px';
-            card.style.padding = '16px';
-            card.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 1.5rem;">📦</span>
-                        <div>
-                            <h4 style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">${item.name}</h4>
-                        </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 18px; height: 18px;"></i></button>
-                        <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 18px; height: 18px;"></i></button>
-                    </div>
-                </div>
-
-                ${item.isEditing ? `
-                <div class="cart-inline-edit">
-                    <div style="display: flex; gap: 10px;">
-                        <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                            <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
-                            <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
-                        </div>
-                        <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                            <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
-                            <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
-                        </div>
-                    </div>
-                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                        <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
-                        <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
-                    </div>
-                </div>
-                ` : `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.88rem;">
-                    <div class="cart-item-qty">
-                        <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', -1)">-</button>
-                        <span style="font-weight: 700; min-width: 20px; text-align: center;">${item.quantity}</span>
-                        <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', 1)">+</button>
-                    </div>
-                    <div style="text-align: right;">
-                        <span style="font-size: 0.78rem; color: var(--text-secondary);">× R$ ${item.price.toFixed(2)}</span>
-                        <div style="font-weight: 800; color: var(--stoqui-purple); font-size: 1.05rem;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
-                    </div>
-                </div>
-                <div style="font-size: 0.72rem; color: #64748b; margin-top: 6px; font-weight: 600;">
-                    ${item.stock} em estoque
-                </div>
-                `}
-            `;
-            mobileContainer.appendChild(card);
-        });
-
-        // Mobile bottom totalizer bar text
-        document.getElementById('mobile-bottom-qty').innerText = `${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'} · Total`;
-        document.getElementById('mobile-bottom-total').innerText = `R$ ${sub.toFixed(2)}`;
-
-        // 3. Cliente representation
-        if (selectedCustomer) {
-            const initials = selectedCustomer.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-            document.getElementById('sel-cust-avatar').innerText = initials;
-            document.getElementById('sel-cust-name').innerText = selectedCustomer.name;
-            document.getElementById('sel-cust-subtitle').innerText = `CNPJ/CPF: ${selectedCustomer.cnpj}`;
-            
-            // Step 4 mirroring
-            document.getElementById('sel-cust-avatar-step4').innerText = initials;
-            document.getElementById('sel-cust-name-step4').innerText = selectedCustomer.name;
-        }
-
-        // 4. Step 4 Summary Totals
-        if (currentStep === 4) {
-            const summaryBox = document.getElementById('delivery-summary-box');
-            if (deliveryType === 'pickup') {
-                summaryBox.innerHTML = `
-                    <span style="color: var(--stoqui-purple);">🏪</span>
-                    <span>✓ Retirada no local (Cliente retira na loja)</span>
-                `;
-            } else {
-                summaryBox.innerHTML = `
-                    <span style="color: var(--stoqui-purple);">🚚</span>
-                    <span>✓ Entrega (Entregamos no endereço: ${document.getElementById('delivery-address-input').value || 'Av. Paulista, 1000'})</span>
-                `;
-            }
-
-            const finList = document.getElementById('financial-summary-list');
-            finList.innerHTML = `
-                ${localCart.map(i => `
-                <div class="table-card-row" style="margin-bottom: 8px; font-size: 0.9rem;">
-                    <span>${i.quantity}x ${i.name}</span>
-                    <span>R$ ${(i.price * i.quantity).toFixed(2)}</span>
-                </div>
-                `).join('')}
-
-                <div class="table-card-row" style="border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px; font-size: 0.88rem; color: var(--text-secondary);">
-                    <span>Subtotal</span>
-                    <span>R$ ${sub.toFixed(2)}</span>
-                </div>
-                
-                <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
-                    <span style="display: flex; align-items: center; gap: 4px;">
-                        Frete <button type="button" onclick="openEditValuePopover('freight', 'Editar Valor do Frete', ${freightAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
-                    </span>
-                    <span>R$ ${freightAmount.toFixed(2)}</span>
-                </div>
-
-                <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
-                    <span style="display: flex; align-items: center; gap: 4px;">
-                        Taxa de venda <button type="button" onclick="openEditValuePopover('tax', 'Editar Taxa de Venda', ${saleTaxAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
-                    </span>
-                    <span>R$ ${saleTaxAmount.toFixed(2)}</span>
-                </div>
-
-                <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
-                    <span style="display: flex; align-items: center; gap: 4px;">
-                        Desconto <button type="button" onclick="openEditValuePopover('discount', 'Editar Desconto do Pedido', ${discountAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
-                    </span>
-                    <span style="color: var(--danger); font-weight: 700;">- R$ ${discountAmount.toFixed(2)}</span>
-                </div>
-
-                <div class="table-card-row" style="border-top: 2px solid var(--stoqui-purple); padding-top: 10px; margin-top: 10px; font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">
-                    <span>Total</span>
-                    <span style="color: var(--stoqui-purple);">R$ ${total.toFixed(2)}</span>
-                </div>
-            `;
-        }
-
-        // 5. Step 5 Pagamentos split updates
-        if (currentStep === 5 || currentStep === 5.1 || currentStep === 5.2) {
-            document.getElementById('step-5-total-val').innerText = `R$ ${total.toFixed(2)}`;
-
-            const splitList = document.getElementById('split-payments-list');
-            splitList.innerHTML = '';
-            paymentsList.forEach((p, idx) => {
-                const card = document.createElement('div');
-                card.style.background = '#ffffff';
-                card.style.border = '1px solid var(--border-color)';
-                card.style.borderRadius = '8px';
-                card.style.padding = '12px 16px';
-                card.style.display = 'flex';
-                card.style.justifyContent = 'space-between';
-                card.style.alignItems = 'center';
-                card.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="color: var(--stoqui-purple);">💵</span>
-                        <span style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${p.method}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span style="font-weight: 800; color: #0f172a;">R$ ${p.amount.toFixed(2)}</span>
-                        <button type="button" onclick="removePaymentItem(${idx})" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 4px;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
-                    </div>
-                `;
-                splitList.appendChild(card);
-            });
-
-            // Action area calculations
-            const actionArea = document.getElementById('split-payments-action-area');
-            if (balance > 0.01) {
-                actionArea.innerHTML = `
-                    <button type="button" onclick="advanceStep(5.1)" class="btn-stoqui" style="background: none; border: 2px dashed var(--stoqui-purple); color: var(--stoqui-purple); box-shadow: none; margin-bottom: 20px;">
-                        <i data-lucide="plus" style="width: 18px; height: 18px;"></i> <span>Adicionar pagamento</span>
-                    </button>
-                    
-                    <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; color: var(--danger); font-weight: 700; font-size: 0.9rem; margin-bottom: 20px;">
-                        <span>Faltam:</span>
-                        <span>R$ ${balance.toFixed(2)}</span>
-                    </div>
-
-                    <button type="button" class="btn-stoqui" disabled style="background: #e2e8f0; color: #94a3b8; box-shadow: none;">
-                        <span>Faltam R$ ${balance.toFixed(2)}</span>
-                    </button>
-                `;
-            } else {
-                actionArea.innerHTML = `
-                    <button type="button" id="btn-concluir-order" onclick="onConcluirCheckout()" class="btn-stoqui">
-                        <span>Concluir R$ ${total.toFixed(2)}</span>
-                    </button>
-                `;
-            }
-        }
-
-        lucide.createIcons();
-    }
-
-    // Modal customer search list pre-fill
-    const originalOpenModal = openModal;
-    openModal = function(id) {
-        if (id === 'select-customer-modal') {
-            document.getElementById('customer-modal-search').value = '';
-            renderCustomerList(customers);
-        } else if (id === 'catalog-picker-modal') {
-            document.getElementById('catalog-modal-search').value = '';
-            renderModalCatalogGrid(products);
-        }
-        originalOpenModal(id);
-    };
-
     // Address CEP pre-fill
     async function onCepQuery(cep) {
         const val = cep.trim().replace(/\D/g, '');
@@ -1564,6 +1294,374 @@
             return;
         }
         updateWizardDOMs();
+    }
+
+    // ── Calculations ──
+    function getSubtotal() {
+        return localCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    }
+    function getTotal() {
+        const sub = getSubtotal();
+        let disc = discountAmount;
+        if (disc > sub) disc = sub;
+        return sub - disc + freightAmount + saleTaxAmount;
+    }
+    function getTotalPaid() {
+        return paymentsList.reduce((sum, p) => sum + p.amount, 0);
+    }
+    function getBalanceRemaining() {
+        return getTotal() - getTotalPaid();
+    }
+
+    // ── DOM update compiler ──
+    function updateWizardDOMs() {
+        const sub = getSubtotal();
+        const total = getTotal();
+        const paid = getTotalPaid();
+        const balance = getBalanceRemaining();
+
+        // 1. Desktop Cart pane updates
+        const cartContainer = document.getElementById('cart-rows-container');
+        const cartEmptyPlaceholder = document.getElementById('cart-empty-placeholder');
+        const clearCartBtn = document.getElementById('btn-clear-cart');
+        const continueBtn = document.getElementById('btn-continue-step3');
+
+        cartContainer.querySelectorAll('.stoqui-cart-row-item').forEach(e => e.remove());
+
+        if (localCart.length === 0) {
+            if (cartEmptyPlaceholder) cartEmptyPlaceholder.style.display = 'block';
+            if (clearCartBtn) clearCartBtn.style.display = 'none';
+            if (continueBtn) continueBtn.disabled = true;
+            document.getElementById('cart-title-text').innerText = 'Carrinho (0 itens)';
+            document.getElementById('cart-total-val').innerText = 'R$ 0';
+        } else {
+            if (cartEmptyPlaceholder) cartEmptyPlaceholder.style.display = 'none';
+            if (clearCartBtn) clearCartBtn.style.display = 'block';
+            if (continueBtn) continueBtn.disabled = false;
+            document.getElementById('cart-title-text').innerText = `Carrinho (${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'})`;
+            document.getElementById('cart-total-val').innerText = `R$ ${sub.toFixed(2)}`;
+
+            localCart.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'stoqui-cart-row-item';
+                row.style.background = '#ffffff';
+                row.style.border = '1px solid var(--border-color)';
+                row.style.borderRadius = '8px';
+                row.style.padding = '12px';
+                row.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>📦</span>
+                            <div>
+                                <h4 style="font-weight: 700; font-size: 0.9rem; color: #0f172a;">${item.name}</h4>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 16px; height: 16px;"></i></button>
+                            <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
+                        </div>
+                    </div>
+                    
+                    ${item.isEditing ? `
+                    <div class="cart-inline-edit">
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
+                                <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
+                            </div>
+                            <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
+                                <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
+                            <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
+                        </div>
+                    </div>
+                    ` : `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.85rem;">
+                        <span style="color: var(--text-secondary); font-weight: 600;">${item.quantity} × R$ ${item.price.toFixed(2)}</span>
+                        <span style="font-weight: 800; color: #0f172a;">R$ ${(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px; font-weight: 600;">
+                        ${item.stock} em estoque
+                    </div>
+                    `}
+                `;
+                cartContainer.appendChild(row);
+            });
+        }
+
+        // 2. Mobile Cart updates (Step 2 list)
+        const mobileContainer = document.getElementById('mobile-cart-items-list');
+        if (mobileContainer) {
+            mobileContainer.innerHTML = '';
+            localCart.forEach(item => {
+                const card = document.createElement('div');
+                card.style.background = '#ffffff';
+                card.style.border = '1px solid var(--border-color)';
+                card.style.borderRadius = '12px';
+                card.style.padding = '16px';
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 1.5rem;">📦</span>
+                            <div>
+                                <h4 style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">${item.name}</h4>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 18px; height: 18px;"></i></button>
+                            <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 18px; height: 18px;"></i></button>
+                        </div>
+                    </div>
+    
+                    ${item.isEditing ? `
+                    <div class="cart-inline-edit">
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
+                                <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
+                            </div>
+                            <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
+                                <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
+                            <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
+                        </div>
+                    </div>
+                    ` : `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.88rem;">
+                        <div class="cart-item-qty">
+                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', -1)">-</button>
+                            <span style="font-weight: 700; min-width: 20px; text-align: center;">${item.quantity}</span>
+                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', 1)">+</button>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="font-size: 0.78rem; color: var(--text-secondary);">× R$ ${item.price.toFixed(2)}</span>
+                            <div style="font-weight: 800; color: var(--stoqui-purple); font-size: 1.05rem;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 6px; font-weight: 600;">
+                        ${item.stock} em estoque
+                    </div>
+                    `}
+            `;
+                mobileContainer.appendChild(card);
+            });
+        }
+
+        // Mobile bottom totalizer bar text
+        const mobileBottomQty = document.getElementById('mobile-bottom-qty');
+        if (mobileBottomQty) mobileBottomQty.innerText = `${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'} · Total`;
+        
+        const mobileBottomTotal = document.getElementById('mobile-bottom-total');
+        if (mobileBottomTotal) mobileBottomTotal.innerText = `R$ ${sub.toFixed(2)}`;
+
+        // 3. Cliente representation
+        if (selectedCustomer) {
+            const initials = selectedCustomer.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+            const avatarEl = document.getElementById('sel-cust-avatar');
+            if (avatarEl) avatarEl.innerText = initials;
+            
+            const nameEl = document.getElementById('sel-cust-name');
+            if (nameEl) nameEl.innerText = selectedCustomer.name;
+            
+            const subtitleEl = document.getElementById('sel-cust-subtitle');
+            if (subtitleEl) subtitleEl.innerText = `CNPJ/CPF: ${selectedCustomer.cnpj}`;
+            
+            // Step 4 mirroring
+            const avatar4 = document.getElementById('sel-cust-avatar-step4');
+            if (avatar4) avatar4.innerText = initials;
+            
+            const name4 = document.getElementById('sel-cust-name-step4');
+            if (name4) name4.innerText = selectedCustomer.name;
+        }
+
+        // 4. Step 4 Summary Totals
+        if (currentStep === 4) {
+            const summaryBox = document.getElementById('delivery-summary-box');
+            if (summaryBox) {
+                if (deliveryType === 'pickup') {
+                    summaryBox.innerHTML = `
+                        <span style="color: var(--stoqui-purple);">🏪</span>
+                        <span>✓ Retirada no local (Cliente retira na loja)</span>
+                    `;
+                } else {
+                    summaryBox.innerHTML = `
+                        <span style="color: var(--stoqui-purple);">🚚</span>
+                        <span>✓ Entrega (Entregamos no endereço: ${document.getElementById('delivery-address-input').value || 'Av. Paulista, 1000'})</span>
+                    `;
+                }
+            }
+
+            const finList = document.getElementById('financial-summary-list');
+            if (finList) {
+                finList.innerHTML = `
+                    ${localCart.map(i => `
+                    <div class="table-card-row" style="margin-bottom: 8px; font-size: 0.9rem;">
+                        <span>${i.quantity}x ${i.name}</span>
+                        <span>R$ ${(i.price * i.quantity).toFixed(2)}</span>
+                    </div>
+                    `).join('')}
+    
+                    <div class="table-card-row" style="border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 10px; font-size: 0.88rem; color: var(--text-secondary);">
+                        <span>Subtotal</span>
+                        <span>R$ ${sub.toFixed(2)}</span>
+                    </div>
+                    
+                    <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
+                        <span style="display: flex; align-items: center; gap: 4px;">
+                            Frete <button type="button" onclick="openEditValuePopover('freight', 'Editar Valor do Frete', ${freightAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                        </span>
+                        <span>R$ ${freightAmount.toFixed(2)}</span>
+                    </div>
+    
+                    <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
+                        <span style="display: flex; align-items: center; gap: 4px;">
+                            Taxa de venda <button type="button" onclick="openEditValuePopover('tax', 'Editar Taxa de Venda', ${saleTaxAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                        </span>
+                        <span>R$ ${saleTaxAmount.toFixed(2)}</span>
+                    </div>
+    
+                    <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
+                        <span style="display: flex; align-items: center; gap: 4px;">
+                            Desconto <button type="button" onclick="openEditValuePopover('discount', 'Editar Desconto do Pedido', ${discountAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                        </span>
+                        <span style="color: var(--danger); font-weight: 700;">- R$ ${discountAmount.toFixed(2)}</span>
+                    </div>
+    
+                    <div class="table-card-row" style="border-top: 2px solid var(--stoqui-purple); padding-top: 10px; margin-top: 10px; font-size: 1.2rem; font-weight: 800; color: var(--text-primary);">
+                        <span>Total</span>
+                        <span style="color: var(--stoqui-purple);">R$ ${total.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+        }
+
+        // 5. Step 5 Pagamentos split updates
+        if (currentStep === 5 || currentStep === 5.1 || currentStep === 5.2) {
+            const step5Val = document.getElementById('step-5-total-val');
+            if (step5Val) step5Val.innerText = `R$ ${total.toFixed(2)}`;
+
+            const splitList = document.getElementById('split-payments-list');
+            if (splitList) {
+                splitList.innerHTML = '';
+                paymentsList.forEach((p, idx) => {
+                    const card = document.createElement('div');
+                    card.style.background = '#ffffff';
+                    card.style.border = '1px solid var(--border-color)';
+                    card.style.borderRadius = '8px';
+                    card.style.padding = '12px 16px';
+                    card.style.display = 'flex';
+                    card.style.justifyContent = 'space-between';
+                    card.style.alignItems = 'center';
+                    card.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: var(--stoqui-purple);">💵</span>
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 0.9rem;">${p.method}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span style="font-weight: 800; color: #0f172a;">R$ ${p.amount.toFixed(2)}</span>
+                            <button type="button" onclick="removePaymentItem(${idx})" style="border: none; background: none; color: var(--danger); cursor: pointer; padding: 4px;"><i data-lucide="x" style="width: 16px; height: 16px;"></i></button>
+                        </div>
+                    `;
+                    splitList.appendChild(card);
+                });
+            }
+
+            // Action area calculations
+            const actionArea = document.getElementById('split-payments-action-area');
+            if (actionArea) {
+                if (balance > 0.01) {
+                    actionArea.innerHTML = `
+                        <button type="button" onclick="advanceStep(5.1)" class="btn-stoqui" style="background: none; border: 2px dashed var(--stoqui-purple); color: var(--stoqui-purple); box-shadow: none; margin-bottom: 20px;">
+                            <i data-lucide="plus" style="width: 18px; height: 18px;"></i> <span>Adicionar pagamento</span>
+                        </button>
+                        
+                        <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 8px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; color: var(--danger); font-weight: 700; font-size: 0.9rem; margin-bottom: 20px;">
+                            <span>Faltam:</span>
+                            <span>R$ ${balance.toFixed(2)}</span>
+                        </div>
+    
+                        <button type="button" class="btn-stoqui" disabled style="background: #e2e8f0; color: #94a3b8; box-shadow: none;">
+                            <span>Faltam R$ ${balance.toFixed(2)}</span>
+                        </button>
+                    `;
+                } else {
+                    actionArea.innerHTML = `
+                        <button type="button" id="btn-concluir-order" onclick="onConcluirCheckout()" class="btn-stoqui">
+                            <span>Concluir R$ ${total.toFixed(2)}</span>
+                        </button>
+                    `;
+                }
+            }
+        }
+
+        lucide.createIcons();
+    }
+
+    // Modal helpers
+    const originalOpenModal = openModal;
+    openModal = function(id) {
+        if (id === 'select-customer-modal') {
+            document.getElementById('customer-modal-search').value = '';
+            renderCustomerList(customers);
+        } else if (id === 'catalog-picker-modal') {
+            document.getElementById('catalog-modal-search').value = '';
+            renderModalCatalogGrid(products);
+        }
+        originalOpenModal(id);
+    };
+
+    // Address CEP pre-fill
+    async function onCepQuery(cep) {
+        const val = cep.trim().replace(/\D/g, '');
+        if (val.length === 8) {
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${val}/json/`);
+                const data = await res.json();
+                if (!data.erro) {
+                    document.getElementById('new-cust-street').value = `${data.logradouro}, ${data.bairro} - ${data.localidade}/${data.uf}`;
+                } else {
+                    showToast('CEP não encontrado.', 'error');
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+    }
+
+    function onSaveNewCustomer(e) {
+        e.preventDefault();
+        const newCust = {
+            id: 'temp-' + Date.now(),
+            name: document.getElementById('new-cust-name').value.trim(),
+            cnpj: document.getElementById('new-cust-doc').value.trim(),
+            phone: document.getElementById('new-cust-phone').value.trim(),
+            email: document.getElementById('new-cust-email').value.trim() || 'contato@empresa.com',
+            address: document.getElementById('new-cust-street').value.trim() || 'Av. Paulista, 1000 - São Paulo/SP',
+            credit_limit: 5000.0,
+            credit_available: 5000.0,
+            status: 'liberado'
+        };
+
+        customers.push(newCust);
+        selectCustomer(newCust);
+        closeModal('new-customer-modal');
+        showToast('Cliente cadastrado e selecionado com sucesso!');
+
+        // Reset fields
+        document.getElementById('new-cust-name').value = '';
+        document.getElementById('new-cust-doc').value = '';
+        document.getElementById('new-cust-phone').value = '';
+        document.getElementById('new-cust-email').value = '';
+        document.getElementById('new-cust-cep').value = '';
+        document.getElementById('new-cust-street').value = '';
     }
 </script>
 {% endblock %}
