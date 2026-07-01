@@ -14,8 +14,10 @@ async def customers_view(request: Request):
         
     rep_name = request.cookies.get("rep_name")
     branch_name = request.cookies.get("rep_branch_name")
+    branch_id = request.cookies.get("rep_branch_id")
+    seller_id = request.cookies.get("rep_seller_id")
     
-    customers = await api_client.get_customers()
+    customers = await api_client.get_customers(token=token, seller_id=seller_id, branch_id=branch_id)
     return templates.TemplateResponse("customers/list.html", {
         "request": request,
         "customers": customers,

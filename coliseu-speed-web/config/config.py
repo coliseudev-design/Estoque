@@ -8,6 +8,9 @@ class Settings(BaseSettings):
     MIDDLEWARE_URL: str = os.getenv("MIDDLEWARE_URL", "http://speed-middleware:3000")
     ADMIN_PANEL_URL: str = os.getenv("ADMIN_PANEL_URL", "http://admin-panel:8000")
     
+    # API Key for middleware authentication
+    API_KEY: str = os.getenv("API_KEY", "")
+    
     # Target Tenant Configuration
     COMPANY_ID: str = os.getenv("COMPANY_ID", "a822a7e7-fdd4-4483-bbb5-26587a72739f")
     

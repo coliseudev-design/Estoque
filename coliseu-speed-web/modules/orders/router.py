@@ -32,8 +32,10 @@ async def list_orders(request: Request):
         
     rep_name = request.cookies.get("rep_name")
     branch_name = request.cookies.get("rep_branch_name")
+    branch_id = request.cookies.get("rep_branch_id")
+    seller_id = request.cookies.get("rep_seller_id")
     
-    orders = await api_client.get_orders()
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
     return templates.TemplateResponse("orders/list.html", {
         "request": request,
         "orders": orders,
@@ -50,9 +52,11 @@ async def new_order_view(request: Request):
         
     rep_name = request.cookies.get("rep_name")
     branch_name = request.cookies.get("rep_branch_name")
+    branch_id = request.cookies.get("rep_branch_id")
+    seller_id = request.cookies.get("rep_seller_id")
     
-    products = await api_client.get_products()
-    customers = await api_client.get_customers()
+    products = await api_client.get_products(token=token, branch_id=branch_id)
+    customers = await api_client.get_customers(token=token, seller_id=seller_id, branch_id=branch_id)
     
     return templates.TemplateResponse("orders/new.html", {
         "request": request,
@@ -64,13 +68,22 @@ async def new_order_view(request: Request):
     })
 
 @router.post("/api/orders/new")
-async def api_create_order(payload: OrderCreateSchema):
+async def api_create_order(request: Request, payload: OrderCreateSchema):
+    token = request.cookies.get("rep_token")
+    seller_id = request.cookies.get("rep_seller_id")
+    seller_name = request.cookies.get("rep_name")
+    branch_id = request.cookies.get("rep_branch_id")
+    
     # Call middleware API to insert order
     res = await api_client.create_order(
+        token=token,
         customer_id=payload.customer_id,
         status=payload.status,
         payment_condition=payload.payment_condition,
-        items=[item.dict() for item in payload.items]
+        items=[item.dict() for item in payload.items],
+        seller_id=seller_id,
+        seller_name=seller_name,
+        branch_id=branch_id
     )
     if not res.get("success", False):
         raise HTTPException(status_code=400, detail=res.get("detail", "Erro desconhecido faturamento."))
@@ -84,10 +97,12 @@ async def view_order(id: str, request: Request):
         
     rep_name = request.cookies.get("rep_name")
     branch_name = request.cookies.get("rep_branch_name")
+    branch_id = request.cookies.get("rep_branch_id")
+    seller_id = request.cookies.get("rep_seller_id")
     
     # Query order from middleware database
-    orders = await api_client.get_orders()
-    order = next((o for o in orders if o["id"] == id), None)
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
         
@@ -108,9 +123,13 @@ async def view_order(id: str, request: Request):
 
 # Baixar PDF (servido como texto puro imitando um arquivo de PDF/Nota para teste)
 @router.get("/orders/{id}/pdf")
-async def download_order_pdf(id: str):
-    orders = await api_client.get_orders()
-    order = next((o for o in orders if o["id"] == id), None)
+async def download_order_pdf(id: str, request: Request):
+    token = request.cookies.get("rep_token")
+    branch_id = request.cookies.get("rep_branch_id")
+    seller_id = request.cookies.get("rep_seller_id")
+    
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
     invoice_text = generate_order_invoice_text(order)
@@ -118,9 +137,13 @@ async def download_order_pdf(id: str):
 
 # WhatsApp trigger link generator
 @router.get("/orders/{id}/share/whatsapp")
-async def share_whatsapp(id: str):
-    orders = await api_client.get_orders()
-    order = next((o for o in orders if o["id"] == id), None)
+async def share_whatsapp(id: str, request: Request):
+    token = request.cookies.get("rep_token")
+    branch_id = request.cookies.get("rep_branch_id")
+    seller_id = request.cookies.get("rep_seller_id")
+    
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
         
@@ -141,9 +164,13 @@ async def share_email(id: str):
 
 # Contract template mock generator
 @router.get("/orders/{id}/share/contract")
-async def share_contract(id: str):
-    orders = await api_client.get_orders()
-    order = next((o for o in orders if o["id"] == id), None)
+async def share_contract(id: str, request: Request):
+    token = request.cookies.get("rep_token")
+    branch_id = request.cookies.get("rep_branch_id")
+    seller_id = request.cookies.get("rep_seller_id")
+    
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
         
@@ -152,7 +179,7 @@ async def share_contract(id: str):
         CONTRATO DE COMPRA E VENDA COMERCIAL
 ==================================================
 Pelo presente instrumento, a empresa ColiseuSpeed Ltda
-vende à contratante {order['customer_name']} (CNPJ: {order['customer_cnpj']})
+vende à contratante {order['customer_name']}
 os itens especificados na fatura do Pedido #{id}
 pelo montante global de R$ {order['total_amount']:.2f}.
 --------------------------------------------------
@@ -163,9 +190,13 @@ Assinado digitalmente por ambas as partes.
 
 # Fiscal NF-e transmit simulation
 @router.get("/orders/{id}/share/fiscal")
-async def share_fiscal(id: str):
-    orders = await api_client.get_orders()
-    order = next((o for o in orders if o["id"] == id), None)
+async def share_fiscal(id: str, request: Request):
+    token = request.cookies.get("rep_token")
+    branch_id = request.cookies.get("rep_branch_id")
+    seller_id = request.cookies.get("rep_seller_id")
+    
+    orders = await api_client.get_orders(token=token, seller_id=seller_id, branch_id=branch_id)
+    order = next((o for o in orders if str(o["id"]) == id), None)
     if not order:
         raise HTTPException(status_code=404, detail="Pedido não encontrado")
         
@@ -173,8 +204,8 @@ async def share_fiscal(id: str):
 ==================================================
     NF-e TRANSMITIDA COM SUCESSO - SEFAZ SP
 ==================================================
-Chave de Acesso NF-e: 352606607011900001045500100000{id}1234567890
-Protocolo de Autorização: 135260000{id}99824
+Chave de Acesso NF-e: 352606607011900001045500100000{id[:10]}1234567890
+Protocolo de Autorização: 135260000{id[:10]}99824
 Data/Hora Processamento: 2026-06-30T15:50:00Z
 Status: 100 - Autorizado o uso da NF-e
 ==================================================

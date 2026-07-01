@@ -14,8 +14,10 @@ async def performance_view(request: Request):
         
     rep_name = request.cookies.get("rep_name")
     branch_name = request.cookies.get("rep_branch_name")
+    branch_id = request.cookies.get("rep_branch_id")
+    seller_id = request.cookies.get("rep_seller_id")
     
-    kpis = await api_client.get_performance_kpis()
+    kpis = await api_client.get_performance_kpis(token=token, seller_id=seller_id, branch_id=branch_id)
     return templates.TemplateResponse("performance/index.html", {
         "request": request,
         "kpis": kpis,

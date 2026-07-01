@@ -43,6 +43,7 @@ async def post_login(
     redirect = RedirectResponse(url="/select-branch", status_code=status.HTTP_303_SEE_OTHER)
     redirect.set_cookie("rep_token", auth_res["token"], httponly=True)
     redirect.set_cookie("rep_name", auth_res.get("rep_name", "Vendedor"), httponly=True)
+    redirect.set_cookie("rep_seller_id", auth_res.get("seller_id", ""), httponly=True)
     return redirect
 
 @router.get("/select-branch", response_class=HTMLResponse)

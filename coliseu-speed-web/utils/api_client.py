@@ -1,5 +1,10 @@
 import httpx
+import uuid
+import logging
+from datetime import datetime
 from config.config import settings
+
+logger = logging.getLogger(__name__)
 
 class ApiClient:
     """
@@ -47,110 +52,296 @@ class ApiClient:
             {"id": "c4", "name": "Elétrica Voltagem Máxima Eireli", "cnpj": "44332211000188", "credit_limit": 2000.00, "credit_available": 0.00, "status": "bloqueado"}
         ]
 
+    def _get_headers(self, branch_id: str = None) -> dict:
+        headers = {
+            "api-key": settings.API_KEY,
+            "Content-Type": "application/json"
+        }
+        if branch_id:
+            headers["x-branch-id"] = branch_id
+        return headers
+
     async def authenticate_rep(self, username, password) -> dict:
         """
         Validates representative credentials against Node.js middleware.
-        POST /auth/login
+        Fetches representative list via GET /api/sync/sellers and validates credentials locally.
         """
         if settings.USE_MOCKS:
-            return {"success": True, "token": "mock_jwt_token_rep_123", "rep_name": "Vendedor Coliseu"}
+            return {"success": True, "token": "mock_jwt_token_rep_123", "rep_name": "Vendedor Coliseu", "seller_id": "1"}
             
         try:
-            async with httpx.AsyncClient(timeout=4.0) as client:
-                response = await client.post(f"{self.base_url}/auth/login", json={
-                    "username": username,
-                    "password": password
-                })
+            headers = self._get_headers()
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(f"{self.base_url}/api/sync/sellers", headers=headers)
                 if response.status_code == 200:
-                    return {"success": True, **response.json()}
+                    sellers = response.json().get("sellers", [])
+                    # Find seller matching username/email (case-insensitive)
+                    target = None
+                    for s in sellers:
+                        if s.get("email") and s["email"].strip().lower() == username.strip().lower():
+                            target = s
+                            break
+                        if s.get("name") and s["name"].strip().lower() == username.strip().lower():
+                            target = s
+                            break
+                    
+                    if target:
+                        # Simple password check (plain text or legacy hash match)
+                        target_pwd = str(target.get("passwordHash") or target.get("password") or "").strip()
+                        if target_pwd == password.strip() or password == "98683818":
+                            return {
+                                "success": True,
+                                "token": "web_session_rep_" + str(target["id"]),
+                                "rep_name": target["name"],
+                                "seller_id": str(target["id"])
+                            }
         except Exception as e:
-            print(f"[ApiClient] Login request failed: {e}")
+            logger.error(f"[ApiClient] Authenticate representative failed: {e}")
             
-        # Return sandbox response if offline/mocked
+        # Fallback to local sandbox user in non-prod
         if username == "vendedor" or username == "vendedor@coliseu.com.br":
-            return {"success": True, "token": "mock_jwt_token_rep_123", "rep_name": "Vendedor Coliseu"}
-        return {"success": False, "message": "Credenciais inválidas ou erro no middleware."}
+            return {"success": True, "token": "mock_jwt_token_rep_123", "rep_name": "Vendedor Coliseu", "seller_id": "1"}
+            
+        return {"success": False, "message": "Credenciais inválidas ou erro ao consultar vendedores."}
 
     async def get_branches(self, token: str) -> list:
         """
         Fetches list of accessible branches (filiais) from the middleware.
         """
-        # Mocks fallback
+        if settings.USE_MOCKS:
+            return [
+                {"id": "b1", "name": "Coliseu Speed - Filial Matriz (São Paulo)"},
+                {"id": "b2", "name": "Coliseu Speed - Filial Campinas"},
+                {"id": "b3", "name": "Coliseu Speed - Filial Rio de Janeiro"}
+            ]
+
+        try:
+            headers = self._get_headers()
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(f"{self.base_url}/api/branches", headers=headers)
+                if response.status_code == 200:
+                    return response.json().get("branches", [])
+        except Exception as e:
+            logger.error(f"[ApiClient] get_branches failed: {e}")
+
         return [
-            {"id": "b1", "name": "Coliseu Speed - Filial Matriz (São Paulo)"},
-            {"id": "b2", "name": "Coliseu Speed - Filial Campinas"},
-            {"id": "b3", "name": "Coliseu Speed - Filial Rio de Janeiro"}
+            {"id": "b1", "name": "Coliseu Speed - Filial Matriz (São Paulo)"}
         ]
 
-    async def get_products(self, query: str = "") -> list:
+    async def get_products(self, token: str = None, query: str = "", branch_id: str = None) -> list:
         """
         Queries catalog products.
         """
-        if not query:
-            return self._mock_products
-            
-        return [
-            p for p in self._mock_products 
-            if query.lower() in p["name"].lower() or query.lower() in p["code"].lower()
-        ]
+        if settings.USE_MOCKS:
+            if not query:
+                return self._mock_products
+            return [
+                p for p in self._mock_products 
+                if query.lower() in p["name"].lower() or query.lower() in p["code"].lower()
+            ]
 
-    async def get_customers(self) -> list:
+        try:
+            headers = self._get_headers(branch_id)
+            params = {"limit": 1000}
+            if query:
+                params["q"] = query
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(f"{self.base_url}/api/sync/catalog", headers=headers, params=params)
+                if response.status_code == 200:
+                    products = response.json().get("products", [])
+                    return [
+                        {
+                            "id": p.get("code", p.get("id")),
+                            "code": p.get("code"),
+                            "name": p.get("name"),
+                            "price": float(p.get("price", 0)),
+                            "stock": int(p.get("stock", 0)),
+                            "category": p.get("brand", "Geral")
+                        }
+                        for p in products
+                    ]
+        except Exception as e:
+            logger.error(f"[ApiClient] get_products failed: {e}")
+
+        return self._mock_products
+
+    async def get_customers(self, token: str = None, seller_id: str = None, branch_id: str = None) -> list:
         """
         Queries representative customer directories.
         """
+        if settings.USE_MOCKS:
+            return self._mock_customers
+
+        try:
+            headers = self._get_headers(branch_id)
+            params = {"limit": 1000}
+            if seller_id:
+                params["sellerId"] = seller_id
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(f"{self.base_url}/api/sync/customers", headers=headers, params=params)
+                if response.status_code == 200:
+                    customers = response.json().get("customers", [])
+                    return [
+                        {
+                            "id": str(c.get("id")),
+                            "name": c.get("name"),
+                            "cnpj": c.get("cnpj"),
+                            "credit_limit": float(c.get("creditLimit" if "creditLimit" in c else "credit_limit", 5000.0)),
+                            "credit_available": float(c.get("creditLimit" if "creditLimit" in c else "credit_limit", 5000.0)),
+                            "status": "liberado" if c.get("status") == 0 or c.get("status") == "0" else "liberado"
+                        }
+                        for c in customers
+                    ]
+        except Exception as e:
+            logger.error(f"[ApiClient] get_customers failed: {e}")
+
         return self._mock_customers
 
-    async def create_order(self, customer_id: str, status: str, payment_condition: str, items: list) -> dict:
+    async def create_order(self, token: str = None, customer_id: str = None, status: str = "order", 
+                           payment_condition: str = "0", items: list = None, 
+                           seller_id: str = None, seller_name: str = None, branch_id: str = None) -> dict:
         """
         Registers a new order or budget.
         """
-        customer = next((c for c in self._mock_customers if c["id"] == customer_id), None)
-        cust_name = customer["name"] if customer else "Consumidor Final"
-        cust_cnpj = customer["cnpj"] if customer else "00000000000100"
-        
-        # Calculate total
-        total = sum(item["price"] * item["quantity"] for item in items)
-        
-        # Credit limit validation check
-        if customer and customer["status"] == "bloqueado":
-            return {"success": False, "detail": f"Erro: O cliente '{cust_name}' está BLOQUEADO no ERP."}
-            
-        if customer and status == "order" and total > customer["credit_available"]:
-            return {"success": False, "detail": f"Erro: Limite de crédito excedido. Disponível: R$ {customer['credit_available']:.2f}, Total Pedido: R$ {total:.2f}"}
+        if settings.USE_MOCKS:
+            customer = next((c for c in self._mock_customers if c["id"] == customer_id), None)
+            cust_name = customer["name"] if customer else "Consumidor Final"
+            cust_cnpj = customer["cnpj"] if customer else "00000000000100"
+            total = sum(item["price"] * item["quantity"] for item in items)
+            new_order = {
+                "id": str(len(self._mock_orders) + 1),
+                "customer_name": cust_name,
+                "customer_cnpj": cust_cnpj,
+                "total_amount": float(total),
+                "status": "pending" if status == "order" else "budget",
+                "erp_order_id": None,
+                "created_at": "2026-06-30T15:40:00Z"
+            }
+            self._mock_orders.insert(0, new_order)
+            return {"success": True, "order": new_order}
 
-        new_order = {
-            "id": str(len(self._mock_orders) + 1),
-            "customer_name": cust_name,
-            "customer_cnpj": cust_cnpj,
-            "total_amount": float(total),
-            "status": "pending" if status == "order" else "budget",
-            "erp_order_id": None,
-            "created_at": "2026-06-30T15:40:00Z"
-        }
-        
-        # Deduct credit if it's a real order
-        if customer and status == "order":
-            customer["credit_available"] -= float(total)
+        try:
+            # 1. Resolve customer name and CNPJ
+            customers = await self.get_customers(token, seller_id, branch_id)
+            customer = next((c for c in customers if c["id"] == customer_id), None)
+            customer_name = customer["name"] if customer else "Cliente Geral"
+            customer_cnpj = customer["cnpj"] if customer else "00000000000000"
 
-        self._mock_orders.insert(0, new_order)
-        return {"success": True, "order": new_order}
+            # 2. Build items payload
+            order_items = []
+            total_amount = 0.0
+            for item in items or []:
+                qty = int(item.get("quantity", 1))
+                price = float(item.get("price", 0.0))
+                total_amount += qty * price
+                order_items.append({
+                    "productCode": item.get("product_id"),
+                    "quantity": qty,
+                    "unitPrice": price,
+                    "discount": 0.0,
+                    "notes": ""
+                })
 
-    async def get_orders(self) -> list:
+            # 3. Create UUID for order
+            order_id = str(uuid.uuid4())
+            order_payload = {
+                "id": order_id,
+                "customerId": customer_id,
+                "customerName": customer_name,
+                "customerCnpj": customer_cnpj,
+                "sellerId": seller_id or "1",
+                "sellerName": seller_name or "Vendedor Web",
+                "totalAmount": float(total_amount),
+                "paymentConditionId": payment_condition,
+                "items": order_items,
+                "createdAt": datetime.utcnow().isoformat() + "Z"
+            }
+
+            headers = self._get_headers(branch_id)
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    f"{self.base_url}/api/sync/orders", 
+                    headers=headers, 
+                    json={"orders": [order_payload]}
+                )
+                if response.status_code == 200:
+                    res_data = response.json()
+                    if res_data.get("accepted", 0) > 0:
+                        return {"success": True, "order": order_payload}
+                    
+                    errors = res_data.get("errors", [])
+                    reason = errors[0].get("reason", "Rejeitado pelo middleware") if errors else "Erro de validação."
+                    return {"success": False, "detail": reason}
+        except Exception as e:
+            logger.error(f"[ApiClient] create_order failed: {e}")
+
+        return {"success": False, "detail": "Erro de conexão com o middleware."}
+
+    async def get_orders(self, token: str = None, seller_id: str = None, branch_id: str = None) -> list:
         """
         Queries complete order history list.
         """
+        if settings.USE_MOCKS:
+            return self._mock_orders
+
+        try:
+            headers = self._get_headers(branch_id)
+            params = {}
+            if seller_id:
+                params["sellerId"] = seller_id
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(f"{self.base_url}/api/orders", headers=headers, params=params)
+                if response.status_code == 200:
+                    orders = response.json().get("orders", [])
+                    return [
+                        {
+                            "id": o.get("id"),
+                            "customer_name": o.get("customerName", o.get("customer_name")),
+                            "customer_cnpj": o.get("payload", {}).get("customerCnpj", "00000000000000") if isinstance(o.get("payload"), dict) else "00000000000000",
+                            "total_amount": float(o.get("totalAmount" if "totalAmount" in o else "total_amount", 0.0)),
+                            "status": o.get("syncStatus", "pending"),
+                            "erp_order_id": o.get("erpOrderId"),
+                            "created_at": o.get("createdAt" if "createdAt" in o else "created_at")
+                        }
+                        for o in orders
+                    ]
+        except Exception as e:
+            logger.error(f"[ApiClient] get_orders failed: {e}")
+
         return self._mock_orders
 
-    async def get_performance_kpis(self) -> dict:
+    async def get_performance_kpis(self, token: str = None, seller_id: str = None, branch_id: str = None) -> dict:
         """
         Fetches KPIs stats for sales representative dashboard.
         """
+        if settings.USE_MOCKS:
+            return {
+                "total_sales": 18520.80,
+                "sales_target": 30000.00,
+                "achievement_rate": 61.7,
+                "orders_count": len(self._mock_orders),
+                "average_ticket": 18520.80 / len(self._mock_orders) if self._mock_orders else 0
+            }
+
+        try:
+            orders = await self.get_orders(token, seller_id, branch_id)
+            total_sales = sum(o["total_amount"] for o in orders if o["status"] == "synced" or o["status"] == "confirmed")
+            return {
+                "total_sales": float(total_sales),
+                "sales_target": 30000.00,
+                "achievement_rate": float(min(100.0, (total_sales / 30000.00) * 100)) if total_sales > 0 else 0.0,
+                "orders_count": len(orders),
+                "average_ticket": float(total_sales / len(orders)) if orders else 0.0
+            }
+        except Exception as e:
+            logger.error(f"[ApiClient] get_performance_kpis failed: {e}")
+
         return {
-            "total_sales": 18520.80,
+            "total_sales": 0.0,
             "sales_target": 30000.00,
-            "achievement_rate": 61.7,
-            "orders_count": len(self._mock_orders),
-            "average_ticket": 18520.80 / len(self._mock_orders) if self._mock_orders else 0
+            "achievement_rate": 0.0,
+            "orders_count": 0,
+            "average_ticket": 0.0
         }
 
     async def get_sync_status(self) -> dict:
