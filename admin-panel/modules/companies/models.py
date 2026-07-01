@@ -93,12 +93,10 @@ class CompanyModule(Base):
     __tablename__ = "company_modules"
 
     id = Column("Id", GUID, primary_key=True, default=uuid.uuid4)
-    company_id = Column("CompanyId", GUID, ForeignKey("companies.Id"), nullable=False)
+    company_id = Column("CompanyId", GUID, nullable=False)
     module_slug = Column("ModuleSlug", String(50), nullable=False)
     is_active = Column("IsActive", Boolean, default=True)
     api_key_hash = Column("ApiKeyHash", String(256), nullable=True)
-
-    company = relationship("Company")
 
 class Branch(Base):
     __tablename__ = "branches"
