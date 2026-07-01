@@ -47,11 +47,11 @@ async def check_rep_session_routing(request: Request, call_next):
         return await call_next(request)
         
     token = request.cookies.get("rep_token")
-    if not token and not path.startswith("/api"):
+    if not token and not path.startswith("/api") and not path.startswith("/web-api"):
         return RedirectResponse(url="/login", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
         
     branch = request.cookies.get("rep_branch_id")
-    if token and not branch and path != "/select-branch" and not path.startswith("/api"):
+    if token and not branch and path != "/select-branch" and not path.startswith("/api") and not path.startswith("/web-api"):
         return RedirectResponse(url="/select-branch", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
     return await call_next(request)

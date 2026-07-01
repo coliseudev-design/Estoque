@@ -24,7 +24,7 @@ async def sync_view(request: Request):
         "active_page": "sync"
     })
 
-@router.post("/api/sync/run")
+@router.post("/web-api/sync/run")
 async def api_sync_run():
     # Simulate force ERP catalog updates
     return JSONResponse(content={"success": True, "message": "Catálogo do Firebird sincronizado com sucesso."})

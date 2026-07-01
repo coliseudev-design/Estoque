@@ -9,6 +9,6 @@ def test_order_creation_credit_limit_validation(client):
         ]
     }
     
-    response = client.post("/api/orders/new", json=payload)
+    response = client.post("/web-api/orders/new", json=payload)
     assert response.status_code == 400
     assert "BLOQUEADO" in response.json()["detail"]

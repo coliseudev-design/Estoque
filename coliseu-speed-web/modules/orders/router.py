@@ -69,7 +69,7 @@ async def new_order_view(request: Request):
         "active_page": "new_order"
     })
 
-@router.post("/api/orders/new")
+@router.post("/web-api/orders/new")
 async def api_create_order(request: Request, payload: OrderCreateSchema):
     token = request.cookies.get("rep_token")
     seller_id = request.cookies.get("rep_seller_id")

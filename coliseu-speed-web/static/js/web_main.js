@@ -119,7 +119,7 @@ async function searchProducts(query) {
     grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Buscando...</div>';
     
     try {
-        const response = await fetch(`/api/catalog/query?q=${encodeURIComponent(query)}`);
+        const response = await fetch(`/web-api/catalog/query?q=${encodeURIComponent(query)}`);
         const data = await response.json();
         
         grid.innerHTML = '';
@@ -177,7 +177,7 @@ async function submitOrder(status = 'order') {
     };
 
     try {
-        const response = await fetch('/api/orders/new', {
+        const response = await fetch('/web-api/orders/new', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -203,7 +203,7 @@ async function submitOrder(status = 'order') {
 async function forceSync() {
     showToast('Forçando sincronização com o ERP...', 'success');
     try {
-        const res = await fetch('/api/sync/run', { method: 'POST' });
+        const res = await fetch('/web-api/sync/run', { method: 'POST' });
         const data = await res.json();
         if (res.ok && data.success) {
             showToast('Sincronização concluída com sucesso!', 'success');

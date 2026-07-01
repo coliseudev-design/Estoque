@@ -26,7 +26,7 @@ async def catalog_view(request: Request):
         "active_page": "catalog"
     })
 
-@router.get("/api/catalog/query")
+@router.get("/web-api/catalog/query")
 async def api_catalog_query(
     request: Request,
     q: str = Query("", alias="q")
