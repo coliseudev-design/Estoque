@@ -183,7 +183,7 @@
             <button type="button" onclick="posToggleAdvancedFilters()" style="border: 1.5px solid var(--border-color); background: #ffffff; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569; padding: 0;">
                 <i data-lucide="sliders-horizontal" style="width: 18px; height: 18px;"></i>
             </button>
-            <a href="/orders/new" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px; min-height: 38px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; padding: 0 12px; height: 38px;">
+            <a href="/orders/new" class="btn btn-primary desktop-only" style="display: inline-flex; align-items: center; gap: 6px; min-height: 38px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; padding: 0 12px; height: 38px;">
                 <i data-lucide="shopping-cart" style="width: 15px; height: 15px;"></i> Novo Pedido
             </a>
         </div>
@@ -459,12 +459,9 @@
                         ${mobStockBadge}
                     </div>
                 </div>
-                <div style="margin-top: 6px; display: flex; gap: 8px;">
-                    <a href="/orders/new" class="btn btn-secondary btn-sm" style="flex: 1; display: inline-flex; justify-content: center; align-items: center; gap: 4px; padding: 8px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; text-decoration: none;">
-                        <i data-lucide="shopping-cart" style="width: 14px; height: 14px;"></i> Lançar Pedido
-                    </a>
-                    <button type="button" onclick="posOpenProductDetails('${prod.id}')" class="btn btn-light btn-sm" style="padding: 8px 12px; border-radius: 8px; border: 1.5px solid var(--border-color); font-weight: 700; font-size: 0.8rem; background: #ffffff; color: #475569; display: inline-flex; align-items: center; justify-content: center;">
-                        Ficha
+                <div style="margin-top: 8px;">
+                    <button type="button" onclick="posOpenProductDetails('${prod.id}')" class="btn btn-primary" style="width: 100%; display: inline-flex; justify-content: center; align-items: center; gap: 6px; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; height: 38px; text-decoration: none; border: none; cursor: pointer;">
+                        <i data-lucide="info" style="width: 15px; height: 15px;"></i> Ver Ficha do Produto
                     </button>
                 </div>
             `;

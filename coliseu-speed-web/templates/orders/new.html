@@ -1139,7 +1139,7 @@
                         <span style="font-size: 0.72rem; color: var(--text-secondary);">Código: ${p.code} | Estoque: ${p.stock}</span>
                     </div>
                 </div>
-                <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">R$ ${p.price.toFixed(2)}</div>
+                <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">R$ ${Number(p.price).toFixed(2)}</div>
             `;
             list.appendChild(card);
         });
@@ -1510,7 +1510,7 @@
                         <span style="font-size: 0.72rem; color: var(--text-secondary);">Código: ${p.code} | Estoque: ${p.stock}</span>
                     </div>
                 </div>
-                <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">R$ ${p.price.toFixed(2)}</div>
+                <div style="font-weight: 800; color: #0f172a; font-size: 0.95rem;">R$ ${Number(p.price).toFixed(2)}</div>
             `;
             grid.appendChild(card);
         });
@@ -1654,7 +1654,7 @@
                                 </div>
                                 <div class="form-group" style="flex: 2; margin-bottom: 0;">
                                     <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">Preço (R$)</label>
-                                    <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 28px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                                    <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 28px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${Number(item.price).toFixed(2)}">
                                 </div>
                             </div>
                             <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px;">
@@ -1664,8 +1664,8 @@
                         </div>
                         ` : `
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px; font-size: 0.8rem;">
-                            <span style="color: var(--text-secondary); font-weight: 600;">${item.quantity} × R$ ${item.price.toFixed(2)}</span>
-                            <span style="font-weight: 800; color: #0f172a;">R$ ${(item.price * item.quantity).toFixed(2)}</span>
+                            <span style="color: var(--text-secondary); font-weight: 600;">${item.quantity} × R$ ${Number(item.price).toFixed(2)}</span>
+                            <span style="font-weight: 800; color: #0f172a;">R$ ${(Number(item.price) * item.quantity).toFixed(2)}</span>
                         </div>
                         `}
                     `;
@@ -1706,7 +1706,7 @@
                             </div>
                             <div class="form-group" style="flex: 2; margin-bottom: 0;">
                                 <label style="font-size: 0.7rem; font-weight: 700; color: #64748b;">Preço (R$)</label>
-                                <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 28px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                                <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 28px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${Number(item.price).toFixed(2)}">
                             </div>
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 6px; margin-top: 4px;">
@@ -1722,8 +1722,8 @@
                             <button type="button" class="qty-btn" onclick="posOnAdjustQty('${item.id}', 1)">+</button>
                         </div>
                         <div style="text-align: right;">
-                            <span style="font-size: 0.75rem; color: var(--text-secondary);">× R$ ${item.price.toFixed(2)}</span>
-                            <div style="font-weight: 800; color: var(--stoqui-purple); font-size: 0.95rem;">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">× R$ ${Number(item.price).toFixed(2)}</span>
+                            <div style="font-weight: 800; color: var(--stoqui-purple); font-size: 0.95rem;">R$ ${(Number(item.price) * item.quantity).toFixed(2)}</div>
                         </div>
                     </div>
                     `}
