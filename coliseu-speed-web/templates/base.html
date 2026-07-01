@@ -10,7 +10,7 @@
 </head>
 <body>
 
-    <!-- Sidebar Navigation -->
+    <!-- Sidebar Navigation (Desktop) -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; color: #fff;">CS</div>
@@ -73,11 +73,39 @@
                 <div class="rep-name">{{ rep_name or 'Vendedor' }}</div>
                 <div class="rep-branch">{{ selected_branch_name or 'Sem filial selecionada' }}</div>
             </div>
-            <a href="/auth/logout" style="color: rgba(255,255,255,0.5); padding: 6px; hover: color: #fff;" title="Sair do Sistema">
+            <a href="/auth/logout" style="color: rgba(255,255,255,0.5); padding: 6px;" title="Sair do Sistema">
                 <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
             </a>
         </div>
     </aside>
+
+    <!-- Mobile Bottom Navigation Bar -->
+    <nav class="mobile-nav">
+        <a href="/" class="mobile-nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Painel</span>
+        </a>
+        <a href="/catalog" class="mobile-nav-item {% if active_page == 'catalog' %}active{% endif %}">
+            <i data-lucide="shopping-bag"></i>
+            <span>Catálogo</span>
+        </a>
+        <a href="/orders/new" class="mobile-nav-item {% if active_page == 'new_order' %}active{% endif %}">
+            <i data-lucide="shopping-cart"></i>
+            <span>Vender</span>
+        </a>
+        <a href="/orders" class="mobile-nav-item {% if active_page == 'orders' %}active{% endif %}">
+            <i data-lucide="history"></i>
+            <span>Pedidos</span>
+        </a>
+        <a href="/customers" class="mobile-nav-item {% if active_page == 'customers' %}active{% endif %}">
+            <i data-lucide="users"></i>
+            <span>Clientes</span>
+        </a>
+        <a href="/sync" class="mobile-nav-item {% if active_page == 'sync' %}active{% endif %}">
+            <i data-lucide="refresh-cw"></i>
+            <span>Sinc</span>
+        </a>
+    </nav>
 
     <!-- Main Wrapper -->
     <div class="main-wrapper">
