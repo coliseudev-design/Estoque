@@ -44,6 +44,29 @@
         color: var(--stoqui-purple);
     }
 
+    /* Date filters scrollable container for mobile */
+    .date-filters-container {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 16px;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 6px;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+    .date-filters-container::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+    }
+    @media (min-width: 768px) {
+        .date-filters-container {
+            flex-wrap: wrap;
+            overflow-x: visible;
+            padding-bottom: 0;
+        }
+    }
+
     /* Grid structures for the dashboard dashboard */
     .kpi-row-2col {
         display: grid;
@@ -139,7 +162,7 @@
     </div>
 
     <!-- Date Filter Pills -->
-    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px;">
+    <div class="date-filters-container">
         <button type="button" id="date-pill-custom" class="date-filter-pill" onclick="posSetDateFilter('custom')">
             <i data-lucide="calendar" style="width: 14px; height: 14px;"></i> Personalizado
         </button>
@@ -160,9 +183,6 @@
         </button>
         <button type="button" id="date-pill-month" class="date-filter-pill" onclick="posSetDateFilter('month')">
             Este mês
-        </button>
-        <button type="button" id="date-pill-week" class="date-filter-pill" onclick="posSetDateFilter('week')">
-            Esta semana
         </button>
     </div>
 
@@ -439,7 +459,7 @@
         activeDateFilter = type;
         
         // Toggle pill buttons
-        const pills = ['custom', 'today', 'yesterday', '7days', '30days', '12months', 'month', 'week'];
+        const pills = ['custom', 'today', 'yesterday', '7days', '30days', '12months', 'month'];
         pills.forEach(p => {
             const btn = document.getElementById(`date-pill-${p}`);
             if (btn) {
