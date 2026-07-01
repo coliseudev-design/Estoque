@@ -756,6 +756,7 @@ body {
     bottom: 0;
     background: rgba(0,0,0,0.55);
     backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     display: none; /* Hide by default */
     align-items: center;
     justify-content: center;
@@ -777,6 +778,7 @@ body {
     flex-direction: column;
     box-shadow: 0 10px 25px rgba(0,0,0,0.25);
     overflow: hidden;
+    flex-shrink: 0 !important;
 }
 
 .modal-overlay.open .modal-content {
@@ -791,6 +793,10 @@ body {
 @media (max-width: 768px) {
     .modal-overlay.open .modal-content {
         animation: none !important;
+    }
+    .modal-overlay {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
     }
 }
 
