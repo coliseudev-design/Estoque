@@ -28,49 +28,91 @@ def login_view(request: Request):
         "is_configured": bool(api_key)
     })
 
-@router.get("/setup-company", response_class=HTMLResponse)
-def setup_company_view(request: Request):
-    return templates.TemplateResponse("auth/setup_company.html", {"request": request})
+@router.get("/register", response_class=HTMLResponse)
+def register_view(request: Request):
+    return templates.TemplateResponse("auth/register.html", {"request": request})
 
-@router.post("/setup-company")
-async def post_setup_company(
+@router.post("/register")
+async def post_register(
     response: Response,
     request: Request,
-    api_key: str = Form(...)
+    name: str = Form(...),
+    email: str = Form(...),
+    company_key: str = Form(...),
+    password: str = Form(...)
 ):
-    api_key = api_key.strip()
-    if not api_key:
-        return templates.TemplateResponse("auth/setup_company.html", {
-            "request": request,
-            "error_message": "A Chave de Acesso é obrigatória."
-        })
-
-    # Query admin-panel to resolve company details via API Key
+    email = email.strip().lower()
+    company_key = company_key.strip()
+    
+    # 1. Resolve company by API Key (serial)
     try:
         async with httpx.AsyncClient(timeout=6.0) as client:
             url = f"{settings.ADMIN_PANEL_URL}/adm/api/companies/lookup-by-key"
-            res = await client.post(url, json={"api_key": api_key})
+            res = await client.post(url, json={"api_key": company_key})
             if res.status_code == 200:
                 data = res.json()
-                if data.get("success", False):
-                    # Set cookies and redirect to login
-                    redirect = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
-                    redirect.set_cookie("rep_api_key", api_key, max_age=31536000, httponly=True)
-                    redirect.set_cookie("rep_company_id", data["company_id"], max_age=31536000, httponly=True)
-                    redirect.set_cookie("rep_company_name", data["company_name"], max_age=31536000, httponly=True)
-                    return redirect
-                else:
-                    error = data.get("detail", "Chave inválida.")
+                if not data.get("success", False):
+                    return templates.TemplateResponse("auth/register.html", {
+                        "request": request,
+                        "error_message": data.get("detail", "Chave de acesso inválida ou empresa inativa.")
+                    })
+                company_id = data["company_id"]
+                company_name = data["company_name"]
             else:
-                error = "Chave de acesso inválida ou inativa no painel central."
+                return templates.TemplateResponse("auth/register.html", {
+                    "request": request,
+                    "error_message": "Chave de acesso inválida ou inativa no painel central."
+                })
     except Exception as e:
-        print(f"[SetupCompany] Lookup failed: {e}")
-        error = "Erro ao conectar com o servidor de licenciamento."
+        print(f"[Register] Lookup failed: {e}")
+        return templates.TemplateResponse("auth/register.html", {
+            "request": request,
+            "error_message": "Erro ao conectar com o servidor de licenciamento."
+        })
 
-    return templates.TemplateResponse("auth/setup_company.html", {
-        "request": request,
-        "error_message": error
-    })
+    # 2. Check if the representative email exists in the synced sellers of this company
+    try:
+        sellers_res = await api_client.get_products(api_key=company_key) # warmup test/sellers list
+        headers = {"api-key": company_key, "Content-Type": "application/json"}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            sellers_url = f"{settings.MIDDLEWARE_URL}/api/sync/sellers"
+            sellers_response = await client.get(sellers_url, headers=headers)
+            if sellers_response.status_code == 200:
+                sellers = sellers_response.json().get("sellers", [])
+                # Find matching seller
+                matched = False
+                for s in sellers:
+                    if s.get("email") and s["email"].strip().lower() == email:
+                        matched = True
+                        break
+                    if s.get("name") and s["name"].strip().lower() == email:
+                        matched = True
+                        break
+                
+                # In development or mock mode, we bypass strict seller validation
+                if not matched and not settings.USE_MOCKS:
+                    return templates.TemplateResponse("auth/register.html", {
+                        "request": request,
+                        "error_message": f"Vendedor com o e-mail '{email}' não encontrado no ERP desta empresa."
+                    })
+    except Exception as e:
+        print(f"[Register] Sellers check failed: {e}")
+        if not settings.USE_MOCKS:
+            return templates.TemplateResponse("auth/register.html", {
+                "request": request,
+                "error_message": "Erro ao validar vendedor com o middleware."
+            })
+
+    # 3. Success link: save cookies and redirect to login
+    redirect = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+    redirect.set_cookie("rep_api_key", company_key, max_age=31536000, httponly=True)
+    redirect.set_cookie("rep_company_id", company_id, max_age=31536000, httponly=True)
+    redirect.set_cookie("rep_company_name", company_name, max_age=31536000, httponly=True)
+    return redirect
+
+@router.get("/setup-company", response_class=HTMLResponse)
+def setup_company_view(request: Request):
+    return RedirectResponse(url="/register")
 
 @router.post("/auth/login")
 async def post_login(
@@ -83,7 +125,7 @@ async def post_login(
     company_id = request.cookies.get("rep_company_id")
     
     if not api_key:
-        return RedirectResponse(url="/setup-company", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/register", status_code=status.HTTP_303_SEE_OTHER)
 
     # 1. Authenticate Rep on Middleware
     auth_res = await api_client.authenticate_rep(username, password, api_key=api_key)
@@ -133,7 +175,6 @@ async def post_select_branch(
 ):
     token = request.cookies.get("rep_token")
     api_key = request.cookies.get("rep_api_key")
-    # Fetch target branch name for visual branding
     branches = await api_client.get_branches(token, api_key=api_key)
     branch = next((b for b in branches if b["id"] == branch_id), None)
     branch_name = branch["name"] if branch else "Filial Padrão"

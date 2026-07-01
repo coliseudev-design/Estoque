@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coliseu Speed — Login Força de Vendas</title>
+  <title>Coliseu Speed — Criar Conta</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap');
 
@@ -140,7 +140,7 @@
 
     .logo-container {
       width: 100%;
-      margin-bottom: 30px;
+      margin-bottom: 24px;
       text-align: left;
     }
     .logo-img {
@@ -166,12 +166,12 @@
     }
 
     /* Formulário */
-    .login-form {
+    .register-form {
       width: 100%;
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
 
     .form-group label {
@@ -181,19 +181,6 @@
       color: #4d5358;
       margin-bottom: 6px;
       letter-spacing: 0.3px;
-    }
-
-    .label-wrapper {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-    }
-    .forgot-link {
-      font-size: 0.8rem;
-      color: #1a7cc7;
-      text-decoration: none;
-      font-weight: 600;
     }
 
     .input-wrapper {
@@ -229,7 +216,13 @@
       box-shadow: 0 0 0 3px rgba(26, 124, 199, 0.12);
     }
 
-    .btn-login {
+    .form-group .caption {
+      font-size: 0.75rem;
+      color: #8a9ab0;
+      margin-top: 4px;
+    }
+
+    .btn-register {
       width: 100%;
       padding: 14px;
       background: #1a7cc7;
@@ -243,63 +236,16 @@
       letter-spacing: 0.5px;
       transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
       box-shadow: 0 4px 14px rgba(26, 124, 199, 0.3);
-      margin-top: 10px;
+      margin-top: 8px;
     }
 
-    .btn-login:hover {
-      background: #15629c;
-      box-shadow: 0 6px 20px rgba(26, 124, 199, 0.4);
-    }
-
-    /* Setup Notice Card */
-    .setup-notice {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      width: 100%;
-    }
-    .setup-icon {
-      font-size: 3.2rem;
-      margin-bottom: 16px;
-      animation: pulse 2.5s infinite;
-    }
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.08); }
-      100% { transform: scale(1); }
-    }
-    .setup-notice h2 {
-      font-size: 1.35rem;
-      color: #1e2d3d;
-      margin-bottom: 10px;
-    }
-    .setup-notice p {
-      color: #8a9ab0;
-      font-size: 0.9rem;
-      line-height: 1.5;
-      margin-bottom: 24px;
-    }
-    .btn-setup {
-      display: block;
-      width: 100%;
-      padding: 14px;
-      background: #1a7cc7;
-      color: #ffffff;
-      text-decoration: none;
-      border-radius: 10px;
-      font-weight: 700;
-      text-align: center;
-      box-shadow: 0 4px 14px rgba(26, 124, 199, 0.3);
-      transition: all 0.2s;
-    }
-    .btn-setup:hover {
+    .btn-register:hover {
       background: #15629c;
       box-shadow: 0 6px 20px rgba(26, 124, 199, 0.4);
     }
 
     .meta-info {
-      margin-top: 24px;
+      margin-top: 20px;
       font-size: 0.85rem;
       color: #8a9ab0;
       text-align: center;
@@ -385,72 +331,85 @@
       </svg>
     </div>
 
-    {% if not is_configured %}
-      <!-- State: Not Configured -->
-      <div class="setup-notice">
-        <span class="setup-icon">📱</span>
-        <h2>Aparelho não Configurado</h2>
-        <p>Esta versão Web/Mobile precisa ser vinculada à licença da sua empresa para carregar os produtos e clientes.</p>
-        <a href="/register" class="btn-setup">Vincular Empresa (Serial)</a>
-      </div>
-    {% else %}
-      <!-- State: Configured -->
-      <div class="form-header">
-        <h1>Bem-vindo de volta 👋</h1>
-        <p>Faça login na empresa <strong>{{ company_name }}</strong></p>
-      </div>
+    <div class="form-header">
+      <h1>Criar Conta 🚀</h1>
+      <p>Cadastre-se para acessar a Força de Vendas</p>
+    </div>
 
-      {% if error_message %}
-          <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444; padding: 12px; border-radius: 10px; font-size: 0.85rem; width: 100%; margin-bottom: 20px; text-align: center;">
-              {{ error_message }}
-          </div>
-      {% endif %}
-
-      <form class="login-form" method="POST" action="/auth/login">
-        <!-- E-mail / Usuário -->
-        <div class="form-group">
-          <label for="username">Usuário ou E-mail</label>
-          <div class="input-wrapper">
-            <span class="icon">👤</span>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              placeholder="vendedor"
-              required
-            />
-          </div>
+    {% if error_message %}
+        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444; padding: 12px; border-radius: 10px; font-size: 0.85rem; width: 100%; margin-bottom: 20px; text-align: center;">
+            {{ error_message }}
         </div>
-
-        <!-- Senha -->
-        <div class="form-group">
-          <div class="label-wrapper">
-            <label for="password">Senha</label>
-            <a href="#" class="forgot-link">Esqueceu a senha?</a>
-          </div>
-          <div class="input-wrapper">
-            <span class="icon">🔑</span>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              placeholder="••••••••"
-              required
-            />
-          </div>
-        </div>
-
-        <!-- Botão -->
-        <button type="submit" class="btn-login">Entrar</button>
-      </form>
-
-      <div class="meta-info">
-        Ainda não tem conta? <a href="/register">Criar acesso ✨</a>
-      </div>
-      <div class="meta-info" style="margin-top: 10px;">
-        Dispositivo vinculado. <a href="/register">Alterar Empresa / Serial</a>
-      </div>
     {% endif %}
+
+    <form class="register-form" method="POST" action="/register">
+      <!-- Nome -->
+      <div class="form-group">
+        <label for="name">Nome Completo</label>
+        <div class="input-wrapper">
+          <span class="icon">👤</span>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            placeholder="ex: João da Silva"
+            required
+          />
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label for="email">E-mail</label>
+        <div class="input-wrapper">
+          <span class="icon">✉️</span>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="ex: joao@empresa.com.br"
+            required
+          />
+        </div>
+      </div>
+
+      <!-- ID da Empresa (CompanyKey) -->
+      <div class="form-group">
+        <label for="company_key">ID da Empresa (CompanyKey)</label>
+        <div class="input-wrapper">
+          <span class="icon">🔑</span>
+          <input
+            type="text"
+            id="company_key"
+            name="company_key"
+            placeholder="ex: ed1d3a98-4c4d-48db-..."
+            required
+          />
+        </div>
+        <p class="caption">Fornecido pelo administrador de licenças da Coliseu.</p>
+      </div>
+
+      <!-- Senha -->
+      <div class="form-group">
+        <label for="password">Senha</label>
+        <div class="input-wrapper">
+          <span class="icon">🔒</span>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Crie uma senha segura"
+            required
+          />
+        </div>
+      </div>
+
+      <button type="submit" class="btn-register">+ Finalizar Cadastro</button>
+    </form>
+
+    <div class="meta-info">
+      Já tem uma conta? <a href="/login">Entrar</a>
+    </div>
   </div>
 </body>
 </html>

@@ -42,8 +42,8 @@ app.include_router(settings_router)
 @app.middleware("http")
 async def check_rep_session_routing(request: Request, call_next):
     path = request.url.path
-    # Ignore static files, login views, setup views, and auth processors
-    if path.startswith("/static") or path in ["/login", "/auth/login", "/auth/logout", "/select-branch", "/auth/select-branch", "/setup-company"]:
+    # Ignore static files, login views, setup views, register views, and auth processors
+    if path.startswith("/static") or path in ["/login", "/auth/login", "/auth/logout", "/select-branch", "/auth/select-branch", "/setup-company", "/register"]:
         return await call_next(request)
         
     token = request.cookies.get("rep_token")
