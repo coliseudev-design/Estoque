@@ -52,15 +52,15 @@
         }
     }
 
-    /* Outer wrapper */
+    /* Outer wrapper - Full Screen Width and Height */
     .stoqui-container {
-        max-width: 1200px;
-        margin: 0 auto;
+        width: 100%;
+        height: 100vh;
+        max-width: none;
         background: #ffffff;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-        border: 1px solid var(--border-color);
-        min-height: 80vh;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
         display: flex;
         flex-direction: column;
         overflow: hidden;
@@ -75,6 +75,7 @@
         align-items: center;
         gap: 16px;
         background: #ffffff;
+        height: 68px;
     }
     .stoqui-header-btn {
         background: none;
@@ -104,6 +105,7 @@
         display: grid;
         grid-template-columns: 1.3fr 0.7fr;
         flex: 1;
+        height: calc(100vh - 68px);
     }
     .stoqui-split-left {
         padding: 24px;
@@ -112,6 +114,7 @@
         gap: 20px;
         background: var(--stoqui-gray-bg);
         border-right: 1px solid var(--border-color);
+        overflow-y: auto;
     }
     .stoqui-split-right {
         padding: 24px;
@@ -119,6 +122,7 @@
         flex-direction: column;
         justify-content: space-between;
         background: #ffffff;
+        overflow-y: auto;
     }
 
     /* Product card item list */
@@ -185,6 +189,8 @@
         padding: 24px;
         width: 100%;
         flex: 1;
+        overflow-y: auto;
+        height: calc(100vh - 68px);
     }
 
     /* Keypad grid input */
@@ -253,6 +259,14 @@
     }
 </style>
 
+<!-- JSON script variables safe serialization -->
+<script id="customers-json-data" type="application/json">
+    {{ customers | tojson }}
+</script>
+<script id="products-json-data" type="application/json">
+    {{ products | tojson }}
+</script>
+
 <div class="stoqui-container">
     
     <!-- Header with Back navigation -->
@@ -268,7 +282,7 @@
         
         <!-- Left Panel: Product search and grid -->
         <div class="stoqui-split-left">
-            <div class="input-wrapper" style="box-shadow: 0 2px 8px rgba(0,0,0,0.02);">
+            <div class="input-wrapper" style="box-shadow: 0 2px 8px rgba(0,0,0,0.02); margin-bottom: 8px;">
                 <span class="icon">🔍</span>
                 <input 
                     type="text" 
@@ -280,7 +294,7 @@
                 >
             </div>
             
-            <div id="catalog-products-list" style="display: flex; flex-direction: column; gap: 12px; max-height: 50vh; overflow-y: auto;">
+            <div id="catalog-products-list" style="display: flex; flex-direction: column; gap: 12px;">
                 <!-- Filled dynamically -->
             </div>
         </div>
@@ -296,7 +310,7 @@
                 </div>
 
                 <!-- Dynamic Cart rows list -->
-                <div id="cart-rows-container" style="display: flex; flex-direction: column; gap: 12px; max-height: 45vh; overflow-y: auto;">
+                <div id="cart-rows-container" style="display: flex; flex-direction: column; gap: 12px;">
                     <!-- Empty cart fallback -->
                     <div id="cart-empty-placeholder" style="text-align: center; padding: 60px 20px; color: var(--text-secondary);">
                         <i data-lucide="shopping-cart" style="width: 48px; height: 48px; margin: 0 auto 12px auto; color: #94a3b8; stroke-width: 1.5;"></i>
@@ -683,35 +697,9 @@
 </div>
 
 <script>
-    // Data structures compiled from JINJA
-    const customers = [
-        {% for cust in customers %}
-        {
-            id: "{{ cust.id }}",
-            name: "{{ cust.name.replace('"', '\\"') }}",
-            cnpj: "{{ cust.cnpj }}",
-            credit_limit: {{ cust.credit_limit or 5000.0 }},
-            credit_available: {{ cust.credit_available or 5000.0 }},
-            status: "{{ cust.status or 'liberado' }}",
-            phone: "{{ cust.phone or '(11) 99999-8888' }}",
-            email: "{{ cust.email or 'contato@empresa.com' }}",
-            address: "Av. Paulista, 1000 - São Paulo/SP"
-        },
-        {% endfor %}
-    ];
-
-    const products = [
-        {% for prod in products %}
-        {
-            id: "{{ prod.id }}",
-            code: "{{ prod.code }}",
-            name: "{{ prod.name.replace('"', '\\"') }}",
-            price: {{ prod.price }},
-            stock: {{ prod.stock }},
-            category: "{{ prod.category or 'Geral' }}"
-        },
-        {% endfor %}
-    ];
+    // Safe extraction of Jinja values using JSON parser to prevent string compilation errors
+    const customers = JSON.parse(document.getElementById('customers-json-data').textContent || '[]');
+    const products = JSON.parse(document.getElementById('products-json-data').textContent || '[]');
 
     // State properties
     let currentStep = 1; // 1: empty/catalog, 2: cart lists, 3: cliente/entrega, 4: resumo, 5: pagamentos list, 5.1: pagamentos grid, 5.2: keypad input, 7: sucesso
@@ -747,7 +735,7 @@
     // Handle back clicks cleanly
     function onHeaderBack() {
         if (currentStep === 1) {
-            window.location.href = '/orders';
+            window.location.href = '/';
         } else if (currentStep === 2) {
             clearCart();
         } else if (currentStep === 3) {
@@ -816,8 +804,8 @@
 
         // Toggle layout panels display
         if (isMobile) {
-            splitLayout.style.display = 'none';
-            singleLayout.style.display = 'block';
+            if (splitLayout) splitLayout.style.display = 'none';
+            if (singleLayout) singleLayout.style.display = 'block';
             
             // Toggle sub-containers inside wizard
             document.querySelectorAll('.step-container').forEach(c => c.style.display = 'none');
@@ -827,11 +815,11 @@
         } else {
             // Desktop
             if (step === 1 || step === 2) {
-                splitLayout.style.display = 'grid';
-                singleLayout.style.display = 'none';
+                if (splitLayout) splitLayout.style.display = 'grid';
+                if (singleLayout) singleLayout.style.display = 'none';
             } else {
-                splitLayout.style.display = 'none';
-                singleLayout.style.display = 'block';
+                if (splitLayout) splitLayout.style.display = 'none';
+                if (singleLayout) singleLayout.style.display = 'block';
                 
                 document.querySelectorAll('.step-container').forEach(c => c.style.display = 'none');
                 const stepId = getStepElementId(step);
@@ -859,6 +847,8 @@
 
     function renderCatalogProducts(items) {
         const list = document.getElementById('catalog-products-list');
+        if (!list) return;
+        
         list.innerHTML = '';
         if (items.length === 0) {
             list.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">Nenhum produto cadastrado</div>';
@@ -998,6 +988,7 @@
 
     function renderCustomerList(listData) {
         const container = document.getElementById('modal-customer-list');
+        if (!container) return;
         container.innerHTML = '';
         listData.forEach(c => {
             const card = document.createElement('div');
@@ -1022,15 +1013,17 @@
         const pickup = document.getElementById('delivery-opt-pickup');
         const ship = document.getElementById('delivery-opt-ship');
         
-        pickup.classList.remove('selected');
-        ship.classList.remove('selected');
+        if (pickup) pickup.classList.remove('selected');
+        if (ship) ship.classList.remove('selected');
 
         if (type === 'pickup') {
-            pickup.classList.add('selected');
-            document.getElementById('delivery-details-panel').style.display = 'none';
+            if (pickup) pickup.classList.add('selected');
+            const detailsPanel = document.getElementById('delivery-details-panel');
+            if (detailsPanel) detailsPanel.style.display = 'none';
         } else {
-            ship.classList.add('selected');
-            document.getElementById('delivery-details-panel').style.display = 'block';
+            if (ship) ship.classList.add('selected');
+            const detailsPanel = document.getElementById('delivery-details-panel');
+            if (detailsPanel) detailsPanel.style.display = 'block';
         }
         updateWizardDOMs();
     }
@@ -1048,9 +1041,15 @@
     }
 
     function openEditValuePopover(fieldName, label, currentValue) {
-        document.getElementById('edit-value-field-name').value = fieldName;
-        document.getElementById('edit-value-field-label').innerText = label;
-        document.getElementById('edit-value-input').value = currentValue;
+        const fieldNameInput = document.getElementById('edit-value-field-name');
+        if (fieldNameInput) fieldNameInput.value = fieldName;
+        
+        const labelEl = document.getElementById('edit-value-field-label');
+        if (labelEl) labelEl.innerText = label;
+        
+        const valInput = document.getElementById('edit-value-input');
+        if (valInput) valInput.value = currentValue;
+        
         openModal('edit-values-modal');
     }
 
@@ -1078,9 +1077,14 @@
         keypadTypedVal = "";
         
         const balance = getBalanceRemaining();
-        document.getElementById('edit-payment-amount-display').innerText = balance.toFixed(2);
-        document.getElementById('keypad-balance-text').innerText = `Faltam: R$ ${balance.toFixed(2)}`;
-        document.getElementById('keypad-total-text').innerText = `R$ ${getTotal().toFixed(2)}`;
+        const displayEl = document.getElementById('edit-payment-amount-display');
+        if (displayEl) displayEl.innerText = balance.toFixed(2);
+        
+        const balanceTextEl = document.getElementById('keypad-balance-text');
+        if (balanceTextEl) balanceTextEl.innerText = `Faltam: R$ ${balance.toFixed(2)}`;
+        
+        const totalTextEl = document.getElementById('keypad-total-text');
+        if (totalTextEl) totalTextEl.innerText = `R$ ${getTotal().toFixed(2)}`;
 
         setStep(5.2);
     }
@@ -1089,18 +1093,23 @@
     function onKeypadDigit(digit) {
         keypadTypedVal += digit;
         const val = parseFloat(keypadTypedVal || "0") / 100;
-        document.getElementById('edit-payment-amount-display').innerText = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const displayEl = document.getElementById('edit-payment-amount-display');
+        if (displayEl) displayEl.innerText = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function onKeypadBackspace() {
         keypadTypedVal = keypadTypedVal.slice(0, -1);
         const val = parseFloat(keypadTypedVal || "0") / 100;
-        document.getElementById('edit-payment-amount-display').innerText = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const displayEl = document.getElementById('edit-payment-amount-display');
+        if (displayEl) displayEl.innerText = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function confirmAddPaymentMethod() {
         // Resolve value from display formatting
-        const displayStr = document.getElementById('edit-payment-amount-display').innerText.replace(/\./g, '').replace(',', '.');
+        const displayEl = document.getElementById('edit-payment-amount-display');
+        if (!displayEl) return;
+        
+        const displayStr = displayEl.innerText.replace(/\./g, '').replace(',', '.');
         const val = parseFloat(displayStr) || 0;
         
         if (val <= 0) {
@@ -1154,19 +1163,23 @@
             const data = await response.json();
             if (response.ok && data.success) {
                 const successContainer = document.getElementById('success-payments-details-list');
-                successContainer.innerHTML = '';
-                paymentsList.forEach(p => {
-                    const row = document.createElement('div');
-                    row.style.display = 'flex';
-                    row.style.justifyContent = 'space-between';
-                    row.style.fontSize = '0.9rem';
-                    row.innerHTML = `
-                        <span>🟠 ${p.method}</span>
-                        <span>R$ ${p.amount.toFixed(2)}</span>
-                    `;
-                    successContainer.appendChild(row);
-                });
-                document.getElementById('success-total-paid').innerText = `R$ ${getTotal().toFixed(2)}`;
+                if (successContainer) {
+                    successContainer.innerHTML = '';
+                    paymentsList.forEach(p => {
+                        const row = document.createElement('div');
+                        row.style.display = 'flex';
+                        row.style.justifyContent = 'space-between';
+                        row.style.fontSize = '0.9rem';
+                        row.innerHTML = `
+                            <span>🟠 ${p.method}</span>
+                            <span>R$ ${p.amount.toFixed(2)}</span>
+                        `;
+                        successContainer.appendChild(row);
+                    });
+                }
+                
+                const totalPaidEl = document.getElementById('success-total-paid');
+                if (totalPaidEl) totalPaidEl.innerText = `R$ ${getTotal().toFixed(2)}`;
                 
                 advanceStep(7);
             } else {
@@ -1194,6 +1207,7 @@
 
     function renderModalCatalogGrid(items) {
         const grid = document.getElementById('modal-catalog-grid');
+        if (!grid) return;
         grid.innerHTML = '';
         if (items.length === 0) {
             grid.innerHTML = '<div style="text-align: center; padding: 40px; color: var(--text-secondary);">Nenhum produto encontrado.</div>';
@@ -1221,14 +1235,16 @@
         });
     }
 
-    // Modal select customers list trigger
+    // Modal helpers
     const originalOpenModal = openModal;
     openModal = function(id) {
         if (id === 'select-customer-modal') {
-            document.getElementById('customer-modal-search').value = '';
+            const searchEl = document.getElementById('customer-modal-search');
+            if (searchEl) searchEl.value = '';
             renderCustomerList(customers);
         } else if (id === 'catalog-picker-modal') {
-            document.getElementById('catalog-modal-search').value = '';
+            const searchEl = document.getElementById('catalog-modal-search');
+            if (searchEl) searchEl.value = '';
             renderModalCatalogGrid(products);
         }
         originalOpenModal(id);
@@ -1242,7 +1258,8 @@
                 const res = await fetch(`https://viacep.com.br/ws/${val}/json/`);
                 const data = await res.json();
                 if (!data.erro) {
-                    document.getElementById('new-cust-street').value = `${data.logradouro}, ${data.bairro} - ${data.localidade}/${data.uf}`;
+                    const streetEl = document.getElementById('new-cust-street');
+                    if (streetEl) streetEl.value = `${data.logradouro}, ${data.bairro} - ${data.localidade}/${data.uf}`;
                 } else {
                     showToast('CEP não encontrado.', 'error');
                 }
@@ -1326,71 +1343,77 @@
         const clearCartBtn = document.getElementById('btn-clear-cart');
         const continueBtn = document.getElementById('btn-continue-step3');
 
-        cartContainer.querySelectorAll('.stoqui-cart-row-item').forEach(e => e.remove());
+        if (cartContainer) {
+            cartContainer.querySelectorAll('.stoqui-cart-row-item').forEach(e => e.remove());
 
-        if (localCart.length === 0) {
-            if (cartEmptyPlaceholder) cartEmptyPlaceholder.style.display = 'block';
-            if (clearCartBtn) clearCartBtn.style.display = 'none';
-            if (continueBtn) continueBtn.disabled = true;
-            document.getElementById('cart-title-text').innerText = 'Carrinho (0 itens)';
-            document.getElementById('cart-total-val').innerText = 'R$ 0';
-        } else {
-            if (cartEmptyPlaceholder) cartEmptyPlaceholder.style.display = 'none';
-            if (clearCartBtn) clearCartBtn.style.display = 'block';
-            if (continueBtn) continueBtn.disabled = false;
-            document.getElementById('cart-title-text').innerText = `Carrinho (${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'})`;
-            document.getElementById('cart-total-val').innerText = `R$ ${sub.toFixed(2)}`;
+            if (localCart.length === 0) {
+                if (cartEmptyPlaceholder) cartEmptyPlaceholder.style.display = 'block';
+                if (clearCartBtn) clearCartBtn.style.display = 'none';
+                if (continueBtn) continueBtn.disabled = true;
+                const titleTextEl = document.getElementById('cart-title-text');
+                if (titleTextEl) titleTextEl.innerText = 'Carrinho (0 itens)';
+                const totalValEl = document.getElementById('cart-total-val');
+                if (totalValEl) totalValEl.innerText = 'R$ 0';
+            } else {
+                if (cartEmptyPlaceholder) cartEmptyPlaceholder.style.display = 'none';
+                if (clearCartBtn) clearCartBtn.style.display = 'block';
+                if (continueBtn) continueBtn.disabled = false;
+                const titleTextEl = document.getElementById('cart-title-text');
+                if (titleTextEl) titleTextEl.innerText = `Carrinho (${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'})`;
+                const totalValEl = document.getElementById('cart-total-val');
+                if (totalValEl) totalValEl.innerText = `R$ ${sub.toFixed(2)}`;
 
-            localCart.forEach(item => {
-                const row = document.createElement('div');
-                row.className = 'stoqui-cart-row-item';
-                row.style.background = '#ffffff';
-                row.style.border = '1px solid var(--border-color)';
-                row.style.borderRadius = '8px';
-                row.style.padding = '12px';
-                row.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span>📦</span>
-                            <div>
-                                <h4 style="font-weight: 700; font-size: 0.9rem; color: #0f172a;">${item.name}</h4>
+                localCart.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'stoqui-cart-row-item';
+                    row.style.background = '#ffffff';
+                    row.style.border = '1px solid var(--border-color)';
+                    row.style.borderRadius = '8px';
+                    row.style.padding = '12px';
+                    row.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span>📦</span>
+                                <div>
+                                    <h4 style="font-weight: 700; font-size: 0.9rem; color: #0f172a;">${item.name}</h4>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 16px; height: 16px;"></i></button>
+                                <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
                             </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 16px; height: 16px;"></i></button>
-                            <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
-                        </div>
-                    </div>
-                    
-                    ${item.isEditing ? `
-                    <div class="cart-inline-edit">
-                        <div style="display: flex; gap: 10px;">
-                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
-                                <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
+                        
+                        ${item.isEditing ? `
+                        <div class="cart-inline-edit">
+                            <div style="display: flex; gap: 10px;">
+                                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                    <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Quantidade</label>
+                                    <input type="number" id="inline-qty-${item.id}" class="form-control" style="min-height: 32px; padding: 4px;" value="${item.quantity}">
+                                </div>
+                                <div class="form-group" style="flex: 2; margin-bottom: 0;">
+                                    <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
+                                    <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                                </div>
                             </div>
-                            <div class="form-group" style="flex: 2; margin-bottom: 0;">
-                                <label style="font-size: 0.72rem; font-weight: 700; color: #64748b;">Preço unitário (R$)</label>
-                                <input type="number" step="0.01" id="inline-price-${item.id}" class="form-control" style="min-height: 32px; padding: 4px; border-color: var(--stoqui-purple-light);" value="${item.price.toFixed(2)}">
+                            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                                <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
+                                <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
                             </div>
                         </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                            <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
-                            <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
+                        ` : `
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.85rem;">
+                            <span style="color: var(--text-secondary); font-weight: 600;">${item.quantity} × R$ ${item.price.toFixed(2)}</span>
+                            <span style="font-weight: 800; color: #0f172a;">R$ ${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
-                    </div>
-                    ` : `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.85rem;">
-                        <span style="color: var(--text-secondary); font-weight: 600;">${item.quantity} × R$ ${item.price.toFixed(2)}</span>
-                        <span style="font-weight: 800; color: #0f172a;">R$ ${(item.price * item.quantity).toFixed(2)}</span>
-                    </div>
-                    <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px; font-weight: 600;">
-                        ${item.stock} em estoque
-                    </div>
-                    `}
-                `;
-                cartContainer.appendChild(row);
-            });
+                        <div style="font-size: 0.72rem; color: #64748b; margin-top: 4px; font-weight: 600;">
+                            ${item.stock} em estoque
+                        </div>
+                        `}
+                    `;
+                    cartContainer.appendChild(row);
+                });
+            }
         }
 
         // 2. Mobile Cart updates (Step 2 list)
@@ -1603,65 +1626,6 @@
         }
 
         lucide.createIcons();
-    }
-
-    // Modal helpers
-    const originalOpenModal = openModal;
-    openModal = function(id) {
-        if (id === 'select-customer-modal') {
-            document.getElementById('customer-modal-search').value = '';
-            renderCustomerList(customers);
-        } else if (id === 'catalog-picker-modal') {
-            document.getElementById('catalog-modal-search').value = '';
-            renderModalCatalogGrid(products);
-        }
-        originalOpenModal(id);
-    };
-
-    // Address CEP pre-fill
-    async function onCepQuery(cep) {
-        const val = cep.trim().replace(/\D/g, '');
-        if (val.length === 8) {
-            try {
-                const res = await fetch(`https://viacep.com.br/ws/${val}/json/`);
-                const data = await res.json();
-                if (!data.erro) {
-                    document.getElementById('new-cust-street').value = `${data.logradouro}, ${data.bairro} - ${data.localidade}/${data.uf}`;
-                } else {
-                    showToast('CEP não encontrado.', 'error');
-                }
-            } catch(e) {
-                console.error(e);
-            }
-        }
-    }
-
-    function onSaveNewCustomer(e) {
-        e.preventDefault();
-        const newCust = {
-            id: 'temp-' + Date.now(),
-            name: document.getElementById('new-cust-name').value.trim(),
-            cnpj: document.getElementById('new-cust-doc').value.trim(),
-            phone: document.getElementById('new-cust-phone').value.trim(),
-            email: document.getElementById('new-cust-email').value.trim() || 'contato@empresa.com',
-            address: document.getElementById('new-cust-street').value.trim() || 'Av. Paulista, 1000 - São Paulo/SP',
-            credit_limit: 5000.0,
-            credit_available: 5000.0,
-            status: 'liberado'
-        };
-
-        customers.push(newCust);
-        selectCustomer(newCust);
-        closeModal('new-customer-modal');
-        showToast('Cliente cadastrado e selecionado com sucesso!');
-
-        // Reset fields
-        document.getElementById('new-cust-name').value = '';
-        document.getElementById('new-cust-doc').value = '';
-        document.getElementById('new-cust-phone').value = '';
-        document.getElementById('new-cust-email').value = '';
-        document.getElementById('new-cust-cep').value = '';
-        document.getElementById('new-cust-street').value = '';
     }
 </script>
 {% endblock %}
