@@ -10,70 +10,303 @@
 </head>
 <body>
 
-    <!-- Sidebar Navigation (Desktop) -->
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div class="sidebar-backdrop mobile-only" onclick="closeMobileSidebar()"></div>
+
+    <!-- Sidebar Navigation (Collapsible & Responsive) -->
     <aside class="sidebar">
         <div class="sidebar-header">
-            <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--primary-light); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; color: #fff;">CS</div>
-            <div class="sidebar-logo">Coliseu<span>Speed</span></div>
+            <div class="sidebar-logo-group">
+                <div class="sidebar-logo-initials">CS</div>
+                <div class="sidebar-logo-text">Coliseu<span>Speed</span></div>
+            </div>
+            <!-- Close mobile sidebar btn -->
+            <button type="button" onclick="closeMobileSidebar()" class="mobile-sidebar-close-btn mobile-only" aria-label="Close Menu">
+                <i data-lucide="x"></i>
+            </button>
+            <!-- Toggle expand/collapse button (Desktop only) -->
+            <button type="button" id="sidebar-toggle" class="sidebar-toggle-btn desktop-only" aria-label="Toggle Sidebar">
+                <i data-lucide="chevron-left"></i>
+            </button>
         </div>
 
-        <ul class="sidebar-menu">
-            <li class="sidebar-item {% if active_page == 'dashboard' %}active{% endif %}">
-                <a href="/">
-                    <i data-lucide="layout-dashboard"></i>
-                    <span>Painel KPIs</span>
-                </a>
-            </li>
-            <li class="sidebar-item {% if active_page == 'catalog' %}active{% endif %}">
-                <a href="/catalog">
-                    <i data-lucide="shopping-bag"></i>
-                    <span>Catálogo</span>
-                </a>
-            </li>
-            <li class="sidebar-item {% if active_page == 'new_order' %}active{% endif %}">
-                <a href="/orders/new">
-                    <i data-lucide="shopping-cart"></i>
-                    <span>Novo Pedido</span>
-                </a>
-            </li>
-            <li class="sidebar-item {% if active_page == 'orders' %}active{% endif %}">
-                <a href="/orders">
-                    <i data-lucide="history"></i>
-                    <span>Histórico Pedidos</span>
-                </a>
-            </li>
-            <li class="sidebar-item {% if active_page == 'customers' %}active{% endif %}">
-                <a href="/customers">
-                    <i data-lucide="users"></i>
-                    <span>Clientes</span>
-                </a>
-            </li>
-            <li class="sidebar-item {% if active_page == 'performance' %}active{% endif %}">
-                <a href="/performance">
-                    <i data-lucide="bar-chart-3"></i>
-                    <span>Dashboard</span>
-                </a>
-            </li>
-            <li class="sidebar-item {% if active_page == 'sync' %}active{% endif %}">
-                <a href="/sync">
-                    <i data-lucide="refresh-cw"></i>
-                    <span>Sincronização</span>
-                </a>
-            </li>
-            <li class="sidebar-item {% if active_page == 'settings' %}active{% endif %}">
-                <a href="/settings">
-                    <i data-lucide="settings"></i>
-                    <span>Configurações</span>
-                </a>
-            </li>
-        </ul>
+        <div class="sidebar-menu-wrapper">
+            <!-- Search Menu Input (Ctrl+K) -->
+            <div class="sidebar-search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="sidebar-menu-search" placeholder="Buscar menu... (Ctrl+K)" oninput="posOnSidebarSearch(this.value)">
+            </div>
+
+            <!-- PRINCIPAL Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Principal</div>
+                <ul class="sidebar-menu-list">
+                    <li class="sidebar-item {% if active_page == 'dashboard' %}active{% endif %}" data-tooltip="Panel KPIs">
+                        <a href="/">
+                            <i data-lucide="layout-dashboard"></i>
+                            <span>Panel KPIs</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if active_page == 'catalog' %}active{% endif %}" data-tooltip="Catálogo">
+                        <a href="/catalog">
+                            <i data-lucide="shopping-bag"></i>
+                            <span>Catálogo</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if active_page == 'new_order' %}active{% endif %}" data-tooltip="Novo Pedido">
+                        <a href="/orders/new">
+                            <i data-lucide="shopping-cart"></i>
+                            <span>Novo Pedido</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if active_page == 'orders' %}active{% endif %}" data-tooltip="Histórico Pedidos">
+                        <a href="/orders">
+                            <i data-lucide="history"></i>
+                            <span>Histórico Pedidos</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if active_page == 'customers' %}active{% endif %}" data-tooltip="Clientes">
+                        <a href="/customers">
+                            <i data-lucide="users"></i>
+                            <span>Clientes</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if active_page == 'performance' %}active{% endif %}" data-tooltip="Dashboard">
+                        <a href="/performance">
+                            <i data-lucide="bar-chart-3"></i>
+                            <span>Dashboard</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- VENDAS Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Vendas</div>
+                <ul class="sidebar-menu-list">
+                    <li class="sidebar-item" data-tooltip="Relatórios">
+                        <a href="#">
+                            <i data-lucide="file-text"></i>
+                            <span>Relatórios</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Analytics">
+                        <a href="#">
+                            <i data-lucide="line-chart"></i>
+                            <span>Analytics</span>
+                            <span class="sidebar-badge badge-black">BLACK</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Contas a receber">
+                        <a href="#">
+                            <i data-lucide="dollar-sign"></i>
+                            <span>Contas a receber</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Carrinhos abandonados">
+                        <a href="#">
+                            <i data-lucide="shopping-cart"></i>
+                            <span>Carrinhos abandonados</span>
+                            <span class="sidebar-badge badge-black">BLACK</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- CONFIGURAÇÕES Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Configurações</div>
+                <ul class="sidebar-menu-list">
+                    <li class="sidebar-item {% if active_page == 'settings' %}active{% endif %}" data-tooltip="Configurações">
+                        <a href="/settings">
+                            <i data-lucide="settings"></i>
+                            <span>Configurações</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item {% if active_page == 'sync' %}active{% endif %}" data-tooltip="Sincronização">
+                        <a href="/sync">
+                            <i data-lucide="refresh-cw"></i>
+                            <span>Sincronização</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- PROMOÇÕES Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Promoções</div>
+                <ul class="sidebar-menu-list">
+                    <li class="sidebar-item" data-tooltip="Cupons de desconto">
+                        <a href="#">
+                            <i data-lucide="ticket"></i>
+                            <span>Cupons de desconto</span>
+                            <span class="sidebar-badge badge-pro">PRO</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- RELACIONAMENTO Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Relacionamento</div>
+                <ul class="sidebar-menu-list">
+                    <li class="sidebar-item" data-tooltip="Clientes">
+                        <a href="/customers">
+                            <i data-lucide="users"></i>
+                            <span>Clientes</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Chats">
+                        <a href="#">
+                            <i data-lucide="message-square"></i>
+                            <span>Chats</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Importação de clientes">
+                        <a href="#">
+                            <i data-lucide="upload"></i>
+                            <span>Importação de clientes</span>
+                            <span class="sidebar-badge badge-pro">PRO</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Fornecedores">
+                        <a href="#">
+                            <i data-lucide="truck"></i>
+                            <span>Fornecedores</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- PRODUTOS Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Produtos</div>
+                <ul class="sidebar-menu-list">
+                    <li class="sidebar-item" data-tooltip="Estoque">
+                        <a href="#">
+                            <i data-lucide="archive"></i>
+                            <span>Estoque</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Categorias">
+                        <a href="#">
+                            <i data-lucide="folder"></i>
+                            <span>Categorias</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Atributos da grade">
+                        <a href="#">
+                            <i data-lucide="layers"></i>
+                            <span>Atributos da grade</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Importação de produtos">
+                        <a href="#">
+                            <i data-lucide="download"></i>
+                            <span>Importação de produtos</span>
+                            <span class="sidebar-badge badge-pro">PRO</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Catálogo em PDF">
+                        <a href="#">
+                            <i data-lucide="file-text"></i>
+                            <span>Catálogo em PDF</span>
+                            <span class="sidebar-badge badge-pro">PRO</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Etiquetas de produtos">
+                        <a href="#">
+                            <i data-lucide="tag"></i>
+                            <span>Etiquetas de produtos</span>
+                            <span class="sidebar-badge badge-pro">PRO</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Tabelas de preço">
+                        <a href="#">
+                            <i data-lucide="table"></i>
+                            <span>Tabelas de preço</span>
+                            <span class="sidebar-badge badge-black">BLACK</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Avaliações">
+                        <a href="#">
+                            <i data-lucide="star"></i>
+                            <span>Avaliações</span>
+                            <span class="sidebar-badge badge-yellow">PRO</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- SUPORTE Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Suporte</div>
+                <ul class="sidebar-menu-list">
+                    <li class="sidebar-item" data-tooltip="Suporte">
+                        <a href="#">
+                            <i data-lucide="help-circle"></i>
+                            <span>Suporte</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="WhatsApp">
+                        <a href="#">
+                            <i data-lucide="message-circle"></i>
+                            <span>WhatsApp</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Canal">
+                        <a href="#">
+                            <i data-lucide="tv"></i>
+                            <span>Canal</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Tutoriais">
+                        <a href="#">
+                            <i data-lucide="video"></i>
+                            <span>Tutoriais</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- REDES SOCIAIS Section -->
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Redes Sociais</div>
+                <ul class="sidebar-menu-list">
+                    <li class="sidebar-item" data-tooltip="Instagram">
+                        <a href="#">
+                            <i data-lucide="instagram"></i>
+                            <span>Instagram</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="Facebook">
+                        <a href="#">
+                            <i data-lucide="facebook"></i>
+                            <span>Facebook</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="LinkedIn">
+                        <a href="#">
+                            <i data-lucide="linkedin"></i>
+                            <span>LinkedIn</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item" data-tooltip="YouTube">
+                        <a href="#">
+                            <i data-lucide="youtube"></i>
+                            <span>YouTube</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
 
         <div class="sidebar-footer">
             <div class="rep-info">
                 <div class="rep-name">{{ rep_name or 'Vendedor' }}</div>
                 <div class="rep-branch">{{ selected_branch_name or 'Sem filial selecionada' }}</div>
             </div>
-            <a href="/auth/logout" style="color: rgba(255,255,255,0.5); padding: 6px;" title="Sair do Sistema">
+            <a href="/auth/logout" style="color: rgba(255,255,255,0.7); padding: 6px; display: flex; align-items: center;" title="Sair do Sistema">
                 <i data-lucide="log-out" style="width: 18px; height: 18px;"></i>
             </a>
         </div>
@@ -130,6 +363,120 @@
 
     <script src="/static/js/web_main.js"></script>
     <script>
+        // Sidebar collapse / expand logic
+        const sidebar = document.querySelector('.sidebar');
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+
+        function setSidebarState(collapsed) {
+            if (collapsed) {
+                sidebar.classList.add('collapsed');
+                document.body.classList.add('sidebar-collapsed');
+                localStorage.setItem('sidebar-collapsed', 'true');
+                // Change icon to menu
+                const toggleIcon = sidebarToggle ? sidebarToggle.querySelector('i') : null;
+                if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'menu');
+            } else {
+                sidebar.classList.remove('collapsed');
+                document.body.classList.remove('sidebar-collapsed');
+                localStorage.setItem('sidebar-collapsed', 'false');
+                // Change icon to chevron-left
+                const toggleIcon = sidebarToggle ? sidebarToggle.querySelector('i') : null;
+                if (toggleIcon) toggleIcon.setAttribute('data-lucide', 'chevron-left');
+            }
+            lucide.createIcons();
+        }
+
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => {
+                const isCollapsed = sidebar.classList.contains('collapsed');
+                setSidebarState(!isCollapsed);
+            });
+        }
+
+        // Load persisted state
+        const isCollapsedStored = localStorage.getItem('sidebar-collapsed') === 'true';
+        // Tablet (768px - 1024px) should be collapsed by default
+        const isTablet = window.innerWidth >= 768 && window.innerWidth <= 1024;
+        if (isCollapsedStored || isTablet) {
+            setSidebarState(true);
+        } else {
+            setSidebarState(false);
+        }
+
+        // Mobile overlay sidebar toggle functions
+        function openMobileSidebar() {
+            document.body.classList.add('mobile-sidebar-open');
+        }
+        function closeMobileSidebar() {
+            document.body.classList.remove('mobile-sidebar-open');
+        }
+
+        // Connect "Mais" tab click to openMobileSidebar on mobile screens
+        const maisTab = document.querySelector('a[href="/settings"]');
+        if (maisTab) {
+            maisTab.addEventListener('click', (e) => {
+                if (window.innerWidth < 768) {
+                    e.preventDefault();
+                    openMobileSidebar();
+                }
+            });
+        }
+
+        // Key shortcuts
+        document.addEventListener('keydown', (e) => {
+            // CTRL+M to toggle sidebar
+            if (e.ctrlKey && e.key.toLowerCase() === 'm') {
+                e.preventDefault();
+                const isCollapsed = sidebar.classList.contains('collapsed');
+                setSidebarState(!isCollapsed);
+            }
+            // ESC key to close mobile menu
+            if (e.key === 'Escape') {
+                if (document.body.classList.contains('mobile-sidebar-open')) {
+                    closeMobileSidebar();
+                }
+            }
+            // Ctrl+K or Cmd+K to focus sidebar search
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                const searchInput = document.getElementById('sidebar-menu-search');
+                if (searchInput) {
+                    e.preventDefault();
+                    // Expand sidebar first if collapsed
+                    if (sidebar.classList.contains('collapsed')) {
+                        setSidebarState(false);
+                    }
+                    searchInput.focus();
+                }
+            }
+        });
+
+        // Search menu items filtering logic
+        function posOnSidebarSearch(query) {
+            query = query.toLowerCase().trim();
+            const items = document.querySelectorAll('.sidebar-menu-list .sidebar-item');
+            const sections = document.querySelectorAll('.sidebar-section');
+
+            sections.forEach(sec => {
+                let hasVisibleItem = false;
+                const secItems = sec.querySelectorAll('.sidebar-item');
+                secItems.forEach(item => {
+                    const text = item.innerText.toLowerCase();
+                    if (text.includes(query)) {
+                        item.style.display = 'block';
+                        hasVisibleItem = true;
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+                
+                if (hasVisibleItem || query === '') {
+                    sec.style.display = 'block';
+                } else {
+                    sec.style.display = 'none';
+                }
+            });
+        }
+
         lucide.createIcons();
         
         {% if flash_message %}
