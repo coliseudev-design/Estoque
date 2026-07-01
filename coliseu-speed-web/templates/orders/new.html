@@ -272,7 +272,8 @@
     <!-- Header with Back navigation -->
     <header class="stoqui-header">
         <button type="button" class="stoqui-header-btn" id="header-back-btn" onclick="onHeaderBack()">
-            <i data-lucide="x" style="width: 20px; height: 20px;"></i>
+            <span id="header-back-icon-arrow" style="display: none;"><i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i></span>
+            <span id="header-back-icon-close" style="display: inline-block;"><i data-lucide="x" style="width: 20px; height: 20px;"></i></span>
         </button>
         <span class="stoqui-header-title" id="header-title">Registrar pedido</span>
     </header>
@@ -349,14 +350,14 @@
                 <h3 style="font-size: 1.35rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;">Produtos</h3>
             </div>
             
-            <div class="empty-cart-state" style="text-align: center; padding: 60px 10px;" onclick="openModal('catalog-picker-modal')">
+            <div class="empty-cart-state" style="text-align: center; padding: 60px 10px;" onclick="posOpenModal('catalog-picker-modal')">
                 <i data-lucide="shopping-cart" style="width: 56px; height: 56px; margin: 0 auto 12px auto; color: #94a3b8; stroke-width: 1.5;"></i>
                 <h4 style="font-weight: 800; font-size: 1.05rem; color: #334155; margin-bottom: 6px;">Nenhum produto adicionado</h4>
                 <p style="color: var(--text-secondary); font-size: 0.85rem;">Adicione produtos para começar</p>
             </div>
 
             <!-- Floating plus button -->
-            <button type="button" class="float-add-btn" onclick="openModal('catalog-picker-modal')">
+            <button type="button" class="float-add-btn" onclick="posOpenModal('catalog-picker-modal')">
                 <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
             </button>
 
@@ -385,7 +386,7 @@
             <div id="mobile-cart-items-list" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 100px;"></div>
 
             <!-- Floating plus button -->
-            <button type="button" class="float-add-btn" onclick="openModal('catalog-picker-modal')">
+            <button type="button" class="float-add-btn" onclick="posOpenModal('catalog-picker-modal')">
                 <i data-lucide="plus" style="width: 28px; height: 28px;"></i>
             </button>
 
@@ -407,7 +408,7 @@
                 <i data-lucide="user" style="width: 16px; height: 16px;"></i> Cliente
             </h3>
             
-            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="border-radius: 8px; border: 1.5px solid var(--border-color); padding: 12px;">
+            <div class="customer-picker-card" onclick="posOpenModal('select-customer-modal')" style="border-radius: 8px; border: 1.5px solid var(--border-color); padding: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div id="sel-cust-avatar" class="customer-avatar" style="background: var(--stoqui-purple);">👤</div>
                     <div>
@@ -449,7 +450,7 @@
 
         <!-- ETAPA 4: RESUMO DETALHADO -->
         <section id="step-4" class="step-container" style="display: none;">
-            <div class="customer-picker-card" onclick="openModal('select-customer-modal')" style="margin-bottom: 16px; border-radius: 8px; padding: 12px;">
+            <div class="customer-picker-card" onclick="posOpenModal('select-customer-modal')" style="margin-bottom: 16px; border-radius: 8px; padding: 12px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <div id="sel-cust-avatar-step4" class="customer-avatar" style="background: var(--stoqui-purple);">👤</div>
                     <div>
@@ -592,7 +593,7 @@
     <div class="modal-content">
         <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
             <h3 style="font-weight: 800; font-size: 1rem;">👤 Selecionar Cliente</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('select-customer-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="posCloseModal('select-customer-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
                 <span>Fechar</span>
             </button>
         </div>
@@ -604,7 +605,7 @@
                 placeholder="Busque por nome, CPF/CNPJ ou Telefone..." 
                 oninput="posOnModalCustomerSearch(this.value)"
             >
-            <button type="button" class="btn btn-secondary" onclick="openModal('new-customer-modal')" style="width: auto; min-height: 40px; padding: 0 10px; background: var(--stoqui-purple); color: #fff; border: none;">
+            <button type="button" class="btn btn-secondary" onclick="posOpenModal('new-customer-modal')" style="width: auto; min-height: 40px; padding: 0 10px; background: var(--stoqui-purple); color: #fff; border: none;">
                 <span>+ Novo</span>
             </button>
         </div>
@@ -617,7 +618,7 @@
     <div class="modal-content" style="max-height: 90vh;">
         <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
             <h3 style="font-weight: 800; font-size: 1rem;">👤 Novo Cliente Rápido</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('new-customer-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="posCloseModal('new-customer-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
                 <span>Fechar</span>
             </button>
         </div>
@@ -660,7 +661,7 @@
     <div class="modal-content" style="max-height: 60vh;">
         <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
             <h3 id="edit-value-modal-title" style="font-weight: 800; font-size: 1rem;">Editar Valor</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('edit-values-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="posCloseModal('edit-values-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
                 <span>Fechar</span>
             </button>
         </div>
@@ -682,7 +683,7 @@
     <div class="modal-content">
         <div class="modal-header" style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #fafafa;">
             <h3 style="font-weight: 800; font-size: 1rem;">📋 Catálogo de Produtos</h3>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('catalog-picker-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="posCloseModal('catalog-picker-modal')" style="min-height: 32px; width: auto; padding: 0 10px;">
                 <span>Fechar</span>
             </button>
         </div>
@@ -724,6 +725,32 @@
     let currentSelectingPaymentMethod = null;
     let currentSelectingPaymentIcon = 'credit-card';
     let keypadTypedVal = "";
+
+    // Define custom local modal handlers to isolate script execution order
+    function posOpenModal(id) {
+        if (id === 'select-customer-modal') {
+            const searchEl = document.getElementById('customer-modal-search');
+            if (searchEl) searchEl.value = '';
+            posRenderCustomerList(customers);
+        } else if (id === 'catalog-picker-modal') {
+            const searchEl = document.getElementById('catalog-modal-search');
+            if (searchEl) searchEl.value = '';
+            posRenderModalCatalogGrid(products);
+        }
+        
+        // Base modal trigger fallback
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.add('open');
+        }
+    }
+
+    function posCloseModal(id) {
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.remove('open');
+        }
+    }
 
     // Load initial configurations
     window.addEventListener('DOMContentLoaded', () => {
@@ -773,13 +800,15 @@
         const splitLayout = document.getElementById('pane-split-checkout');
         const singleLayout = document.getElementById('pane-single-checkout');
         
-        const backBtn = document.getElementById('header-back-btn');
-        const backIcon = backBtn.querySelector('i');
         const titleSpan = document.getElementById('header-title');
+        const arrowIcon = document.getElementById('header-back-icon-arrow');
+        const closeIcon = document.getElementById('header-back-icon-close');
 
         // Dynamic Header titles matching current state
         if (isMobile) {
-            backIcon.setAttribute('data-lucide', 'arrow-left');
+            if (arrowIcon) arrowIcon.style.display = 'inline-block';
+            if (closeIcon) closeIcon.style.display = 'none';
+
             if (step === 1 || step === 2) {
                 titleSpan.innerText = 'Novo pedido';
             } else if (step === 3) {
@@ -794,10 +823,13 @@
         } else {
             // Desktop behavior
             if (step === 1 || step === 2) {
-                backIcon.setAttribute('data-lucide', 'x');
+                if (arrowIcon) arrowIcon.style.display = 'none';
+                if (closeIcon) closeIcon.style.display = 'inline-block';
                 titleSpan.innerText = 'Registrar pedido';
             } else {
-                backIcon.setAttribute('data-lucide', 'arrow-left');
+                if (arrowIcon) arrowIcon.style.display = 'inline-block';
+                if (closeIcon) closeIcon.style.display = 'none';
+
                 if (step === 3 || step === 4) {
                     titleSpan.innerText = 'Novo pedido';
                 } else if (step === 5 || step === 5.1 || step === 5.2) {
@@ -1000,7 +1032,7 @@
     // ── Cliente + Entrega Selection ──
     function posSelectCustomer(cust) {
         selectedCustomer = cust;
-        closeModal('select-customer-modal');
+        posCloseModal('select-customer-modal');
         posUpdateWizardDOMs();
     }
 
@@ -1076,23 +1108,8 @@
         const valInput = document.getElementById('edit-value-input');
         if (valInput) valInput.value = currentValue;
         
-        openModal('edit-values-modal');
+        posOpenModal('edit-values-modal');
     }
-
-    // Modal helpers
-    const originalOpenModal = openModal;
-    openModal = function(id) {
-        if (id === 'select-customer-modal') {
-            const searchEl = document.getElementById('customer-modal-search');
-            if (searchEl) searchEl.value = '';
-            posRenderCustomerList(customers);
-        } else if (id === 'catalog-picker-modal') {
-            const searchEl = document.getElementById('catalog-modal-search');
-            if (searchEl) searchEl.value = '';
-            posRenderModalCatalogGrid(products);
-        }
-        originalOpenModal(id);
-    };
 
     function posOnSaveEditValue(e) {
         e.preventDefault();
@@ -1107,7 +1124,7 @@
             discountAmount = val;
         }
 
-        closeModal('edit-values-modal');
+        posCloseModal('edit-values-modal');
         posUpdateWizardDOMs();
     }
 
@@ -1260,7 +1277,7 @@
             card.className = 'stoqui-product-card';
             card.onclick = () => {
                 posAddToCart(p);
-                closeModal('catalog-picker-modal');
+                posCloseModal('catalog-picker-modal');
             };
             card.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -1311,7 +1328,7 @@
 
         customers.push(newCust);
         posSelectCustomer(newCust);
-        closeModal('new-customer-modal');
+        posCloseModal('new-customer-modal');
         showToast('Cliente cadastrado e selecionado com sucesso!');
 
         // Reset fields
