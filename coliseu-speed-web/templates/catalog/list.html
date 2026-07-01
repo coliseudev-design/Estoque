@@ -171,19 +171,26 @@
 <div style="padding: 4px 8px;">
 
     <!-- Custom Header section -->
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
         <h1 style="font-size: 1.45rem; font-weight: 800; color: #0f172a; margin: 0;">Catálogo de Produtos</h1>
-        <a href="/orders/new" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; min-height: 38px; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">
-            <i data-lucide="shopping-cart" style="width: 16px; height: 16px;"></i> Novo Pedido
-        </a>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <!-- Compact Search Bar -->
+            <div style="box-shadow: none; margin-bottom: 0; min-height: 38px; border-radius: 8px; width: 180px; display: flex; align-items: center; border: 1.5px solid var(--border-color); padding: 0 10px; background: #ffffff;">
+                <i data-lucide="search" style="width: 14px; height: 14px; color: #94a3b8; margin-right: 6px;"></i>
+                <input type="text" id="filter-name" placeholder="Pesquise..." oninput="posOnFilterChange()" style="border: none; outline: none; background: none; font-size: 0.82rem; width: 100%;">
+            </div>
+            <!-- Toggle Advanced Filters Button -->
+            <button type="button" onclick="posToggleAdvancedFilters()" style="border: 1.5px solid var(--border-color); background: #ffffff; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569; padding: 0;">
+                <i data-lucide="sliders-horizontal" style="width: 18px; height: 18px;"></i>
+            </button>
+            <a href="/orders/new" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px; min-height: 38px; border-radius: 8px; font-weight: 700; font-size: 0.82rem; padding: 0 12px; height: 38px;">
+                <i data-lucide="shopping-cart" style="width: 15px; height: 15px;"></i> Novo Pedido
+            </a>
+        </div>
     </div>
 
-    <!-- Top search parameters grid -->
-    <div class="catalog-filter-grid">
-        <div class="filter-input-wrapper">
-            <label for="filter-name">Descrição / Nome</label>
-            <input type="text" id="filter-name" class="filter-input-control" placeholder="Busque por descrição..." oninput="posOnFilterChange()">
-        </div>
+    <!-- Top search parameters grid (Collapsible/Advanced) -->
+    <div id="advanced-filters-panel" class="catalog-filter-grid" style="display: none;">
         <div class="filter-input-wrapper">
             <label for="filter-code">Código / SKU</label>
             <input type="text" id="filter-code" class="filter-input-control" placeholder="Ex: PROD-001" oninput="posOnFilterChange()">
@@ -326,6 +333,22 @@
     function posOpenModal(id) {
         const modal = document.getElementById(id);
         if (modal) modal.classList.add('open');
+    }
+
+    function posToggleAdvancedFilters() {
+        const panel = document.getElementById('advanced-filters-panel');
+        if (panel) {
+            if (panel.style.display === 'none') {
+                panel.style.display = 'grid';
+            } else {
+                panel.style.display = 'none';
+                // Clear advanced filters on close
+                document.getElementById('filter-code').value = '';
+                document.getElementById('filter-barcode').value = '';
+                document.getElementById('filter-reference').value = '';
+                posOnFilterChange();
+            }
+        }
     }
 
     // Handles multi-parameter filtering

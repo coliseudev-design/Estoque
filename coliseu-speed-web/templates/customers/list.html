@@ -4,6 +4,11 @@
 
 {% block content %}
 <style>
+    /* Hide base.html main-header to take complete control of styling */
+    .main-header {
+        display: none !important;
+    }
+
     /* Design Tokens */
     :root {
         --stoqui-purple: #1D4ED8; /* Solid Blue matching PDV/Dashboard */
@@ -49,19 +54,37 @@
         text-align: center;
         gap: 8px;
     }
-    .cust-profile-stat-val {
+    .cust-stat-val {
+        font-size: 1.15rem;
         font-weight: 800;
-        font-size: 0.95rem;
         color: #0f172a;
     }
-    .cust-profile-stat-lbl {
-        font-size: 0.72rem;
+    .cust-stat-lbl {
+        font-size: 0.68rem;
         color: #64748b;
         font-weight: 700;
+        text-transform: uppercase;
         margin-top: 2px;
     }
 
-    /* Contact rows */
+    /* Status Pill styling */
+    .cust-status-badge {
+        font-weight: 800;
+        font-size: 0.72rem;
+        padding: 4px 10px;
+        border-radius: 9999px;
+        display: inline-flex;
+        text-transform: uppercase;
+    }
+    .cust-status-badge.liberado {
+        background: #DCFCE7;
+        color: #15803D;
+    }
+    .cust-status-badge.bloqueado {
+        background: #FEE2E2;
+        color: #B91C1C;
+    }
+
     .cust-contact-row {
         display: flex;
         align-items: center;
@@ -131,78 +154,97 @@
     {{ orders | tojson }}
 </script>
 
-<!-- Desktop View (Tabela) -->
-<div class="card table-container" style="border: 1.5px solid var(--border-color); box-shadow: none; padding: 0; overflow: hidden;">
-    <div style="padding: 16px 20px; border-bottom: 1.5px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="font-size: 1.1rem; font-weight: 800; color: #0f172a; margin: 0;">Carteira de Clientes</h2>
-    </div>
+<div style="padding: 4px 8px;">
 
-    <div style="overflow-x: auto;">
-        <table class="table" style="min-width: 900px; margin-bottom: 0;">
-            <thead>
-                <tr style="background: #fafafa; border-bottom: 1.5px solid var(--border-color);">
-                    <th>Cliente / Razão Social</th>
-                    <th>CNPJ / CPF</th>
-                    <th>Cidade</th>
-                    <th>Telefone</th>
-                    <th>E-mail</th>
-                    <th style="text-align: right; width: 140px;">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for cust in customers %}
-                <tr style="border-bottom: 1px solid var(--border-color);">
-                    <td>
-                        <div style="font-weight: 700; color: #0f172a;">{{ cust.name }}</div>
-                    </td>
-                    <td style="color: #475569;">{{ cust.cnpj }}</td>
-                    <td>{{ cust.city or 'Não Informado' }}</td>
-                    <td>{{ cust.phone or 'Não Informado' }}</td>
-                    <td style="color: #64748b;">{{ cust.email or 'Não Informado' }}</td>
-                    <td style="text-align: right;">
-                        <button type="button" onclick="posOpenCustomerDetails('{{ cust.id }}')" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 6px; font-weight: 700;">
-                            <i data-lucide="eye" style="width: 14px; height: 14px;"></i> Ver Ficha
-                        </button>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">
-                        Nenhum cliente cadastrado no portfólio.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Mobile View (Cards responsivos empilhados) -->
-<div class="responsive-cards" style="margin-top: 16px; margin-bottom: 100px;">
-    {% for cust in customers %}
-    <div class="table-card" style="border: 1.5px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 12px; background: #ffffff;">
-        <div class="table-card-row" style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-                <h4 style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin: 0;">{{ cust.name }}</h4>
-                <span style="font-size: 0.78rem; color: #64748b; margin-top: 2px; display: block;">{{ cust.cnpj }}</span>
+    <!-- Custom Standardized Header section matching Screenshot 1 -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-color); margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <h1 style="font-size: 1.45rem; font-weight: 800; color: #0f172a; margin: 0;">Carteira de Clientes</h1>
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <!-- Compact Search Bar -->
+            <div style="box-shadow: none; margin-bottom: 0; min-height: 38px; border-radius: 8px; width: 180px; display: flex; align-items: center; border: 1.5px solid var(--border-color); padding: 0 10px; background: #ffffff;">
+                <i data-lucide="search" style="width: 14px; height: 14px; color: #94a3b8; margin-right: 6px;"></i>
+                <input type="text" id="customer-search-input" placeholder="Pesquise..." oninput="posOnCustomerSearch(this.value)" style="border: none; outline: none; background: none; font-size: 0.82rem; width: 100%;">
             </div>
-        </div>
-        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: #475569; border-top: 1px solid var(--border-color); padding-top: 8px;">
-            <div>📍 <strong>Cidade:</strong> {{ cust.city or 'Não Informado' }}</div>
-            <div>📞 <strong>Telefone:</strong> {{ cust.phone or 'Não Informado' }}</div>
-            <div>✉️ <strong>E-mail:</strong> {{ cust.email or 'Não Informado' }}</div>
-        </div>
-        <div style="margin-top: 12px;">
-            <button type="button" onclick="posOpenCustomerDetails('{{ cust.id }}')" class="btn btn-secondary" style="width: 100%; min-height: 40px; display: inline-flex; justify-content: center; align-items: center; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">
-                <i data-lucide="eye" style="width: 16px; height: 16px; margin-right: 6px;"></i> Ver Ficha do Cliente
+            <!-- Standard Filter Trigger Button -->
+            <button type="button" style="border: 1.5px solid var(--border-color); background: #ffffff; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569; padding: 0;">
+                <i data-lucide="sliders-horizontal" style="width: 18px; height: 18px;"></i>
+            </button>
+            <button type="button" style="border: 1.5px solid var(--border-color); background: #ffffff; border-radius: 8px; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #475569; padding: 0;">
+                <i data-lucide="more-vertical" style="width: 18px; height: 18px;"></i>
             </button>
         </div>
     </div>
-    {% else %}
-    <div style="text-align: center; color: var(--text-muted); padding: 40px;">
-        Nenhum cliente cadastrado no portfólio.
+
+    <!-- Desktop View (Tabela) -->
+    <div class="card table-container" style="border: 1.5px solid var(--border-color); box-shadow: none; padding: 0; overflow: hidden; background: #ffffff;">
+        <div style="overflow-x: auto;">
+            <table class="table" style="min-width: 900px; margin-bottom: 0;">
+                <thead>
+                    <tr style="background: #fafafa; border-bottom: 1.5px solid var(--border-color);">
+                        <th>Cliente / Razão Social</th>
+                        <th>CNPJ / CPF</th>
+                        <th>Cidade</th>
+                        <th>Telefone</th>
+                        <th>E-mail</th>
+                        <th style="text-align: right; width: 140px;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cust in customers %}
+                    <tr class="customer-row" style="border-bottom: 1px solid var(--border-color);">
+                        <td>
+                            <div style="font-weight: 700; color: #0f172a;">{{ cust.name }}</div>
+                        </td>
+                        <td style="color: #475569;">{{ cust.cnpj }}</td>
+                        <td>{{ cust.city or 'Não Informado' }}</td>
+                        <td>{{ cust.phone or 'Não Informado' }}</td>
+                        <td style="color: #64748b;">{{ cust.email or 'Não Informado' }}</td>
+                        <td style="text-align: right;">
+                            <button type="button" onclick="posOpenCustomerDetails('{{ cust.id }}')" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border-radius: 6px; font-weight: 700;">
+                                <i data-lucide="eye" style="width: 14px; height: 14px;"></i> Ver Ficha
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            Nenhum cliente cadastrado no portfólio.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
-    {% endfor %}
+
+    <!-- Mobile View (Cards responsivos empilhados) -->
+    <div class="responsive-cards" style="margin-top: 0; margin-bottom: 100px;">
+        {% for cust in customers %}
+        <div class="table-card customer-mobile-card" style="border: 1.5px solid var(--border-color); border-radius: 12px; padding: 16px; margin-bottom: 12px; background: #ffffff;">
+            <div class="table-card-row" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h4 style="font-weight: 700; color: #0f172a; font-size: 0.95rem; margin: 0;">{{ cust.name }}</h4>
+                    <span style="font-size: 0.78rem; color: #64748b; margin-top: 2px; display: block;">{{ cust.cnpj }}</span>
+                </div>
+            </div>
+            <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: #475569; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                <div>📍 <strong>Cidade:</strong> {{ cust.city or 'Não Informado' }}</div>
+                <div>📞 <strong>Telefone:</strong> {{ cust.phone or 'Não Informado' }}</div>
+                <div>✉️ <strong>E-mail:</strong> {{ cust.email or 'Não Informado' }}</div>
+            </div>
+            <div style="margin-top: 12px;">
+                <button type="button" onclick="posOpenCustomerDetails('{{ cust.id }}')" class="btn btn-secondary" style="width: 100%; min-height: 40px; display: inline-flex; justify-content: center; align-items: center; border-radius: 8px; font-weight: 700; font-size: 0.85rem;">
+                    <i data-lucide="eye" style="width: 16px; height: 16px; margin-right: 6px;"></i> Ver Ficha do Cliente
+                </button>
+            </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: var(--text-muted); padding: 40px;">
+            Nenhum cliente cadastrado no portfólio.
+        </div>
+        {% endfor %}
+    </div>
+
 </div>
 
 <!-- Modal: Detalhes do Cliente (Anexo 3) -->
@@ -223,109 +265,62 @@
         <div style="padding: 20px; overflow-y: auto; flex: 1;">
             <div class="cust-detail-layout">
                 
-                <!-- Left: Profile card summary -->
-                <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 16px; justify-content: flex-start; height: fit-content; width: 100%;">
-                    <div style="display: flex; align-items: center; gap: 14px;">
-                        <div id="modal-cust-avatar" style="width: 54px; height: 54px; border-radius: 50%; background: var(--stoqui-purple-bg); color: var(--stoqui-purple); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.2rem;">
-                            AS
-                        </div>
-                        <div>
-                            <h4 id="modal-cust-name" style="font-weight: 800; color: #0f172a; font-size: 1.1rem; margin: 0;">Nome do Cliente</h4>
-                            <span style="font-size: 0.72rem; color: #16a34a; font-weight: 800; background: #dcfce7; padding: 2px 8px; border-radius: 4px; margin-top: 4px; display: inline-block;">Ativo</span>
-                        </div>
+                <!-- Left: Profile and basic stats -->
+                <div style="background: #ffffff; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 20px; display: flex; flex-direction: column;">
+                    <div style="text-align: center; margin-bottom: 16px;">
+                        <div id="modal-cust-avatar" style="width: 80px; height: 80px; border-radius: 50%; background: var(--stoqui-purple-bg); color: var(--stoqui-purple); font-size: 2.2rem; font-weight: 800; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; border: 1.5px solid var(--border-color);">👤</div>
+                        <h2 id="modal-cust-name" style="font-size: 1.2rem; font-weight: 800; color: #0f172a; margin: 0 0 4px 0;">Supermercado Pão e Mel</h2>
+                        <div id="modal-cust-cnpj" style="font-size: 0.8rem; color: #64748b; font-weight: 700;">CNPJ: 98.765.432/0001-00</div>
                     </div>
 
-                    <!-- Faturamento stats row -->
+                    <!-- Client status badge -->
+                    <div style="text-align: center; margin-bottom: 16px;">
+                        <span id="modal-cust-status" class="cust-status-badge liberado">Liberado</span>
+                    </div>
+
+                    <!-- Tech stats block -->
                     <div class="cust-profile-stats-card">
                         <div>
-                            <div class="cust-profile-stat-val" id="modal-stat-orders">0</div>
-                            <div class="cust-profile-stat-lbl">Vendas</div>
+                            <div id="modal-cust-stat-sales" class="cust-stat-val">R$ 0</div>
+                            <div class="cust-stat-lbl">Faturamento</div>
                         </div>
                         <div>
-                            <div class="cust-profile-stat-val" id="modal-stat-ticket">R$ 0,00</div>
-                            <div class="cust-profile-stat-lbl">Ticket médio</div>
+                            <div id="modal-cust-stat-orders" class="cust-stat-val">0</div>
+                            <div class="cust-stat-lbl">Pedidos</div>
                         </div>
                         <div>
-                            <div class="cust-profile-stat-val" id="modal-stat-total">R$ 0,00</div>
-                            <div class="cust-profile-stat-lbl">Total gasto</div>
+                            <div id="modal-cust-stat-days" class="cust-stat-val">0</div>
+                            <div class="cust-stat-lbl">Dias Sem Comprar</div>
                         </div>
                     </div>
 
                     <!-- Contact Details list -->
-                    <div style="margin-bottom: 20px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <div class="cust-contact-row">
+                            <i data-lucide="map-pin" class="cust-contact-icon"></i>
+                            <span id="modal-cust-city">Cidade: --</span>
+                        </div>
                         <div class="cust-contact-row">
                             <i data-lucide="phone" class="cust-contact-icon"></i>
-                            <span id="modal-contact-phone">--</span>
+                            <span id="modal-cust-phone">Telefone: --</span>
                         </div>
                         <div class="cust-contact-row">
                             <i data-lucide="mail" class="cust-contact-icon"></i>
-                            <span id="modal-contact-email">--</span>
+                            <span id="modal-cust-email">E-mail: --</span>
                         </div>
-                        <div class="cust-contact-row">
-                            <i data-lucide="file-text" class="cust-contact-icon"></i>
-                            <span id="modal-contact-cnpj">--</span>
-                        </div>
-                        <div class="cust-contact-row">
-                            <i data-lucide="map-pin" class="cust-contact-icon"></i>
-                            <span id="modal-contact-city">--</span>
-                        </div>
-                    </div>
-
-                    <!-- CTA Buttons -->
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <a href="/orders/new" class="btn-stoqui" style="text-decoration: none; width: 100%; text-align: center;">
-                            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> <span>Lançar pedido</span>
-                        </a>
-                        <button type="button" class="btn btn-secondary" style="width: 100%; min-height: 40px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; border: 1.5px solid var(--border-color); color: #475569; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                            <i data-lucide="share-2" style="width: 16px; height: 16px;"></i> Compartilhar loja
-                        </button>
                     </div>
                 </div>
 
-                <!-- Right: Details panels (Orders, Outstandings, Address) -->
-                <div>
-                    <!-- Pedidos panel -->
-                    <div class="cust-right-panel">
-                        <h4 class="cust-right-panel-title">
-                            <i data-lucide="shopping-bag" style="width: 18px; height: 18px; color: var(--stoqui-purple-light);"></i> Pedidos
-                        </h4>
-                        <div id="modal-orders-container" style="display: flex; flex-direction: column; gap: 8px;">
-                            <!-- Loaded dynamically -->
+                <!-- Right: Orders History list -->
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="cust-right-panel" style="margin-bottom: 0; flex: 1;">
+                        <div class="cust-right-panel-title">
+                            <i data-lucide="shopping-bag" style="width: 18px; height: 18px; color: var(--stoqui-purple);"></i>
+                            <span>Histórico de Compras</span>
+                            <span id="modal-orders-total-count" style="font-size: 0.72rem; color: #64748b; font-weight: 700; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; margin-left: auto;">0 pedidos</span>
                         </div>
-                        <div style="margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <strong style="font-size: 0.85rem; color: #1e293b;">Ver todos os pedidos</strong>
-                                <div id="modal-orders-total-count" style="font-size: 0.75rem; color: #64748b;">0 pedidos no total</div>
-                            </div>
-                            <a href="/orders" style="color: #475569;"><i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i></a>
-                        </div>
-                    </div>
-
-                    <!-- Contas a Receber panel -->
-                    <div class="cust-right-panel">
-                        <h4 class="cust-right-panel-title">
-                            <i data-lucide="dollar-sign" style="width: 18px; height: 18px; color: var(--stoqui-purple-light);"></i> Contas a receber
-                        </h4>
-                        <div style="background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color); padding: 16px; text-align: center; color: #64748b; font-size: 0.88rem;">
-                            Este cliente não possui contas pendentes
-                        </div>
-                    </div>
-
-                    <!-- Endereços panel -->
-                    <div class="cust-right-panel">
-                        <h4 class="cust-right-panel-title">
-                            <i data-lucide="map-pin" style="width: 18px; height: 18px; color: var(--stoqui-purple-light);"></i> Endereços
-                        </h4>
-                        <div style="display: flex; align-items: flex-start; gap: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color); padding: 14px 16px; font-size: 0.85rem; color: #334155;">
-                            <i data-lucide="map-pin" style="width: 18px; height: 18px; color: var(--stoqui-purple-light); flex-shrink: 0; margin-top: 2px;"></i>
-                            <div>
-                                <strong id="modal-address-title" style="color: #0f172a; display: block; margin-bottom: 2px;">Endereço de Faturamento</strong>
-                                <span id="modal-address-text">--</span>
-                            </div>
-                        </div>
-                        <div style="margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 12px; display: flex; justify-content: space-between; align-items: center;">
-                            <strong style="font-size: 0.85rem; color: #1e293b;">Adicionar endereço</strong>
-                            <a href="#" style="color: #475569;"><i data-lucide="chevron-right" style="width: 20px; height: 20px;"></i></a>
+                        <div id="modal-customer-orders-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
@@ -336,7 +331,7 @@
 </div>
 
 <script>
-    // Extract base datasets
+    // Extract serialized datasets
     const customersData = JSON.parse(document.getElementById('customers-json-data').textContent || '[]');
     const ordersHistory = JSON.parse(document.getElementById('orders-json-data').textContent || '[]');
 
@@ -350,53 +345,91 @@
         if (modal) modal.classList.add('open');
     }
 
-    // Dynamic Customer sheet compiler (Anexo 3)
-    function posOpenCustomerDetails(custId) {
-        const cust = customersData.find(c => c.id === custId);
+    // Client-side search filters for standardized header input
+    function posOnCustomerSearch(query) {
+        query = query.toLowerCase().trim();
+        
+        // Filter desktop rows
+        document.querySelectorAll('.customer-row').forEach(row => {
+            const text = row.innerText.toLowerCase();
+            if (text.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        // Filter mobile cards
+        document.querySelectorAll('.customer-mobile-card').forEach(card => {
+            const text = card.innerText.toLowerCase();
+            if (text.includes(query)) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Opens customer profile and history modal
+    function posOpenCustomerDetails(id) {
+        const cust = customersData.find(c => c.id === id);
         if (!cust) return;
 
-        // Initials avatar
-        const initials = cust.name ? cust.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() : 'C';
+        // Resolve initials avatar
+        const initials = cust.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
         document.getElementById('modal-cust-avatar').innerText = initials;
 
+        // Basic Profile information
         document.getElementById('modal-cust-name').innerText = cust.name;
-        document.getElementById('modal-contact-phone').innerText = cust.phone || 'Não Informado';
-        document.getElementById('modal-contact-email').innerText = cust.email || 'Não Informado';
-        document.getElementById('modal-contact-cnpj').innerText = cust.cnpj || 'Não Informado';
-        document.getElementById('modal-contact-city').innerText = cust.city || 'Não Informado';
-        document.getElementById('modal-address-title').innerText = cust.name;
-        document.getElementById('modal-address-text').innerText = cust.address || 'Não Informado';
-
-        // Filter customer orders
-        const custOrders = ordersHistory.filter(o => o.customer_name === cust.name);
+        document.getElementById('modal-cust-cnpj').innerText = cust.cnpj ? `CNPJ/CPF: ${cust.cnpj}` : 'CNPJ/CPF: Não informado';
         
-        // Calculate statistics
-        const salesCount = custOrders.length;
-        const totalSpent = custOrders.reduce((sum, o) => sum + (parseFloat(o.total_amount) || 0), 0);
-        const ticketAvg = salesCount > 0 ? totalSpent / salesCount : 0;
+        // Status Badge class resolution
+        const statusEl = document.getElementById('modal-cust-status');
+        const statusVal = cust.status || 'liberado';
+        statusEl.innerText = statusVal;
+        statusEl.className = `cust-status-badge ${statusVal}`;
 
-        document.getElementById('modal-stat-orders').innerText = salesCount;
-        document.getElementById('modal-stat-ticket').innerText = `R$ ${ticketAvg.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        document.getElementById('modal-stat-total').innerText = `R$ ${totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        // Contact info
+        document.getElementById('modal-cust-city').innerText = `Cidade: ${cust.city || 'Não Informada'}`;
+        document.getElementById('modal-cust-phone').innerText = `Telefone: ${cust.phone || 'Não Informado'}`;
+        document.getElementById('modal-cust-email').innerText = `E-mail: ${cust.email || 'Não Informado'}`;
 
-        // Populate recent orders list
-        const ordersList = document.getElementById('modal-orders-container');
+        // Calculate statistics based on orders history
+        const clientOrders = ordersHistory.filter(ord => ord.customer_id === cust.id || ord.customer_name === cust.name);
+        const salesCount = clientOrders.length;
+        
+        let totalSalesVal = 0;
+        clientOrders.forEach(ord => {
+            totalSalesVal += ord.total || 0;
+        });
+
+        // Resolve days sem comprar
+        let daysSemComprar = 'N/A';
+        if (clientOrders.length > 0) {
+            // Sort by creation date descending
+            const sorted = [...clientOrders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            const lastDate = new Date(sorted[0].created_at);
+            const diffTime = Math.abs(new Date() - lastDate);
+            daysSemComprar = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        }
+
+        document.getElementById('modal-cust-stat-orders').innerText = salesCount;
+        document.getElementById('modal-cust-stat-sales').innerText = `R$ ${totalSalesVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('modal-cust-stat-days').innerText = daysSemComprar;
+
+        // Populating dynamic orders history list inside Modal
+        const ordersList = document.getElementById('modal-customer-orders-list');
         if (ordersList) {
             ordersList.innerHTML = '';
             
-            if (custOrders.length === 0) {
-                ordersList.innerHTML = `<div style="font-size: 0.82rem; color: #64748b; padding: 4px 2px;">Nenhum pedido faturado para este cliente.</div>`;
+            if (clientOrders.length === 0) {
+                ordersList.innerHTML = `<div style="font-size: 0.85rem; color: #64748b; padding: 12px 2px; text-align: center;">Nenhuma compra registrada para este cliente.</div>`;
             } else {
-                custOrders.slice(0, 3).forEach(ord => {
-                    const priceText = (parseFloat(ord.total_amount) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                clientOrders.slice(0, 5).forEach(ord => {
+                    const priceText = (ord.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     
-                    // Resolve status badge
-                    let badgeClass = 'badge-status-modal pendente';
-                    let statusLabel = 'Novo';
-                    if (ord.erp_order_id) {
-                        badgeClass = 'badge-status-modal aprovado';
-                        statusLabel = 'Aprovado';
-                    }
+                    let statusLabel = ord.status || 'novo';
+                    let badgeClass = `badge-status-modal ${statusLabel}`;
 
                     // Resolve time
                     let timeText = '12:00';

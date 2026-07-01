@@ -301,6 +301,40 @@
         .mobile-bottom-bar {
             bottom: 60px !important;
         }
+        .desktop-only {
+            display: none !important;
+        }
+    }
+
+    /* Mobile-only sticky bottom footer */
+    .mobile-checkout-footer {
+        display: none;
+    }
+    @media (max-width: 768px) {
+        .mobile-checkout-footer {
+            display: flex !important;
+            position: fixed;
+            bottom: 60px !important;
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border-top: 1px solid var(--border-color);
+            padding: 12px 16px;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 102;
+        }
+    }
+    @media (min-width: 769px) {
+        .mobile-checkout-footer {
+            display: block !important;
+            position: static !important;
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            margin-top: 16px;
+        }
     }
 
     /* Dynamic Payments Method Grid - Stoqui Style */
@@ -567,7 +601,7 @@
                 </div>
 
                 <!-- Right Column: Totals Summary -->
-                <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="desktop-only" style="display: flex; flex-direction: column; gap: 16px;">
                     <h3 style="font-size: 0.82rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 0;">Resumo do pedido:</h3>
                     <div id="financial-summary-list" style="background: #fafafa; border-radius: 8px; padding: 16px; border: 1px solid var(--border-color);"></div>
 
@@ -576,6 +610,17 @@
                     </button>
                 </div>
 
+            </div>
+
+            <!-- Sticky footer bottom bar for Step 3 on mobile -->
+            <div class="mobile-checkout-footer">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Total</span>
+                    <strong class="mobile-bottom-total-display" style="font-size: 1.25rem; color: #0f172a;">R$ 0,00</strong>
+                </div>
+                <button type="button" onclick="posOnCheckoutContinuePayments()" class="btn-stoqui">
+                    <span>Continuar para pagamento →</span>
+                </button>
             </div>
         </section>
 
@@ -630,7 +675,7 @@
             </button>
 
             <!-- Bottom dynamic status totals action footer -->
-            <div id="split-payments-action-area" style="margin-top: 16px;"></div>
+            <div id="split-payments-action-area" class="mobile-checkout-footer" style="margin-top: 16px;"></div>
         </section>
 
         <!-- ETAPA 5.1: GRID DE ESPÉCIES/FORMAS DE PAGAMENTO (SELECTION GRID) -->
@@ -1692,6 +1737,10 @@
         
         const mobileBottomTotal = document.getElementById('mobile-bottom-total');
         if (mobileBottomTotal) mobileBottomTotal.innerText = `R$ ${sub.toFixed(2)}`;
+
+        document.querySelectorAll('.mobile-bottom-total-display').forEach(el => {
+            el.innerText = `R$ ${sub.toFixed(2)}`;
+        });
 
         if (selectedCustomer) {
             const initials = selectedCustomer.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
