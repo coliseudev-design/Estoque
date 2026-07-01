@@ -289,7 +289,7 @@
                     id="catalog-search-input" 
                     class="form-control" 
                     placeholder="Pesquise por nome, ou leia o código de barras..." 
-                    oninput="onCatalogSearch(this.value)"
+                    oninput="posOnCatalogSearch(this.value)"
                     style="border-color: var(--stoqui-purple-light); font-size: 0.95rem; min-height: 48px; border-radius: 8px;"
                 >
             </div>
@@ -304,7 +304,7 @@
             <div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
                     <h3 id="cart-title-text" style="font-size: 1.05rem; font-weight: 800; color: #0f172a;">Carrinho (0 itens)</h3>
-                    <button type="button" onclick="clearCart()" id="btn-clear-cart" class="btn btn-secondary btn-sm" style="display: none; min-height: 32px; width: auto; color: var(--stoqui-purple); background: none; border: none; font-weight: 700;">
+                    <button type="button" onclick="posClearCart()" id="btn-clear-cart" class="btn btn-secondary btn-sm" style="display: none; min-height: 32px; width: auto; color: var(--stoqui-purple); background: none; border: none; font-weight: 700;">
                         <i data-lucide="trash" style="width: 14px; height: 14px; margin-right: 4px;"></i> Limpar
                     </button>
                 </div>
@@ -371,7 +371,7 @@
         <section id="step-2" class="mobile-only step-container" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                 <h3 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">Produtos</h3>
-                <button type="button" onclick="clearCart()" class="btn btn-secondary btn-sm" style="color: var(--stoqui-purple); background: none; border: none; font-weight: 700; padding: 4px;">
+                <button type="button" onclick="posClearCart()" class="btn btn-secondary btn-sm" style="color: var(--stoqui-purple); background: none; border: none; font-weight: 700; padding: 4px;">
                     Limpar
                 </button>
             </div>
@@ -417,7 +417,7 @@
                 <i data-lucide="truck" style="width: 16px; height: 16px;"></i> Entrega
             </h3>
 
-            <div class="delivery-radio-card selected" id="delivery-opt-pickup" onclick="setDeliveryType('pickup')" style="border-radius: 8px;">
+            <div class="delivery-radio-card selected" id="delivery-opt-pickup" onclick="posSetDeliveryType('pickup')" style="border-radius: 8px;">
                 <div style="flex: 1;">
                     <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Retirada no local</div>
                     <span style="font-size: 0.78rem; color: var(--text-secondary);">Cliente retira na loja</span>
@@ -425,7 +425,7 @@
                 <i data-lucide="store" style="width: 24px; height: 24px; color: var(--stoqui-purple);"></i>
             </div>
 
-            <div class="delivery-radio-card" id="delivery-opt-ship" onclick="setDeliveryType('ship')" style="border-radius: 8px;">
+            <div class="delivery-radio-card" id="delivery-opt-ship" onclick="posSetDeliveryType('ship')" style="border-radius: 8px;">
                 <div style="flex: 1;">
                     <div style="font-weight: 700; font-size: 0.9rem; color: var(--text-primary);">Entrega</div>
                     <span style="font-size: 0.78rem; color: var(--text-secondary);">Entregamos no endereço</span>
@@ -466,7 +466,7 @@
             <h3 style="font-size: 0.85rem; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
                 <i data-lucide="tag" style="width: 14px; height: 14px;"></i> Cupom
             </h3>
-            <select id="coupon-select" class="form-control" style="margin-bottom: 24px; border-radius: 8px;" onchange="onCouponSelect(this.value)">
+            <select id="coupon-select" class="form-control" style="margin-bottom: 24px; border-radius: 8px;" onchange="posOnCouponSelect(this.value)">
                 <option value="none">Selecione um cupom</option>
                 <option value="COLISEU5">COLISEU5 (5% Desconto)</option>
                 <option value="DESCONTO10">DESCONTO10 (R$ 10,00 Desconto)</option>
@@ -500,27 +500,27 @@
                 Adicionar pagamento
             </h3>
             <div class="payment-grid">
-                <div class="payment-card" onclick="openPaymentKeypad('Pix', 'qr-code')">
+                <div class="payment-card" onclick="posOpenPaymentKeypad('Pix', 'qr-code')">
                     <i data-lucide="qr-code" style="width: 24px; height: 24px;"></i>
                     <span>Pix</span>
                 </div>
-                <div class="payment-card" onclick="openPaymentKeypad('Dinheiro', 'banknote')">
+                <div class="payment-card" onclick="posOpenPaymentKeypad('Dinheiro', 'banknote')">
                     <i data-lucide="banknote" style="width: 24px; height: 24px;"></i>
                     <span>Dinheiro</span>
                 </div>
-                <div class="payment-card" onclick="openPaymentKeypad('Mercado Pago', 'credit-card')">
+                <div class="payment-card" onclick="posOpenPaymentKeypad('Mercado Pago', 'credit-card')">
                     <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
                     <span>Mercado Pago</span>
                 </div>
-                <div class="payment-card" onclick="openPaymentKeypad('Pagaleve', 'wallet')">
+                <div class="payment-card" onclick="posOpenPaymentKeypad('Pagaleve', 'wallet')">
                     <i data-lucide="wallet" style="width: 24px; height: 24px;"></i>
                     <span>Pagaleve</span>
                 </div>
-                <div class="payment-card" onclick="openPaymentKeypad('Cartão de Crédito', 'credit-card')">
+                <div class="payment-card" onclick="posOpenPaymentKeypad('Cartão de Crédito', 'credit-card')">
                     <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
                     <span>Cartão de Crédito</span>
                 </div>
-                <div class="payment-card" onclick="openPaymentKeypad('Cartão de Débito', 'credit-card')">
+                <div class="payment-card" onclick="posOpenPaymentKeypad('Cartão de Débito', 'credit-card')">
                     <i data-lucide="credit-card" style="width: 24px; height: 24px;"></i>
                     <span>Cartão de Débito</span>
                 </div>
@@ -540,21 +540,21 @@
 
             <!-- Stoqui Numeric Keypad -->
             <div class="keypad-grid">
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('1')">1</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('2')">2</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('3')">3</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('4')">4</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('5')">5</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('6')">6</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('7')">7</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('8')">8</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('9')">9</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('0')">0</button>
-                <button type="button" class="keypad-key" onclick="onKeypadDigit('00')">00</button>
-                <button type="button" class="keypad-key" onclick="onKeypadBackspace()" style="color: var(--danger);"><i data-lucide="delete" style="width: 20px; height: 20px; display: inline;"></i></button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('1')">1</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('2')">2</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('3')">3</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('4')">4</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('5')">5</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('6')">6</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('7')">7</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('8')">8</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('9')">9</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('0')">0</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadDigit('00')">00</button>
+                <button type="button" class="keypad-key" onclick="posOnKeypadBackspace()" style="color: var(--danger);"><i data-lucide="delete" style="width: 20px; height: 20px; display: inline;"></i></button>
             </div>
 
-            <button type="button" onclick="confirmAddPaymentMethod()" class="btn-stoqui" style="margin-top: 20px;">
+            <button type="button" onclick="posConfirmAddPaymentMethod()" class="btn-stoqui" style="margin-top: 20px;">
                 <span>Adicionar</span>
             </button>
         </section>
@@ -574,7 +574,7 @@
                 </div>
             </div>
 
-            <button type="button" onclick="finalizeSuccessFlow()" class="btn-stoqui">
+            <button type="button" onclick="posFinalizeSuccessFlow()" class="btn-stoqui">
                 <span>Finalizar e ver pedido</span>
             </button>
         </section>
@@ -597,7 +597,7 @@
                 id="customer-modal-search" 
                 class="form-control" 
                 placeholder="Busque por nome, CPF/CNPJ ou Telefone..." 
-                oninput="onModalCustomerSearch(this.value)"
+                oninput="posOnModalCustomerSearch(this.value)"
             >
             <button type="button" class="btn btn-secondary" onclick="openModal('new-customer-modal')" style="width: auto; min-height: 44px; padding: 0 12px; background: var(--stoqui-purple); color: #fff; border: none;">
                 <span>+ Novo</span>
@@ -616,7 +616,7 @@
                 <span>Fechar</span>
             </button>
         </div>
-        <form onsubmit="onSaveNewCustomer(event)" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex: 1;">
+        <form onsubmit="posOnSaveNewCustomer(event)" style="padding: 16px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; flex: 1;">
             <div class="form-group">
                 <label class="form-label" style="font-weight: 700;">Nome Completo / Razão Social *</label>
                 <input type="text" id="new-cust-name" class="form-control" required placeholder="Ex: José da Silva">
@@ -636,7 +636,7 @@
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 10px;">
                 <div class="form-group">
                     <label class="form-label">CEP</label>
-                    <input type="text" id="new-cust-cep" class="form-control" placeholder="00000000" oninput="onCepQuery(this.value)">
+                    <input type="text" id="new-cust-cep" class="form-control" placeholder="00000000" oninput="posOnCepQuery(this.value)">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Endereço (Rua/Avenida)</label>
@@ -659,7 +659,7 @@
                 <span>Fechar</span>
             </button>
         </div>
-        <form onsubmit="onSaveEditValue(event)" style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
+        <form onsubmit="posOnSaveEditValue(event)" style="padding: 16px; display: flex; flex-direction: column; gap: 16px;">
             <input type="hidden" id="edit-value-field-name">
             <div class="form-group">
                 <label id="edit-value-field-label" class="form-label" style="font-weight: 700;">Valor (R$)</label>
@@ -687,7 +687,7 @@
                 id="catalog-modal-search" 
                 class="form-control" 
                 placeholder="Busque produto por nome ou SKU..." 
-                oninput="onModalCatalogSearch(this.value)"
+                oninput="posOnModalCatalogSearch(this.value)"
             >
         </div>
         <div id="modal-catalog-grid" class="catalog-grid" style="padding: 16px; flex: 1; overflow-y: auto;">
@@ -703,7 +703,7 @@
 
     // State properties
     let currentStep = 1; // 1: empty/catalog, 2: cart lists, 3: cliente/entrega, 4: resumo, 5: pagamentos list, 5.1: pagamentos grid, 5.2: keypad input, 7: sucesso
-    let localCart = [];
+    let posCart = [];
     let selectedCustomer = null;
     let deliveryType = 'pickup';
     let deliveryAddress = '';
@@ -722,7 +722,7 @@
     // Load initial configurations
     window.addEventListener('DOMContentLoaded', () => {
         // Pre-render catalog list initially
-        renderCatalogProducts(products);
+        posRenderCatalogProducts(products);
         
         // Auto-configure viewport responsive state on boot
         const isMobile = window.innerWidth < 768;
@@ -737,7 +737,7 @@
         if (currentStep === 1) {
             window.location.href = '/';
         } else if (currentStep === 2) {
-            clearCart();
+            posClearCart();
         } else if (currentStep === 3) {
             // Back from Step 3 returns to cart (Step 2 on mobile or Step 1 on desktop split view)
             const isMobile = window.innerWidth < 768;
@@ -828,7 +828,7 @@
             }
         }
 
-        updateWizardDOMs();
+        posUpdateWizardDOMs();
         lucide.createIcons();
     }
 
@@ -837,15 +837,15 @@
     }
 
     // ── Catalog Product Searching ──
-    function onCatalogSearch(query) {
+    function posOnCatalogSearch(query) {
         const filtered = products.filter(p => 
             p.name.toLowerCase().includes(query.toLowerCase()) || 
             p.code.toLowerCase().includes(query.toLowerCase())
         );
-        renderCatalogProducts(filtered);
+        posRenderCatalogProducts(filtered);
     }
 
-    function renderCatalogProducts(items) {
+    function posRenderCatalogProducts(items) {
         const list = document.getElementById('catalog-products-list');
         if (!list) return;
         
@@ -858,7 +858,7 @@
         items.forEach(p => {
             const card = document.createElement('div');
             card.className = 'stoqui-product-card';
-            card.onclick = () => addToCart(p);
+            card.onclick = () => posAddToCart(p);
             card.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 12px;">
                     <span style="font-size: 1.5rem;">📦</span>
@@ -873,8 +873,8 @@
         });
     }
 
-    function addToCart(prod) {
-        const existing = localCart.find(i => i.id === prod.id);
+    function posAddToCart(prod) {
+        const existing = posCart.find(i => i.id === prod.id);
         if (existing) {
             if (existing.quantity >= prod.stock) {
                 showToast('Quantidade máxima esgotada!', 'error');
@@ -886,7 +886,7 @@
                 showToast('Produto sem estoque!', 'error');
                 return;
             }
-            localCart.push({
+            posCart.push({
                 id: prod.id,
                 code: prod.code,
                 name: prod.name,
@@ -903,33 +903,33 @@
         if (isMobile && currentStep === 1) {
             setStep(2);
         } else {
-            updateWizardDOMs();
+            posUpdateWizardDOMs();
         }
     }
 
-    function clearCart() {
+    function posClearCart() {
         if (confirm('Deseja limpar todo o carrinho?')) {
-            localCart = [];
+            posCart = [];
             const isMobile = window.innerWidth < 768;
             if (isMobile) {
                 setStep(1);
             } else {
-                updateWizardDOMs();
+                posUpdateWizardDOMs();
             }
         }
     }
 
     // Toggle inline editing form
-    function toggleInlineEdit(id) {
-        const item = localCart.find(i => i.id === id);
+    function posToggleInlineEdit(id) {
+        const item = posCart.find(i => i.id === id);
         if (item) {
             item.isEditing = !item.isEditing;
-            updateWizardDOMs();
+            posUpdateWizardDOMs();
         }
     }
 
-    function saveInlineEdit(id) {
-        const item = localCart.find(i => i.id === id);
+    function posSaveInlineEdit(id) {
+        const item = posCart.find(i => i.id === id);
         if (!item) return;
 
         const qtyInput = document.getElementById(`inline-qty-${id}`);
@@ -945,7 +945,7 @@
         }
 
         if (newQty <= 0) {
-            localCart = localCart.filter(i => i.id !== id);
+            posCart = posCart.filter(i => i.id !== id);
         } else {
             item.quantity = newQty;
             item.price = newPrice;
@@ -954,46 +954,46 @@
         
         // Handle mobile fallback empty transitions
         const isMobile = window.innerWidth < 768;
-        if (isMobile && localCart.length === 0) {
+        if (isMobile && posCart.length === 0) {
             setStep(1);
         } else {
-            updateWizardDOMs();
+            posUpdateWizardDOMs();
         }
     }
 
-    function removeCartItem(id) {
-        localCart = localCart.filter(i => i.id !== id);
+    function posRemoveCartItem(id) {
+        posCart = posCart.filter(i => i.id !== id);
         const isMobile = window.innerWidth < 768;
-        if (isMobile && localCart.length === 0) {
+        if (isMobile && posCart.length === 0) {
             setStep(1);
         } else {
-            updateWizardDOMs();
+            posUpdateWizardDOMs();
         }
     }
 
     // ── Cliente + Entrega Selection ──
-    function selectCustomer(cust) {
+    function posSelectCustomer(cust) {
         selectedCustomer = cust;
         closeModal('select-customer-modal');
-        updateWizardDOMs();
+        posUpdateWizardDOMs();
     }
 
-    function onModalCustomerSearch(query) {
+    function posOnModalCustomerSearch(query) {
         const filtered = customers.filter(c => 
             c.name.toLowerCase().includes(query.toLowerCase()) || 
             c.cnpj.includes(query)
         );
-        renderCustomerList(filtered);
+        posRenderCustomerList(filtered);
     }
 
-    function renderCustomerList(listData) {
+    function posRenderCustomerList(listData) {
         const container = document.getElementById('modal-customer-list');
         if (!container) return;
         container.innerHTML = '';
         listData.forEach(c => {
             const card = document.createElement('div');
             card.className = 'customer-picker-card';
-            card.onclick = () => selectCustomer(c);
+            card.onclick = () => posSelectCustomer(c);
             const initials = c.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
             card.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 12px;">
@@ -1008,7 +1008,7 @@
         });
     }
 
-    function setDeliveryType(type) {
+    function posSetDeliveryType(type) {
         deliveryType = type;
         const pickup = document.getElementById('delivery-opt-pickup');
         const ship = document.getElementById('delivery-opt-ship');
@@ -1025,22 +1025,22 @@
             const detailsPanel = document.getElementById('delivery-details-panel');
             if (detailsPanel) detailsPanel.style.display = 'block';
         }
-        updateWizardDOMs();
+        posUpdateWizardDOMs();
     }
 
     // ── Financial overrides ──
-    function onCouponSelect(val) {
+    function posOnCouponSelect(val) {
         if (val === 'COLISEU5') {
-            discountAmount = getSubtotal() * 0.05;
+            discountAmount = posGetSubtotal() * 0.05;
         } else if (val === 'DESCONTO10') {
             discountAmount = 10.0;
         } else {
             discountAmount = 0;
         }
-        updateWizardDOMs();
+        posUpdateWizardDOMs();
     }
 
-    function openEditValuePopover(fieldName, label, currentValue) {
+    function posOpenEditValuePopover(fieldName, label, currentValue) {
         const fieldNameInput = document.getElementById('edit-value-field-name');
         if (fieldNameInput) fieldNameInput.value = fieldName;
         
@@ -1053,7 +1053,7 @@
         openModal('edit-values-modal');
     }
 
-    function onSaveEditValue(e) {
+    function posOnSaveEditValue(e) {
         e.preventDefault();
         const fieldName = document.getElementById('edit-value-field-name').value;
         const val = parseFloat(document.getElementById('edit-value-input').value) || 0;
@@ -1067,16 +1067,16 @@
         }
 
         closeModal('edit-values-modal');
-        updateWizardDOMs();
+        posUpdateWizardDOMs();
     }
 
     // ── Split Payments Keypad actions ──
-    function openPaymentKeypad(methodName, iconName) {
+    function posOpenPaymentKeypad(methodName, iconName) {
         currentSelectingPaymentMethod = methodName;
         currentSelectingPaymentIcon = iconName;
         keypadTypedVal = "";
         
-        const balance = getBalanceRemaining();
+        const balance = posGetBalanceRemaining();
         const displayEl = document.getElementById('edit-payment-amount-display');
         if (displayEl) displayEl.innerText = balance.toFixed(2);
         
@@ -1084,27 +1084,27 @@
         if (balanceTextEl) balanceTextEl.innerText = `Faltam: R$ ${balance.toFixed(2)}`;
         
         const totalTextEl = document.getElementById('keypad-total-text');
-        if (totalTextEl) totalTextEl.innerText = `R$ ${getTotal().toFixed(2)}`;
+        if (totalTextEl) totalTextEl.innerText = `R$ ${posGetTotal().toFixed(2)}`;
 
         setStep(5.2);
     }
 
     // POS keypad numeric inputs
-    function onKeypadDigit(digit) {
+    function posOnKeypadDigit(digit) {
         keypadTypedVal += digit;
         const val = parseFloat(keypadTypedVal || "0") / 100;
         const displayEl = document.getElementById('edit-payment-amount-display');
         if (displayEl) displayEl.innerText = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function onKeypadBackspace() {
+    function posOnKeypadBackspace() {
         keypadTypedVal = keypadTypedVal.slice(0, -1);
         const val = parseFloat(keypadTypedVal || "0") / 100;
         const displayEl = document.getElementById('edit-payment-amount-display');
         if (displayEl) displayEl.innerText = val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function confirmAddPaymentMethod() {
+    function posConfirmAddPaymentMethod() {
         // Resolve value from display formatting
         const displayEl = document.getElementById('edit-payment-amount-display');
         if (!displayEl) return;
@@ -1117,7 +1117,7 @@
             return;
         }
 
-        const balance = getBalanceRemaining();
+        const balance = posGetBalanceRemaining();
         if (val > (balance + 0.01)) {
             showToast('Valor adicionado excede o saldo restante!', 'error');
             return;
@@ -1135,11 +1135,11 @@
 
     function removePaymentItem(index) {
         paymentsList.splice(index, 1);
-        updateWizardDOMs();
+        posUpdateWizardDOMs();
     }
 
     // ERP checkout faturamento integration
-    async function onConcluirCheckout() {
+    async function posOnConcluirCheckout() {
         const btn = document.getElementById('btn-concluir-order');
         if (btn) btn.disabled = true;
 
@@ -1147,7 +1147,7 @@
             customer_id: selectedCustomer ? selectedCustomer.id : 'temp-1',
             status: 'order',
             payment_condition: paymentsList.map(p => `${p.method}: R$ ${p.amount.toFixed(2)}`).join(', '),
-            items: localCart.map(i => ({
+            items: posCart.map(i => ({
                 product_id: i.id,
                 quantity: i.quantity,
                 price: i.price
@@ -1179,7 +1179,7 @@
                 }
                 
                 const totalPaidEl = document.getElementById('success-total-paid');
-                if (totalPaidEl) totalPaidEl.innerText = `R$ ${getTotal().toFixed(2)}`;
+                if (totalPaidEl) totalPaidEl.innerText = `R$ ${posGetTotal().toFixed(2)}`;
                 
                 advanceStep(7);
             } else {
@@ -1192,20 +1192,20 @@
         }
     }
 
-    function finalizeSuccessFlow() {
+    function posFinalizeSuccessFlow() {
         window.location.href = '/orders';
     }
 
     // Modal search catalog items
-    function onModalCatalogSearch(query) {
+    function posOnModalCatalogSearch(query) {
         const filtered = products.filter(p => 
             p.name.toLowerCase().includes(query.toLowerCase()) || 
             p.code.toLowerCase().includes(query.toLowerCase())
         );
-        renderModalCatalogGrid(filtered);
+        posRenderModalCatalogGrid(filtered);
     }
 
-    function renderModalCatalogGrid(items) {
+    function posRenderModalCatalogGrid(items) {
         const grid = document.getElementById('modal-catalog-grid');
         if (!grid) return;
         grid.innerHTML = '';
@@ -1218,7 +1218,7 @@
             const card = document.createElement('div');
             card.className = 'stoqui-product-card';
             card.onclick = () => {
-                addToCart(p);
+                posAddToCart(p);
                 closeModal('catalog-picker-modal');
             };
             card.innerHTML = `
@@ -1241,17 +1241,17 @@
         if (id === 'select-customer-modal') {
             const searchEl = document.getElementById('customer-modal-search');
             if (searchEl) searchEl.value = '';
-            renderCustomerList(customers);
+            posRenderCustomerList(customers);
         } else if (id === 'catalog-picker-modal') {
             const searchEl = document.getElementById('catalog-modal-search');
             if (searchEl) searchEl.value = '';
-            renderModalCatalogGrid(products);
+            posRenderModalCatalogGrid(products);
         }
         originalOpenModal(id);
     };
 
     // Address CEP pre-fill
-    async function onCepQuery(cep) {
+    async function posOnCepQuery(cep) {
         const val = cep.trim().replace(/\D/g, '');
         if (val.length === 8) {
             try {
@@ -1269,7 +1269,7 @@
         }
     }
 
-    function onSaveNewCustomer(e) {
+    function posOnSaveNewCustomer(e) {
         e.preventDefault();
         const newCust = {
             id: 'temp-' + Date.now(),
@@ -1284,7 +1284,7 @@
         };
 
         customers.push(newCust);
-        selectCustomer(newCust);
+        posSelectCustomer(newCust);
         closeModal('new-customer-modal');
         showToast('Cliente cadastrado e selecionado com sucesso!');
 
@@ -1297,8 +1297,8 @@
         document.getElementById('new-cust-street').value = '';
     }
 
-    function onAdjustQty(id, delta) {
-        const item = localCart.find(i => i.id === id);
+    function posOnAdjustQty(id, delta) {
+        const item = posCart.find(i => i.id === id);
         if (!item) return;
 
         item.quantity += delta;
@@ -1307,35 +1307,35 @@
             item.quantity = item.stock;
         }
         if (item.quantity <= 0) {
-            removeCartItem(id);
+            posRemoveCartItem(id);
             return;
         }
-        updateWizardDOMs();
+        posUpdateWizardDOMs();
     }
 
     // ── Calculations ──
-    function getSubtotal() {
-        return localCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    function posGetSubtotal() {
+        return posCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     }
-    function getTotal() {
-        const sub = getSubtotal();
+    function posGetTotal() {
+        const sub = posGetSubtotal();
         let disc = discountAmount;
         if (disc > sub) disc = sub;
         return sub - disc + freightAmount + saleTaxAmount;
     }
-    function getTotalPaid() {
+    function posGetTotalPaid() {
         return paymentsList.reduce((sum, p) => sum + p.amount, 0);
     }
-    function getBalanceRemaining() {
-        return getTotal() - getTotalPaid();
+    function posGetBalanceRemaining() {
+        return posGetTotal() - posGetTotalPaid();
     }
 
     // ── DOM update compiler ──
-    function updateWizardDOMs() {
-        const sub = getSubtotal();
-        const total = getTotal();
-        const paid = getTotalPaid();
-        const balance = getBalanceRemaining();
+    function posUpdateWizardDOMs() {
+        const sub = posGetSubtotal();
+        const total = posGetTotal();
+        const paid = posGetTotalPaid();
+        const balance = posGetBalanceRemaining();
 
         // 1. Desktop Cart pane updates
         const cartContainer = document.getElementById('cart-rows-container');
@@ -1346,7 +1346,7 @@
         if (cartContainer) {
             cartContainer.querySelectorAll('.stoqui-cart-row-item').forEach(e => e.remove());
 
-            if (localCart.length === 0) {
+            if (posCart.length === 0) {
                 if (cartEmptyPlaceholder) cartEmptyPlaceholder.style.display = 'block';
                 if (clearCartBtn) clearCartBtn.style.display = 'none';
                 if (continueBtn) continueBtn.disabled = true;
@@ -1359,11 +1359,11 @@
                 if (clearCartBtn) clearCartBtn.style.display = 'block';
                 if (continueBtn) continueBtn.disabled = false;
                 const titleTextEl = document.getElementById('cart-title-text');
-                if (titleTextEl) titleTextEl.innerText = `Carrinho (${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'})`;
+                if (titleTextEl) titleTextEl.innerText = `Carrinho (${posCart.length} ${posCart.length > 1 ? 'itens' : 'item'})`;
                 const totalValEl = document.getElementById('cart-total-val');
                 if (totalValEl) totalValEl.innerText = `R$ ${sub.toFixed(2)}`;
 
-                localCart.forEach(item => {
+                posCart.forEach(item => {
                     const row = document.createElement('div');
                     row.className = 'stoqui-cart-row-item';
                     row.style.background = '#ffffff';
@@ -1379,8 +1379,8 @@
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 16px; height: 16px;"></i></button>
-                                <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
+                                <button type="button" onclick="posToggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 16px; height: 16px;"></i></button>
+                                <button type="button" onclick="posRemoveCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 16px; height: 16px;"></i></button>
                             </div>
                         </div>
                         
@@ -1397,8 +1397,8 @@
                                 </div>
                             </div>
                             <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                                <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
-                                <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
+                                <button type="button" onclick="posToggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
+                                <button type="button" onclick="posSaveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
                             </div>
                         </div>
                         ` : `
@@ -1420,7 +1420,7 @@
         const mobileContainer = document.getElementById('mobile-cart-items-list');
         if (mobileContainer) {
             mobileContainer.innerHTML = '';
-            localCart.forEach(item => {
+            posCart.forEach(item => {
                 const card = document.createElement('div');
                 card.style.background = '#ffffff';
                 card.style.border = '1px solid var(--border-color)';
@@ -1435,8 +1435,8 @@
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <button type="button" onclick="toggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 18px; height: 18px;"></i></button>
-                            <button type="button" onclick="removeCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 18px; height: 18px;"></i></button>
+                            <button type="button" onclick="posToggleInlineEdit('${item.id}')" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 18px; height: 18px;"></i></button>
+                            <button type="button" onclick="posRemoveCartItem('${item.id}')" style="border: none; background: none; color: var(--danger); cursor: pointer;"><i data-lucide="trash-2" style="width: 18px; height: 18px;"></i></button>
                         </div>
                     </div>
     
@@ -1453,16 +1453,16 @@
                             </div>
                         </div>
                         <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                            <button type="button" onclick="toggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
-                            <button type="button" onclick="saveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
+                            <button type="button" onclick="posToggleInlineEdit('${item.id}')" class="btn btn-secondary btn-sm" style="min-height: 28px; width: auto; font-size: 0.75rem;">Cancelar</button>
+                            <button type="button" onclick="posSaveInlineEdit('${item.id}')" class="btn btn-primary btn-sm btn-purple" style="min-height: 28px; width: auto; font-size: 0.75rem; background: var(--stoqui-purple); color: #fff; border: none;">Confirmar</button>
                         </div>
                     </div>
                     ` : `
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 0.88rem;">
                         <div class="cart-item-qty">
-                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', -1)">-</button>
+                            <button type="button" class="qty-btn" onclick="posOnAdjustQty('${item.id}', -1)">-</button>
                             <span style="font-weight: 700; min-width: 20px; text-align: center;">${item.quantity}</span>
-                            <button type="button" class="qty-btn" onclick="onAdjustQty('${item.id}', 1)">+</button>
+                            <button type="button" class="qty-btn" onclick="posOnAdjustQty('${item.id}', 1)">+</button>
                         </div>
                         <div style="text-align: right;">
                             <span style="font-size: 0.78rem; color: var(--text-secondary);">× R$ ${item.price.toFixed(2)}</span>
@@ -1480,7 +1480,7 @@
 
         // Mobile bottom totalizer bar text
         const mobileBottomQty = document.getElementById('mobile-bottom-qty');
-        if (mobileBottomQty) mobileBottomQty.innerText = `${localCart.length} ${localCart.length > 1 ? 'itens' : 'item'} · Total`;
+        if (mobileBottomQty) mobileBottomQty.innerText = `${posCart.length} ${posCart.length > 1 ? 'itens' : 'item'} · Total`;
         
         const mobileBottomTotal = document.getElementById('mobile-bottom-total');
         if (mobileBottomTotal) mobileBottomTotal.innerText = `R$ ${sub.toFixed(2)}`;
@@ -1525,7 +1525,7 @@
             const finList = document.getElementById('financial-summary-list');
             if (finList) {
                 finList.innerHTML = `
-                    ${localCart.map(i => `
+                    ${posCart.map(i => `
                     <div class="table-card-row" style="margin-bottom: 8px; font-size: 0.9rem;">
                         <span>${i.quantity}x ${i.name}</span>
                         <span>R$ ${(i.price * i.quantity).toFixed(2)}</span>
@@ -1539,21 +1539,21 @@
                     
                     <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
                         <span style="display: flex; align-items: center; gap: 4px;">
-                            Frete <button type="button" onclick="openEditValuePopover('freight', 'Editar Valor do Frete', ${freightAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                            Frete <button type="button" onclick="posOpenEditValuePopover('freight', 'Editar Valor do Frete', ${freightAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
                         </span>
                         <span>R$ ${freightAmount.toFixed(2)}</span>
                     </div>
     
                     <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
                         <span style="display: flex; align-items: center; gap: 4px;">
-                            Taxa de venda <button type="button" onclick="openEditValuePopover('tax', 'Editar Taxa de Venda', ${saleTaxAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                            Taxa de venda <button type="button" onclick="posOpenEditValuePopover('tax', 'Editar Taxa de Venda', ${saleTaxAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
                         </span>
                         <span>R$ ${saleTaxAmount.toFixed(2)}</span>
                     </div>
     
                     <div class="table-card-row" style="margin-top: 8px; font-size: 0.88rem; color: var(--text-secondary);">
                         <span style="display: flex; align-items: center; gap: 4px;">
-                            Desconto <button type="button" onclick="openEditValuePopover('discount', 'Editar Desconto do Pedido', ${discountAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
+                            Desconto <button type="button" onclick="posOpenEditValuePopover('discount', 'Editar Desconto do Pedido', ${discountAmount})" style="border: none; background: none; color: var(--stoqui-purple); cursor: pointer;"><i data-lucide="edit-2" style="width: 14px; height: 14px;"></i></button>
                         </span>
                         <span style="color: var(--danger); font-weight: 700;">- R$ ${discountAmount.toFixed(2)}</span>
                     </div>
@@ -1617,7 +1617,7 @@
                     `;
                 } else {
                     actionArea.innerHTML = `
-                        <button type="button" id="btn-concluir-order" onclick="onConcluirCheckout()" class="btn-stoqui">
+                        <button type="button" id="btn-concluir-order" onclick="posOnConcluirCheckout()" class="btn-stoqui">
                             <span>Concluir R$ ${total.toFixed(2)}</span>
                         </button>
                     `;
