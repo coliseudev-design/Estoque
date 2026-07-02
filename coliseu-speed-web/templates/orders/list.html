@@ -55,7 +55,7 @@
     @media (max-width: 768px) {
         .orders-filter-grid {
             display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
+            grid-template-columns: repeat(2, 1fr) !important;
             gap: 6px !important;
         }
         .orders-filter-grid .date-filter-pill {
@@ -214,9 +214,6 @@
         </button>
         <button type="button" id="date-pill-month" class="date-filter-pill" onclick="posSetDateFilter('month')">
             Este mês
-        </button>
-        <button type="button" id="date-pill-week" class="date-filter-pill" onclick="posSetDateFilter('week')">
-            Esta semana
         </button>
         <button type="button" id="date-pill-30days" class="date-filter-pill" onclick="posSetDateFilter('30days')">
             Últimos 30 dias

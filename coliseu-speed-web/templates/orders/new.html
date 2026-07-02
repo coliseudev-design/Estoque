@@ -232,6 +232,10 @@
         border-color: var(--stoqui-purple) !important;
         background: var(--stoqui-purple-bg) !important;
     }
+    
+    @keyframes spin {
+        100% { transform: rotate(360deg); }
+    }
 
     /* Keypad grid input */
     .keypad-grid {
@@ -1326,7 +1330,13 @@
 
     async function posOnConcluirCheckout() {
         const btn = document.getElementById('btn-concluir-order');
-        if (btn) btn.disabled = true;
+        let originalText = '';
+        if (btn) {
+            btn.disabled = true;
+            originalText = btn.innerHTML;
+            btn.innerHTML = '<span><i data-lucide="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Enviando...</span>';
+            lucide.createIcons();
+        }
 
         // Resolve integer customer ID. If Outro or null, fallback to first mock customer "1" (or "c1" parsed to "1")
         let custId = "1";
@@ -1383,7 +1393,10 @@
         } catch(e) {
             showToast('Erro de conexão com o servidor ERP.', 'error');
         } finally {
-            if (btn) btn.disabled = false;
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
     }
 

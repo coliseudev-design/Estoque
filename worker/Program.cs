@@ -241,6 +241,29 @@ try
             ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
         });
 
+    // ── HTTP Client para ColiseSpeed API (PDV Web) ──────────────────────────
+    var speedSection = builder.Configuration.GetSection(ColiseSpeedApiOptions.Section);
+    var speedBaseUrl = speedSection["BaseUrl"] ?? string.Empty;
+    var speedApiKey  = speedSection["InternalApiKey"]  ?? string.Empty;
+    var speedEnabled = string.Equals(speedSection["Enabled"], "true", StringComparison.OrdinalIgnoreCase);
+
+    builder.Services
+        .AddHttpClient<ColiseuSpeed.Worker.Services.ColiseSpeedApiClient>(client =>
+        {
+            if (!string.IsNullOrWhiteSpace(speedBaseUrl))
+            {
+                client.BaseAddress = new Uri(speedBaseUrl);
+                client.DefaultRequestHeaders.Add("api-key", speedApiKey);
+                client.DefaultRequestHeaders.Add("X-Company-Id", vpsSection["CompanyId"] ?? string.Empty);
+                client.Timeout = TimeSpan.FromSeconds(
+                    int.TryParse(speedSection["TimeoutSeconds"], out var t) ? t : 30);
+            }
+        })
+        .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+        });
+
     // ── Services ─────────────────────────────────────────────────────────────
     builder.Services.AddSingleton<FirebirdService>();
     builder.Services.AddSingleton<StatusStore>();

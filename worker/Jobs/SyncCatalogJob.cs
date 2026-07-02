@@ -23,6 +23,7 @@ public sealed partial class SyncCatalogJob
     private readonly FirebirdService        _firebird;
     private readonly VpsApiClient           _vps;
     private readonly AtendenteApiClient     _atendente;
+    private readonly ColiseSpeedApiClient   _speed;
     private readonly StatusStore            _status;
     private readonly ILogger<SyncCatalogJob> _logger;
     private readonly IdentityApiClient      _identity;
@@ -35,6 +36,7 @@ public sealed partial class SyncCatalogJob
         FirebirdService        firebird,
         VpsApiClient           vps,
         AtendenteApiClient     atendente,
+        ColiseSpeedApiClient   speed,
         StatusStore            status,
         IOptions<VpsApiOptions> vpsOpts,
         IdentityApiClient      identity,
@@ -44,6 +46,7 @@ public sealed partial class SyncCatalogJob
         _firebird  = firebird;
         _vps       = vps;
         _atendente = atendente;
+        _speed     = speed;
         _status    = status;
         _logger    = logger;
         _identity  = identity;
@@ -208,6 +211,9 @@ public sealed partial class SyncCatalogJob
 
             // Dual-push: também envia para o Atendente do Futuro
             await SafePushAtendente("Sellers", () => _atendente.PushSellersAsync(sellers, ct));
+            
+            // Tri-push: também envia para o ColiseSpeed PDV
+            await SafePushColiseSpeed("Sellers", () => _speed.PushSellersAsync(sellers, ct));
 
             _logger.LogInformation("[CatalogSync/Sellers] {Count} vendedores enviados. OK={Ok}", sellers.Count, ok);
             _status.Update("Sellers", sellers.Count, DateTime.Now, ok ? null : "Falha no push para VPS");
@@ -394,6 +400,9 @@ public sealed partial class SyncCatalogJob
 
             // Dual-push: também envia para o Atendente do Futuro
             await SafePushAtendente("Customers", () => _atendente.PushCustomersAsync(customers, ct));
+            
+            // Tri-push: também envia para o ColiseSpeed PDV
+            await SafePushColiseSpeed("Customers", () => _speed.PushCustomersAsync(customers, ct));
 
             _logger.LogInformation("[CatalogSync/Customers] {Total} clientes. {Ok} sincronizados.",
                 customers.Count, success);
@@ -584,6 +593,9 @@ public sealed partial class SyncCatalogJob
 
             // Dual-push: também envia para o Atendente do Futuro
             await SafePushAtendente("Natureza", () => _atendente.PushNaturezaAsync(naturezas, ct));
+            
+            // Tri-push: também envia para o ColiseSpeed PDV
+            await SafePushColiseSpeed("Natureza", () => _speed.PushNaturezaAsync(naturezas, ct));
 
             _logger.LogInformation("[CatalogSync/Natureza] {Count} naturezas enviadas.", naturezas.Count);
             _status.Update("Natureza", naturezas.Count, DateTime.Now, ok ? null : "Falha no push");
