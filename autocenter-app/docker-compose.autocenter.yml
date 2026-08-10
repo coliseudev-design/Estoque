@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  autocenter-middleware:
+    build: 
+      context: ./middleware
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3100
+      # SEGREDOS: Configure no painel do Coolify
+      - JWT_DEVICE_KEY=${JWT_DEVICE_KEY}
+      - APIBRASIL_TOKEN=${APIBRASIL_TOKEN}
+      - APIBRASIL_DEVICE_TOKEN=${APIBRASIL_DEVICE_TOKEN}
+      - IDENTITY_API_URL=${IDENTITY_API_URL:-https://adminlicencas.coliseusistemas.com.br}
+      - IDENTITY_INTERNAL_KEY=${IDENTITY_INTERNAL_KEY:-Coliseu2026!IdentitySuperSecretKeyOauth20}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY:-}
+      # BANCO (Pode vir de um DB gerenciado do Coolify via internal IP)
+      - PG_HOST=${PG_HOST}
+      - PG_PORT=5432
+      - PG_DATABASE=${PG_DATABASE:-coliseu_autocenter}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_SSL=false
+      # REDIS
+      - REDIS_URL=${REDIS_URL}
+    expose:
+      - "3100"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/health/liveness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - default
+    # NOTA: Labels manuais de Traefik foram removidas propositalmente para o Coolify gerenciar o Ingress nativo.
+
+  db-backup:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - PG_HOST=${PG_HOST}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+      - PG_DATABASE=autocenter_db
+      - CRON_SCHEDULE=0 2 * * *
+    volumes:
+      - ./backup/data:/backups
+      - ./backup/rclone.conf:/root/.config/rclone/rclone.conf:ro
+    networks:
+      - default
+
+networks:
+  default:
+    name: coolify
+    external: true
