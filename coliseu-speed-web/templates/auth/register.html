@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coliseu Speed — Criar Conta</title>
+  <title>Coliseu Estoque — Criar Conta & Vincular Empresa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap');
-
     *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
@@ -14,256 +15,479 @@
     }
 
     body {
-      font-family: 'Nunito', sans-serif;
+      font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       min-height: 100vh;
       display: flex;
-      background: #f0f4f8;
-      overflow: hidden;
+      background: #060e1a;
+      overflow-x: hidden;
+      color: #0f172a;
     }
 
-    /* ── Painel esquerdo (Dashboard Preview) ── */
-    .left-panel {
-      flex: 1.2;
-      background: #0b1a30;
+    /* ── Painel Esquerdo (Showcase / Dashboard Preview) ── */
+    .hero-panel {
+      flex: 1.25;
+      position: relative;
+      background-color: #060e1a;
+      background-image: url('/static/img/warehouse_hero_bg.jpg');
+      background-size: cover;
+      background-position: center right;
+      background-repeat: no-repeat;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 50px 60px;
-      position: relative;
+      padding: 52px 64px;
       overflow-y: auto;
     }
 
-    .left-panel .header {
-      font-size: 1.8rem;
-      font-weight: 800;
-      color: #ffffff;
-    }
-    .left-panel .header span {
-      color: #1a7cc7;
-    }
-
-    .left-panel .hero-text {
-      margin: 40px 0;
-    }
-    .left-panel .hero-text h2 {
-      color: #ffffff;
-      font-size: 2.2rem;
-      font-weight: 700;
-      line-height: 1.3;
-      margin-bottom: 15px;
-    }
-    .left-panel .hero-text p {
-      color: #8a9ab0;
-      font-size: 1.1rem;
-      line-height: 1.6;
-      max-width: 460px;
+    .hero-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 75% 40%, rgba(6, 14, 26, 0.45) 0%, rgba(6, 14, 26, 0.85) 60%, rgba(4, 9, 18, 0.98) 100%),
+                  linear-gradient(180deg, rgba(6, 14, 26, 0.75) 0%, rgba(4, 9, 18, 0.96) 100%);
+      pointer-events: none;
+      z-index: 1;
     }
 
-    /* Cards de KPIs do Dashboard */
-    .kpi-cards {
+    .hero-content {
+      position: relative;
+      z-index: 2;
       display: flex;
       flex-direction: column;
-      gap: 15px;
-      margin-bottom: 20px;
-      width: 100%;
-      max-width: 480px;
+      justify-content: space-between;
+      min-height: 100%;
     }
-    .kpi-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-badge {
+      width: 46px;
+      height: 46px;
       border-radius: 12px;
-      padding: 16px 20px;
+      background: linear-gradient(135deg, rgba(14, 165, 233, 0.25) 0%, rgba(2, 132, 199, 0.45) 100%);
+      border: 1.5px solid rgba(56, 189, 248, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.25);
+      flex-shrink: 0;
+    }
+
+    .brand-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-name {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.4px;
+      line-height: 1.1;
+    }
+
+    .brand-sub {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #38bdf8;
+      letter-spacing: 1.8px;
+      text-transform: uppercase;
+    }
+
+    .hero-text-block {
+      margin: 40px 0 32px 0;
+    }
+
+    .hero-title {
+      color: #ffffff;
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1.2;
+      letter-spacing: -0.6px;
+      margin-bottom: 16px;
+      max-width: 580px;
+    }
+
+    .hero-title .highlight {
+      color: #38bdf8;
+      display: block;
+    }
+
+    .hero-description {
+      color: #94a3b8;
+      font-size: 0.95rem;
+      line-height: 1.65;
+      max-width: 520px;
+      font-weight: 400;
+    }
+
+    .kpi-section {
+      width: 100%;
+      max-width: 520px;
+      margin-bottom: 30px;
+    }
+
+    .kpi-row-top {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .kpi-card {
+      background: rgba(13, 27, 46, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+
+    .kpi-card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      margin-bottom: 12px;
     }
-    .kpi-card .info {
+
+    .kpi-title-wrap {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
+      align-items: center;
+      gap: 8px;
     }
-    .kpi-card .label {
-      color: #8a9ab0;
-      font-size: 0.85rem;
+
+    .kpi-icon-box {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: rgba(56, 189, 248, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #38bdf8;
+      flex-shrink: 0;
+    }
+
+    .kpi-card-title {
+      color: #cbd5e1;
+      font-size: 0.8rem;
       font-weight: 600;
+    }
+
+    .kpi-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .badge-green {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.28);
+    }
+
+    .badge-cyan {
+      background: rgba(14, 165, 233, 0.16);
+      color: #38bdf8;
+      border: 1px solid rgba(14, 165, 233, 0.28);
+    }
+
+    .kpi-card-value {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.2;
+      margin-bottom: 4px;
+      letter-spacing: -0.3px;
+    }
+
+    .kpi-card-value span {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-left: 4px;
+    }
+
+    .kpi-card-sub {
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .sub-green { color: #34d399; }
+    .sub-cyan { color: #38bdf8; }
+
+    .kpi-card-full {
+      background: rgba(13, 27, 46, 0.72);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 18px 22px;
+    }
+
+    .kpi-full-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .bar-chart-neon {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 32px;
+    }
+
+    .bar-chart-neon span {
+      display: block;
+      width: 5px;
+      background: #0ea5e9;
+      border-radius: 2px;
+      filter: drop-shadow(0 0 5px rgba(14, 165, 233, 0.65));
+    }
+
+    .bar-chart-neon span:nth-child(1) { height: 12px; }
+    .bar-chart-neon span:nth-child(2) { height: 22px; }
+    .bar-chart-neon span:nth-child(3) { height: 16px; }
+    .bar-chart-neon span:nth-child(4) { height: 28px; }
+    .bar-chart-neon span:nth-child(5) { height: 32px; }
+    .bar-chart-neon span:nth-child(6) { height: 24px; }
+    .bar-chart-neon span:nth-child(7) { height: 30px; }
+
+    .kpi-full-value {
+      font-size: 1.85rem;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .kpi-full-caption {
+      font-size: 0.74rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .hero-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      width: 100%;
+    }
+
+    .footer-copy {
+      color: #64748b;
+      font-size: 0.78rem;
+    }
+
+    .footer-status {
       display: flex;
       align-items: center;
       gap: 6px;
-    }
-    .kpi-card .value {
-      color: #ffffff;
-      font-size: 1.4rem;
-      font-weight: 700;
-    }
-    .kpi-card .badge {
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 4px 8px;
-      border-radius: 6px;
-    }
-    .kpi-card .badge.green {
-      background: rgba(34, 197, 94, 0.15);
-      color: #22c55e;
-    }
-    .kpi-card .badge.blue {
-      background: rgba(59, 130, 246, 0.15);
-      color: #3b82f6;
-    }
-    .kpi-card .sparkline {
-      display: flex;
-      align-items: flex-end;
-      gap: 3px;
-      height: 30px;
-    }
-    .kpi-card .sparkline span {
-      display: block;
-      width: 4px;
-      background: #1a7cc7;
-      border-radius: 2px;
+      font-size: 0.78rem;
+      color: #34d399;
+      font-weight: 600;
     }
 
-    /* ── Painel direito (Criar Conta) ── */
-    .right-panel {
-      width: 480px;
-      min-width: 400px;
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    /* ── Painel Direito (Formulário Cadastro) ── */
+    .form-panel {
+      width: 500px;
+      min-width: 420px;
       background: #ffffff;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 40px 50px;
-      box-shadow: -8px 0 40px rgba(0,0,0,0.08);
+      padding: 40px 52px;
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.15);
       position: relative;
-      z-index: 2;
+      z-index: 10;
       overflow-y: auto;
     }
 
-    .logo-container {
+    .form-container {
       width: 100%;
+      max-width: 380px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .form-logo {
       margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .form-logo img {
+      height: 44px;
+      max-width: 220px;
+      object-fit: contain;
+    }
+
+    .form-header-box {
+      width: 100%;
+      margin-bottom: 20px;
       text-align: left;
     }
-    .logo-img {
-      height: 42px;
-    }
 
-    .form-header {
-      width: 100%;
-      margin-bottom: 24px;
-    }
-
-    .form-header h1 {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #1e2d3d;
+    .form-title {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.4px;
       margin-bottom: 6px;
     }
 
-    .form-header p {
-      font-size: 0.9rem;
-      color: #8a9ab0;
-      font-weight: 400;
+    .form-subtitle {
+      font-size: 0.86rem;
+      color: #64748b;
+      line-height: 1.45;
     }
 
-    /* Formulário */
-    .register-form {
+    .alert-error {
+      width: 100%;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+    }
+
+    .auth-form {
       width: 100%;
     }
 
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 15px;
+      width: 100%;
     }
 
-    .form-group label {
+    .form-label {
       display: block;
       font-size: 0.8rem;
       font-weight: 600;
-      color: #4d5358;
-      margin-bottom: 6px;
-      letter-spacing: 0.3px;
+      color: #334155;
+      margin-bottom: 5px;
     }
 
-    .input-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    .input-wrapper .icon {
-      position: absolute;
-      left: 16px;
-      color: #b0bec5;
-      font-size: 1.1rem;
-      pointer-events: none;
-    }
-
-    .input-wrapper input {
+    .input-field {
       width: 100%;
-      padding: 12px 16px 12px 46px;
-      border: 1.5px solid #e0e7ef;
-      border-radius: 10px;
+      padding: 11px 13px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
       font-size: 0.9rem;
-      font-family: 'Nunito', sans-serif;
-      color: #1e2d3d;
-      background: #f8fafc;
-      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
-      outline: none;
-    }
-
-    .input-wrapper input:focus {
-      border-color: #1a7cc7;
+      font-family: inherit;
+      color: #0f172a;
       background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(26, 124, 199, 0.12);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
     }
 
-    .form-group .caption {
-      font-size: 0.75rem;
-      color: #8a9ab0;
+    .input-field:focus {
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+    }
+
+    .input-field::placeholder {
+      color: #94a3b8;
+    }
+
+    .form-caption {
+      font-size: 0.72rem;
+      color: #64748b;
       margin-top: 4px;
     }
 
-    .btn-register {
+    .btn-submit {
       width: 100%;
-      padding: 14px;
-      background: #1a7cc7;
+      padding: 12.5px 20px;
+      background: #0257a7;
       color: #ffffff;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       font-size: 0.95rem;
       font-weight: 700;
-      font-family: 'Nunito', sans-serif;
+      font-family: inherit;
       cursor: pointer;
-      letter-spacing: 0.5px;
-      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 4px 14px rgba(26, 124, 199, 0.3);
-      margin-top: 8px;
+      transition: background-color 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 14px rgba(2, 87, 167, 0.28);
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
 
-    .btn-register:hover {
-      background: #15629c;
-      box-shadow: 0 6px 20px rgba(26, 124, 199, 0.4);
+    .btn-submit:hover {
+      background: #014382;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(2, 87, 167, 0.38);
     }
 
-    .meta-info {
-      margin-top: 20px;
-      font-size: 0.85rem;
-      color: #8a9ab0;
+    .form-bottom-links {
+      margin-top: 22px;
       text-align: center;
       width: 100%;
-    }
-    .meta-info a {
-      color: #1a7cc7;
-      text-decoration: none;
-      font-weight: 700;
+      font-size: 0.84rem;
+      color: #64748b;
     }
 
-    /* Versão mobile */
-    @media (max-width: 768px) {
-      body { flex-direction: column; overflow: auto; }
-      .left-panel {
-        display: none; /* Hide preview on mobile to focus on form */
+    .form-bottom-links a {
+      color: #0284c7;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .form-bottom-links a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 960px) {
+      body {
+        flex-direction: column;
+        overflow-y: auto;
       }
-      .right-panel {
+
+      .hero-panel {
+        flex: none;
+        padding: 40px 28px;
+        min-height: auto;
+      }
+
+      .hero-title {
+        font-size: 1.9rem;
+      }
+
+      .kpi-section {
+        max-width: 100%;
+      }
+
+      .form-panel {
         width: 100%;
         min-width: unset;
         padding: 40px 24px;
@@ -274,142 +498,204 @@
 </head>
 <body>
 
-  <!-- ── Painel esquerdo (Dashboard Preview) ── -->
-  <div class="left-panel">
-    <div class="header">Coliseu<span>Speed</span></div>
-    
-    <div class="hero-text">
-      <h2>Seus resultados,<br>em tempo real.</h2>
-      <p>A plataforma gerencial definitiva do ecossistema Coliseu. Transforme os dados do seu ERP em decisões estratégicas de qualquer lugar.</p>
-    </div>
+  <!-- ── Painel Esquerdo (Showcase / Dashboard Preview) ── -->
+  <div class="hero-panel">
+    <div class="hero-content">
 
-    <div class="kpi-cards">
-      <!-- Faturamento Diário -->
-      <div class="kpi-card">
-        <div class="info">
-          <span class="label">📈 Faturamento Diário</span>
-          <span class="value">R$ 12.450,00</span>
+      <div class="brand-header">
+        <div class="brand-badge">
+          <svg width="26" height="26" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 11C7.5 7.5 15.5 6 22 7.5C24.5 8 26.5 9 27.5 10L26 12C24 10.8 20.5 9.8 16 9.8C10.5 9.8 6.5 11.5 5 12.5L4 11Z" fill="#38BDF8"/>
+            <path d="M4 17C8 14 17 12.8 23.5 14.2L27 16L25.5 18C22.5 16.8 17.5 16 13 16C9 16 6 17.5 4.8 18.5L4 17Z" fill="#0284C7"/>
+            <path d="M4 23C8.5 20.5 18 19.5 24.5 21L28 22.8L26.5 25C23 23.8 17 22.8 12 22.8C8 22.8 5.5 24.2 4.5 25L4 23Z" fill="#0257A7"/>
+          </svg>
         </div>
-        <span class="badge green">+15.2% vs ontem</span>
+        <div class="brand-info">
+          <div class="brand-name">Coliseu Estoque</div>
+          <div class="brand-sub">GESTÃO DE ESTOQUE, INVENTÁRIO & EXPEDIÇÃO</div>
+        </div>
       </div>
 
-      <!-- Clientes Ativos -->
-      <div class="kpi-card">
-        <div class="info">
-          <span class="label">👥 Clientes Ativos</span>
-          <span class="value">4.861</span>
-        </div>
-        <span class="badge blue">+42 esta semana</span>
+      <div class="hero-text-block">
+        <h1 class="hero-title">
+          Controle total de entradas, saídas
+          <span class="highlight">e inventário em tempo real.</span>
+        </h1>
+        <p class="hero-description">
+          A plataforma definitiva para controle de armazenagem, contagem e expedição. Rastreabilidade por lote e validade, conferência cega de mercadorias e reposição de estoque sincronizados diretamente com seu ERP.
+        </p>
       </div>
 
-      <!-- Ticket Médio -->
-      <div class="kpi-card">
-        <div class="info">
-          <span class="label">📊 Ticket Médio Geral</span>
-          <span class="value">R$ 643,27</span>
+      <div class="kpi-section">
+        <div class="kpi-row-top">
+          <div class="kpi-card">
+            <div class="kpi-card-header">
+              <div class="kpi-title-wrap">
+                <div class="kpi-icon-box">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <path d="m9 15 2 2 4-4"></path>
+                  </svg>
+                </div>
+                <span class="kpi-card-title">Conferência & NFe</span>
+              </div>
+              <span class="kpi-badge badge-green">ERP ONLINE</span>
+            </div>
+            <div class="kpi-card-value">1.428 <span>conferidos</span></div>
+            <div class="kpi-card-sub sub-cyan">+18.4% autorizados no mês</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-card-header">
+              <div class="kpi-title-wrap">
+                <div class="kpi-icon-box">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+                    <path d="m3.3 7 8.7 5 8.7-5"></path>
+                    <path d="M12 22V12"></path>
+                  </svg>
+                </div>
+                <span class="kpi-card-title">Acuracidade & Giro</span>
+              </div>
+              <span class="kpi-badge badge-cyan">EM OPERAÇÃO</span>
+            </div>
+            <div class="kpi-card-value">99.4% <span>física</span></div>
+            <div class="kpi-card-sub sub-green">100% monitoramento por coletor</div>
+          </div>
         </div>
-        <div class="sparkline">
-          <span style="height: 10px;"></span>
-          <span style="height: 18px;"></span>
-          <span style="height: 15px;"></span>
-          <span style="height: 25px;"></span>
-          <span style="height: 30px;"></span>
+
+        <div class="kpi-card-full">
+          <div class="kpi-full-header">
+            <div class="kpi-title-wrap">
+              <div class="kpi-icon-box">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </div>
+              <span class="kpi-card-title">Volume Total em Estoque</span>
+            </div>
+            <div class="bar-chart-neon">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+          <div class="kpi-full-value">R$ 1.845.620,00</div>
+          <div class="kpi-full-caption">Total consolidado de mercadorias sincronizadas com ERP</div>
         </div>
       </div>
+
+      <div class="hero-footer">
+        <span class="footer-copy">© 2026 Coliseu Sistemas • Gestão de Estoque</span>
+        <div class="footer-status">
+          <span class="status-dot"></span>
+          <span>ERP & Coletores Integrados</span>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- ── Painel direito (Criar Conta) ── -->
-  <div class="right-panel">
-    <div class="logo-container">
-      <!-- Coliseu Logo -->
-      <svg class="logo-img" viewBox="0 0 300 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 40c0-10 8-18 18-18h120c10 0 18 8 18 18v5H12v-5z" fill="#1a7cc7"/>
-        <path d="M12 25c0-8 6-15 15-15h110c8 0 15 7 15 15v3H12v-3z" fill="#3aabdf"/>
-        <text x="175" y="38" font-family="'Nunito', sans-serif" font-size="28" font-weight="800" fill="#1e2d3d">coliseu</text>
-        <text x="175" y="52" font-family="'Nunito', sans-serif" font-size="12" font-weight="600" fill="#8a9ab0" letter-spacing="2">SISTEMAS</text>
-      </svg>
-    </div>
+  <!-- ── Painel Direito (Criar Conta) ── -->
+  <div class="form-panel">
+    <div class="form-container">
 
-    <div class="form-header">
-      <h1>Criar Conta 🚀</h1>
-      <p>Cadastre-se para acessar a Força de Vendas</p>
-    </div>
+      <div class="form-logo">
+        <img src="/static/img/coliseu_logo.png" alt="Coliseu Sistemas" />
+      </div>
 
-    {% if error_message %}
-        <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.25); color: #ef4444; padding: 12px; border-radius: 10px; font-size: 0.85rem; width: 100%; margin-bottom: 20px; text-align: center;">
-            {{ error_message }}
+      <div class="form-header-box">
+        <h2 class="form-title">Criar Conta 🚀</h2>
+        <p class="form-subtitle">Cadastre seus dados e vincule à licença da sua empresa.</p>
+      </div>
+
+      {% if error_message %}
+        <div class="alert-error">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <span>{{ error_message }}</span>
         </div>
-    {% endif %}
+      {% endif %}
 
-    <form class="register-form" method="POST" action="/register">
-      <!-- Nome -->
-      <div class="form-group">
-        <label for="name">Nome Completo</label>
-        <div class="input-wrapper">
-          <span class="icon">👤</span>
+      <form class="auth-form" method="POST" action="/register">
+        <!-- Nome -->
+        <div class="form-group">
+          <label class="form-label" for="name">Nome Completo</label>
           <input
             type="text"
             id="name"
             name="name"
-            placeholder="ex: João da Silva"
+            class="input-field"
+            placeholder="ex: Carlos Oliveira"
             required
+            autofocus
           />
         </div>
-      </div>
 
-      <!-- Email -->
-      <div class="form-group">
-        <label for="email">E-mail</label>
-        <div class="input-wrapper">
-          <span class="icon">✉️</span>
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label" for="email">E-mail Corporativo</label>
           <input
             type="email"
             id="email"
             name="email"
-            placeholder="ex: joao@empresa.com.br"
+            class="input-field"
+            placeholder="ex: carlos@empresa.com.br"
             required
           />
         </div>
-      </div>
 
-      <!-- ID da Empresa (CompanyKey) -->
-      <div class="form-group">
-        <label for="company_key">ID da Empresa (CompanyKey)</label>
-        <div class="input-wrapper">
-          <span class="icon">🔑</span>
+        <!-- ID da Empresa (CompanyKey) -->
+        <div class="form-group">
+          <label class="form-label" for="company_key">Chave de Acesso / Serial da Licença</label>
           <input
             type="text"
             id="company_key"
             name="company_key"
-            placeholder="ex: ed1d3a98-4c4d-48db-..."
+            class="input-field"
+            placeholder="ex: cs_key_... ou UUID da empresa"
             required
           />
+          <p class="form-caption">Fornecido pelo administrador de licenças da Coliseu Sistemas.</p>
         </div>
-        <p class="caption">Fornecido pelo administrador de licenças da Coliseu.</p>
-      </div>
 
-      <!-- Senha -->
-      <div class="form-group">
-        <label for="password">Senha</label>
-        <div class="input-wrapper">
-          <span class="icon">🔒</span>
+        <!-- Senha -->
+        <div class="form-group">
+          <label class="form-label" for="password">Senha de Acesso</label>
           <input
             type="password"
             id="password"
             name="password"
+            class="input-field"
             placeholder="Crie uma senha segura"
             required
           />
         </div>
+
+        <button type="submit" class="btn-submit">
+          <span>Finalizar Cadastro</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </form>
+
+      <div class="form-bottom-links">
+        Já possui acesso configurado? <a href="/login">Entrar</a>
       </div>
 
-      <button type="submit" class="btn-register">+ Finalizar Cadastro</button>
-    </form>
-
-    <div class="meta-info">
-      Já tem uma conta? <a href="/login">Entrar</a>
     </div>
   </div>
+
 </body>
 </html>

@@ -19,13 +19,13 @@ def login_view(request: Request):
         
     company_name = request.cookies.get("rep_company_name")
     company_id = request.cookies.get("rep_company_id")
-    api_key = request.cookies.get("rep_api_key")
+    api_key = request.cookies.get("rep_api_key") or settings.API_KEY
     
     return templates.TemplateResponse("auth/login.html", {
         "request": request,
         "company_name": company_name,
         "company_id": company_id,
-        "is_configured": bool(api_key)
+        "is_configured": bool(api_key or settings.USE_MOCKS)
     })
 
 @router.get("/register", response_class=HTMLResponse)
@@ -119,39 +119,66 @@ async def post_login(
     response: Response,
     request: Request,
     username: str = Form(...),
-    password: str = Form(...)
+    password: str = Form(...),
+    company_key: str = Form(None)
 ):
-    api_key = request.cookies.get("rep_api_key")
-    company_id = request.cookies.get("rep_company_id")
+    api_key = request.cookies.get("rep_api_key") or settings.API_KEY
+    company_id = request.cookies.get("rep_company_id") or settings.COMPANY_ID
+    company_name = request.cookies.get("rep_company_name")
     
-    if not api_key:
-        return RedirectResponse(url="/register", status_code=status.HTTP_303_SEE_OTHER)
+    if company_key and company_key.strip():
+        api_key = company_key.strip()
+        try:
+            async with httpx.AsyncClient(timeout=4.0) as client:
+                res = await client.post(f"{settings.ADMIN_PANEL_URL}/adm/api/companies/lookup-by-key", json={"api_key": api_key})
+                if res.status_code == 200:
+                    d = res.json()
+                    if d.get("success"):
+                        company_id = d.get("company_id", company_id)
+                        company_name = d.get("company_name", "Empresa Conectada")
+        except Exception:
+            pass
+
+    if not api_key and not settings.USE_MOCKS:
+        return templates.TemplateResponse("auth/login.html", {
+            "request": request,
+            "error_message": "Vincule a chave/serial da empresa para continuar.",
+            "company_name": company_name,
+            "is_configured": False
+        })
 
     # 1. Authenticate Rep on Middleware
     auth_res = await api_client.authenticate_rep(username, password, api_key=api_key)
     if not auth_res.get("success", False):
         return templates.TemplateResponse("auth/login.html", {
             "request": request, 
-            "error_message": auth_res.get("message", "Falha de login."),
-            "company_name": request.cookies.get("rep_company_name"),
+            "error_message": auth_res.get("message", "Falha de login. Verifique seu usuário/e-mail e senha."),
+            "company_name": company_name,
             "is_configured": True
         })
         
     # 2. Check Company License status on Admin Panel
-    lic_res = await admin_client.get_license_status(company_id=company_id)
-    if not lic_res.get("valid", False):
-        return templates.TemplateResponse("auth/login.html", {
-            "request": request,
-            "error_message": "Acesso Bloqueado. A licença deste inquilino está inativa ou expirada. Contate o administrador.",
-            "company_name": request.cookies.get("rep_company_name"),
-            "is_configured": True
-        })
+    if not settings.USE_MOCKS and company_id:
+        lic_res = await admin_client.get_license_status(company_id=company_id)
+        if not lic_res.get("valid", False):
+            return templates.TemplateResponse("auth/login.html", {
+                "request": request,
+                "error_message": "Acesso Bloqueado. A licença deste inquilino está inativa ou expirada. Contate o administrador.",
+                "company_name": company_name,
+                "is_configured": True
+            })
 
     # 3. Store rep token in cookie and redirect to Select Branch
     redirect = RedirectResponse(url="/select-branch", status_code=status.HTTP_303_SEE_OTHER)
     redirect.set_cookie("rep_token", auth_res["token"], httponly=True)
-    redirect.set_cookie("rep_name", auth_res.get("rep_name", "Vendedor"), httponly=True)
+    redirect.set_cookie("rep_name", auth_res.get("rep_name", "Operador de Estoque"), httponly=True)
     redirect.set_cookie("rep_seller_id", auth_res.get("seller_id", ""), httponly=True)
+    if api_key:
+        redirect.set_cookie("rep_api_key", api_key, max_age=31536000, httponly=True)
+    if company_id:
+        redirect.set_cookie("rep_company_id", company_id, max_age=31536000, httponly=True)
+    if company_name:
+        redirect.set_cookie("rep_company_name", company_name, max_age=31536000, httponly=True)
     return redirect
 
 @router.get("/select-branch", response_class=HTMLResponse)
