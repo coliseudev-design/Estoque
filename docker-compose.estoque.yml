@@ -1,0 +1,48 @@
+# =============================================================================
+# Coliseu Estoque — API + Dashboard + PostgreSQL
+#
+#   docker compose -f docker-compose.estoque.yml up -d --build
+#   Dashboard:  http://localhost:3100
+#   Saúde:      http://localhost:3100/health
+#
+# Produção (Coolify): use este arquivo como base; defina os segredos no painel.
+# =============================================================================
+
+services:
+  estoque-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: coliseu_estoque
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${ESTOQUE_PG_PASSWORD:-dev_password}
+    volumes:
+      - estoque_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d coliseu_estoque"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  estoque-api:
+    build:
+      context: .
+      dockerfile: estoque-api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      estoque-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 3100
+      DATABASE_URL: postgres://postgres:${ESTOQUE_PG_PASSWORD:-dev_password}@estoque-db:5432/coliseu_estoque
+      IDENTITY_BASE_URL: ${IDENTITY_BASE_URL:-https://adminlicencas.coliseusistemas.com.br}
+      IDENTITY_INTERNAL_API_KEY: ${IDENTITY_INTERNAL_API_KEY:?defina IDENTITY_INTERNAL_API_KEY}
+      ESTOQUE_MODULE_SLUG: ${ESTOQUE_MODULE_SLUG:-estoque}
+      ESTOQUE_JWT_SECRET: ${ESTOQUE_JWT_SECRET:?defina ESTOQUE_JWT_SECRET}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?defina JWT_ACCESS_SECRET}
+    ports:
+      - "3100:3100"
+
+volumes:
+  estoque_pg:

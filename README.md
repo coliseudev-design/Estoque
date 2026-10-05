@@ -1,5 +1,9 @@
 # Coliseu Speed — Documentação de Deploy
 
+> **Coliseu Estoque** (conferência cega / separação) vive em `estoque-api/`,
+> `dashboard/` e `app/`. Arquitetura e decisões: [`docs/ESTOQUE_ARQUITETURA.md`](docs/ESTOQUE_ARQUITETURA.md).
+> O restante deste README trata do Coliseu Speed (vendas).
+
 Sistema multi-tenant de integração ERP (Firebird) ↔ Mobile (Flutter) via middleware Node.js.
 
 ## Arquitetura

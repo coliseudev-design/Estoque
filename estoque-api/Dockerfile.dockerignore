@@ -1,0 +1,7 @@
+# Contexto = raiz do repositório. Só entra o que o Dockerfile copia.
+*
+!estoque-api/package.json
+!estoque-api/package-lock.json
+!estoque-api/src
+!estoque-api/sql
+!dashboard

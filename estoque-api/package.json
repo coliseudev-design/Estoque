@@ -1,0 +1,26 @@
+{
+  "name": "coliseu-estoque-api",
+  "version": "1.0.0",
+  "description": "API central do Coliseu Estoque — conferência cega, separação e sincronismo com o ERP via Worker",
+  "main": "src/index.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --env-file=.env --watch src/index.js",
+    "test": "node --test tests/",
+    "check": "node --check src/index.js"
+  },
+  "dependencies": {
+    "compression": "^1.7.5",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "zod": "^3.24.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
