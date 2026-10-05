@@ -32,6 +32,13 @@ router.get('/', anyone, route(async (req, res) => {
     res.json({ items: await docs.listDocuments(req.tenantId, req.user, q) });
 }));
 
+// Leitor de código de barras: pedido, NF, chave do ERP ou chave de acesso da NF-e.
+// Precisa vir antes de '/:id'.
+router.get('/lookup', anyone, route(async (req, res) => {
+    const { code } = parse(z.object({ code: z.string().trim().min(1).max(64) }), req.query);
+    res.json(await docs.lookupDocuments(req.tenantId, req.user, code));
+}));
+
 router.get('/:id', anyone, route(async (req, res) => {
     res.json(await docs.getDocument(req.tenantId, req.user, idParam(req)));
 }));

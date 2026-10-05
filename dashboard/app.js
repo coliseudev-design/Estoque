@@ -59,12 +59,40 @@
   const WB_LABEL = { NAO_APLICAVEL: '—', PENDENTE: 'Pendente', GRAVADO: 'Gravado', ERRO: 'Erro' };
   const ROLE_LABEL = { operador: 'Operador', supervisor: 'Supervisor', admin: 'Administrador' };
   const badge = (code, label) => html`<span class="badge b-${code}">${label}</span>`;
-  // Pedido conferido = liberado para o faturamento emitir a NF.
-  const docStatus = (d) => badge(d.status, d.source === 'PED' && d.status === 'CONCLUIDO' ? 'Liberado p/ faturar' : STATUS_LABEL[d.status]);
+
+  /**
+   * Status da separação como o armazém fala — com cor própria e consistente em todas as telas.
+   * Pedido conferido = liberado para o faturamento; com NF emitida = faturado.
+   */
+  function statusInfo(d) {
+    switch (d.status) {
+      case 'AGUARDANDO': return { cls: 's-wait', label: 'Aguardando separação' };
+      case 'EM_CONFERENCIA': return { cls: 's-sep', label: 'Em separação', pulse: true };
+      case 'DIVERGENTE': return { cls: 's-recount', label: 'Recontagem', pulse: true };
+      case 'AGUARDANDO_APROVACAO': return { cls: 's-approval', label: 'Divergência · supervisor' };
+      case 'CONCLUIDO':
+        if (d.source === 'PED') return d.invoiceNumber ? { cls: 's-invoiced', label: 'Faturado' } : { cls: 's-done', label: 'Liberado p/ faturar' };
+        return { cls: 's-done', label: 'Conferido' };
+      default: return { cls: 's-cancel', label: STATUS_LABEL[d.status] || d.status };
+    }
+  }
+  const docStatus = (d) => {
+    const s = statusInfo(d);
+    return html`<span class="status ${s.cls}${s.pulse ? ' pulse' : ''}">${s.label}</span>`;
+  };
   const invoicedEarly = (d) => d.invoiceNumber && !['CONCLUIDO', 'CANCELADO'].includes(d.status);
   const invoiceBadge = (d) => (d.invoiceNumber
-    ? html` <span class="badge ${invoicedEarly(d) ? 'b-FALTA' : 'b-OK'}" title="${invoicedEarly(d) ? 'Faturado antes da conferência' : 'Nota fiscal emitida'}">NF ${d.invoiceNumber}</span>`
+    ? html` <span class="badge ${invoicedEarly(d) ? 'b-FALTA' : 'b-NF'}" title="${invoicedEarly(d) ? 'Faturado antes de terminar a conferência' : 'Nota fiscal emitida'}">NF ${d.invoiceNumber}</span>`
     : '');
+  /** Barra de progresso: produtos já lidos ÷ produtos do pedido (não revela quantidade esperada). */
+  const progressBar = (d) => {
+    if (!d.productCount) return '';
+    const done = ['CONCLUIDO'].includes(d.status);
+    const n = done ? d.productCount : Math.min(d.countedProducts || 0, d.productCount);
+    const pct = Math.round((n / d.productCount) * 100);
+    return html`<div class="progress ${statusInfo(d).cls}" title="${n} de ${d.productCount} produtos lidos">
+      <div class="bar"><i style="width:${pct}%"></i></div><span class="txt">${n}/${d.productCount}</span></div>`;
+  };
 
   // ── Toasts, sons e modais ─────────────────────────────────────────────────
   function toast(msg, isError = false) {
@@ -191,7 +219,11 @@
   function startStream() {
     if (stream || !state.token) return;
     stream = new EventSource(`/v1/stream?access_token=${encodeURIComponent(state.token)}`);
-    const setLive = (on) => { const d = $('#live-dot'); if (d) d.classList.toggle('on', on); const t = $('#live-text'); if (t) t.textContent = on ? 'Ao vivo' : 'Reconectando…'; };
+    const setLive = (on) => {
+      $('#live-dot')?.classList.toggle('on', on);
+      $('#live-status')?.classList.toggle('on', on);
+      const t = $('#live-text'); if (t) t.textContent = on ? 'Online' : 'Reconectando…';
+    };
     stream.onopen = () => setLive(true);
     stream.onerror = () => setLive(false);
     for (const type of ['document.updated', 'scan.added', 'documents.synced', 'worker.heartbeat']) {
@@ -214,11 +246,17 @@
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
     log: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>',
     menu: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>',
+    scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    boxes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 9l9-5 9 5-9 5-9-5z"/><path d="M3 9v6l9 5 9-5V9"/><path d="M12 14v6"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>',
+    trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
   };
 
   const NAV = [
     { href: '#/', label: 'Painel', icon: 'panel', sup: true },
-    { href: '#/documentos', label: 'Documentos', icon: 'docs' },
+    { href: '#/documentos', label: 'Pedidos', icon: 'docs' },
     { href: '#/produtos', label: 'Produtos', icon: 'box' },
     { href: '#/usuarios', label: 'Usuários', icon: 'users', sup: true },
     { href: '#/auditoria', label: 'Auditoria', icon: 'log', sup: true },
@@ -231,20 +269,35 @@
     $('#root').innerHTML = html`
       <div class="shell">
         <aside class="sidebar" id="sidebar">
-          <div class="brand"><div class="brand-mark">C</div><div>Coliseu Estoque<small>${state.company?.name || ''}</small></div></div>
+          <div class="brand">
+            <img class="brand-logo" src="img/coliseu_logo.png" alt="Coliseu Sistemas" width="150" height="38">
+            <span class="brand-sub">Estoque · ${state.company?.name || ''}</span>
+          </div>
           ${links.map((n) => html`<a class="nav-link" href="${n.href}" data-nav="${n.href}">${raw(ICON[n.icon])}<span>${n.label}</span></a>`)}
           <div class="sidebar-foot">
             <div class="who">${state.user.name}</div>
             <div class="muted">${ROLE_LABEL[state.user.role]}</div>
-            <div class="muted" style="margin-top:8px"><span class="live-dot" id="live-dot"></span><span id="live-text">Conectando…</span></div>
             <button class="btn sm" id="logout" style="margin-top:12px;width:100%">Sair</button>
           </div>
         </aside>
-        <div>
-          <div class="topbar-mobile"><button class="btn sm" id="menu-btn" aria-label="Menu">${raw(ICON.menu)}</button><strong>Coliseu Estoque</strong></div>
+        <div style="min-width:0">
+          <div class="app-stripe"></div>
+          <header class="topbar">
+            <button class="btn sm topbar-mobile" id="menu-btn" aria-label="Menu">${raw(ICON.menu)}</button>
+            <div><h1 id="tb-title">Coliseu Estoque</h1><div class="sub" id="tb-sub"></div></div>
+            <div class="spacer"></div>
+            <button class="btn btn-scan" id="scan-btn" title="Ler código de barras (F2)">
+              <span class="reader-dot" id="reader-dot"></span>${raw(ICON.scan)}<span>Ler código</span><kbd>F2</kbd></button>
+            <div class="presence">
+              <div class="who"><strong>${state.user.name}</strong>
+                <span class="pstatus" id="live-status"><span class="live-dot" id="live-dot"></span><span id="live-text">Conectando…</span></span></div>
+              <div class="avatar">${(state.user.name || '?').trim().charAt(0).toUpperCase()}</div>
+            </div>
+          </header>
           <main id="main"></main>
         </div>
       </div>`.s;
+    $('#scan-btn').addEventListener('click', () => openScanner());
     $('#logout').addEventListener('click', () => logout());
     $('#menu-btn').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
     $$('.nav-link').forEach((a) => a.addEventListener('click', () => $('#sidebar').classList.remove('open')));
@@ -260,8 +313,13 @@
   }
 
   const main = () => $('#main');
-  const pageHead = (title, sub, actions = '') => html`
-    <div class="page-head"><div><h1>${title}</h1>${sub ? html`<div class="sub">${sub}</div>` : ''}</div><div class="btn-row">${actions}</div></div>`;
+  /** Título vai para o cabeçalho fixo; na página ficam só as ações. */
+  const pageHead = (title, sub, actions = '') => {
+    const t = $('#tb-title');
+    if (t) { t.textContent = title; $('#tb-sub').textContent = sub || ''; document.title = `${title} · Coliseu Estoque`; }
+    const hasActions = Array.isArray(actions) ? actions.some(Boolean) : Boolean(actions);
+    return hasActions ? html`<div class="page-head"><div></div><div class="btn-row">${actions}</div></div>` : html``;
+  };
 
   // ───────────────────────────────────────────────────────────────────────────
   // Roteador
@@ -408,81 +466,156 @@
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Painel
+  // Tabela de pedidos (painel e lista usam a mesma)
   // ───────────────────────────────────────────────────────────────────────────
+  const shortDate = (v) => {
+    if (!v) return '—';
+    const d = new Date(v);
+    const today = new Date();
+    return d.toDateString() === today.toDateString() ? 'Hoje' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
+  function ordersTable(items, { erpCol = false } = {}) {
+    return html`<div class="table-wrap"><table>
+      <thead><tr>
+        <th>Pedido #</th><th>Cliente</th><th class="num">Itens</th><th>Emissão</th>
+        <th>Separação</th><th>Status</th><th>Responsável</th>${erpCol ? html`<th>ERP</th>` : ''}
+      </tr></thead>
+      <tbody>${items.map((d) => {
+        const s = statusInfo(d);
+        return html`<tr class="clickable row-s ${s.cls}" data-id="${d.id}">
+          <td><div class="doc-no">${d.number || d.erpKey}${d.priority > 0 ? html` <span class="badge b-FALTA">Urgente</span>` : ''}</div>
+            <div class="sub">${d.source === 'NFS' ? `Nota de saída${d.orderNumber ? ` · pedido ${d.orderNumber}` : ''}` : 'Pedido de venda'}${invoiceBadge(d)}</div></td>
+          <td>${d.customerName || '—'}<div class="sub">${d.sellerName || ''}</div></td>
+          <td class="num">${d.itemCount ?? '—'}</td>
+          <td>${shortDate(d.issuedAt)}<div class="sub">atualizado ${ago(d.updatedAt)}</div></td>
+          <td>${progressBar(d)}</td>
+          <td>${docStatus(d)}${d.erpChanged ? html` <span class="badge b-FALTA" title="O ERP alterou o pedido durante a separação">ERP alterou</span>` : ''}</td>
+          <td>${d.lock ? html`<span title="Reservado até ${fmtDateTime(d.lock.expiresAt)}">🔒 ${d.lock.userName}</span>` : (d.finishedByName || d.startedByName || html`<span class="muted">—</span>`)}</td>
+          ${erpCol ? html`<td>${d.writebackStatus !== 'NAO_APLICAVEL' ? badge(d.writebackStatus, WB_LABEL[d.writebackStatus]) : ''}</td>` : ''}
+        </tr>`;
+      })}</tbody></table></div>`;
+  }
+
+  function bindRows(container) {
+    $$('tr[data-id]', container).forEach((tr) => tr.addEventListener('click', () => { location.hash = `#/documentos/${tr.dataset.id}`; }));
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Painel operacional
+  // ───────────────────────────────────────────────────────────────────────────
+  const PANEL_TABS = [
+    { key: 'ativos', label: 'Na fila', status: 'AGUARDANDO,EM_CONFERENCIA,DIVERGENTE,AGUARDANDO_APROVACAO' },
+    { key: 'sep', label: 'Em separação', status: 'EM_CONFERENCIA', tone: '' },
+    { key: 'div', label: 'Divergências', status: 'DIVERGENTE,AGUARDANDO_APROVACAO', tone: 'tone-danger' },
+    { key: 'lib', label: 'Liberados', status: 'CONCLUIDO', tone: 'tone-ok' },
+  ];
+
   async function viewPanel() {
+    let tab = store.get('est.panel.tab') || 'ativos';
+
     const load = async () => {
-      const [s, attention] = await Promise.all([
+      const current = PANEL_TABS.find((t) => t.key === tab) || PANEL_TABS[0];
+      const [s, list] = await Promise.all([
         api('GET', '/v1/dashboard/summary'),
-        api('GET', '/v1/documents?status=AGUARDANDO_APROVACAO,DIVERGENTE&limit=8&days=30'),
+        api('GET', `/v1/documents?status=${current.status}&limit=15&days=${current.key === 'lib' ? 1 : 30}`),
       ]);
       const st = s.byStatus;
       const workerAge = s.worker.seenAt ? (Date.now() - new Date(s.worker.seenAt)) / 60000 : Infinity;
       const workerOk = workerAge < 15;
-      const divRate = s.today.concluidos ? Math.round((s.today.com_divergencia / s.today.concluidos) * 100) : 0;
+      const divergencias = (st.DIVERGENTE || 0) + (st.AGUARDANDO_APROVACAO || 0);
+      const conformidade = s.today.concluidos ? ((s.today.concluidos - s.today.com_divergencia) / s.today.concluidos) * 100 : null;
+      const ativos = s.operators.filter((o) => o.ultima_leitura && Date.now() - new Date(o.ultima_leitura) < 10 * 60000).length;
+      const counts = {
+        ativos: (st.AGUARDANDO || 0) + (st.EM_CONFERENCIA || 0) + divergencias,
+        sep: st.EM_CONFERENCIA || 0,
+        div: divergencias,
+        lib: s.today.concluidos,
+      };
+
+      const kpi = (cls, label, icon, value, hint, hintCls, go) => html`
+        <div class="card kpi ${cls} ${go ? 'clickable' : ''}" ${go ? raw(`data-go="${esc(go)}"`) : ''}>
+          <div class="top"><div class="label">${label}</div><div class="icon">${raw(ICON[icon])}</div></div>
+          <div class="value">${value}</div>
+          <div class="hint ${hintCls || ''}">${hint}</div>
+        </div>`;
 
       main().innerHTML = html`
-        ${pageHead('Painel', `${state.company.name} · hoje, ${new Date().toLocaleDateString('pt-BR')}`)}
-        ${!workerOk ? html`<div class="alert-box warn">O Worker do ERP não se comunica ${s.worker.seenAt ? ago(s.worker.seenAt) : 'desde a instalação'}. Novos pedidos e o retorno ao ERP estão parados — verifique o serviço ColiseuWorkervett no servidor do cliente.</div>` : ''}
-        ${s.writeback.erros ? html`<div class="alert-box danger">${s.writeback.erros} conferência(s) com erro ao gravar no ERP. <a href="#/documentos" data-wb="ERRO">Ver documentos</a></div>` : ''}
+        ${pageHead('Dashboard Operacional', `Monitoramento em tempo real · ${state.company.name}`)}
+        ${!workerOk ? html`<div class="alert-box warn">O Worker do ERP não se comunica ${s.worker.seenAt ? ago(s.worker.seenAt) : 'desde a instalação'}. Pedidos novos e o retorno ao ERP estão parados — verifique o serviço ColiseuWorkervett no servidor do cliente.</div>` : ''}
+        ${s.writeback.erros ? html`<div class="alert-box danger">${s.writeback.erros} conferência(s) com erro ao gravar no ERP. <a href="#/documentos" data-wb="ERRO">Ver pedidos</a></div>` : ''}
         <div class="grid kpis">
-          <div class="card kpi"><div class="label">Na fila</div><div class="value">${st.AGUARDANDO || 0}</div><div class="hint">aguardando conferência</div></div>
-          <div class="card kpi"><div class="label">Em conferência</div><div class="value">${st.EM_CONFERENCIA || 0}</div><div class="hint">agora</div></div>
-          <div class="card kpi ${st.DIVERGENTE ? 'alert' : ''}"><div class="label">Recontagem</div><div class="value">${st.DIVERGENTE || 0}</div><div class="hint">com divergência</div></div>
-          <div class="card kpi ${st.AGUARDANDO_APROVACAO ? 'danger' : ''}"><div class="label">Aprovação</div><div class="value">${st.AGUARDANDO_APROVACAO || 0}</div><div class="hint">aguardando supervisor</div></div>
-          <div class="card kpi"><div class="label">Concluídos hoje</div><div class="value">${s.today.concluidos}</div><div class="hint">${divRate}% com divergência · ${fmtDuration(s.today.tempo_medio_s)} em média</div></div>
+          ${kpi('kpi-wait', 'Aguardando', 'clock', st.AGUARDANDO || 0, 'na fila de separação', '', 'AGUARDANDO')}
+          ${kpi('kpi-sep', 'Em separação', 'boxes', st.EM_CONFERENCIA || 0, ativos ? `${ativos} operador(es) ativos agora` : 'nenhum operador lendo agora', '', 'EM_CONFERENCIA')}
+          ${kpi('kpi-warn', 'Divergências', 'alert', divergencias,
+            divergencias ? (st.AGUARDANDO_APROVACAO ? `${st.AGUARDANDO_APROVACAO} aguardando supervisor` : 'em recontagem') : 'Nenhuma pendente',
+            divergencias ? 'bad' : 'good', 'DIVERGENTE,AGUARDANDO_APROVACAO')}
+          ${kpi('kpi-done', 'Liberados hoje', 'check', s.today.concluidos,
+            s.today.concluidos ? `${fmtDuration(s.today.tempo_medio_s)} em média por pedido` : 'nenhum ainda', '', 'CONCLUIDO')}
+          ${kpi('kpi-rate', 'Conformidade', 'trend', conformidade === null ? '—' : `${conformidade.toFixed(1).replace('.', ',')}%`,
+            conformidade === null ? 'sem conferências hoje' : conformidade >= 95 ? '↑ Ótimo nível' : conformidade >= 85 ? 'Atenção' : '↓ Abaixo do esperado',
+            conformidade === null ? '' : conformidade >= 95 ? 'good' : 'bad')}
         </div>
-        <div class="grid two" style="margin-top:16px">
+
+        <div class="card" style="margin-top:20px">
+          <div class="card-head">
+            <h2>Pedidos na fila</h2>
+            <div class="pills">${PANEL_TABS.map((t) => html`<button class="pill ${t.tone || ''} ${t.key === tab ? 'active' : ''}" data-tab="${t.key}">${t.label}<span class="n">${counts[t.key]}</span></button>`)}</div>
+          </div>
+          <div id="panel-list">${list.items.length ? ordersTable(list.items)
+            : html`<div class="empty">${tab === 'div' ? 'Nenhuma divergência. 👌' : tab === 'lib' ? 'Nenhum pedido liberado hoje ainda.' : 'Nenhum pedido aqui agora.'}</div>`}</div>
+          ${list.items.length >= 15 ? html`<div style="padding:12px;text-align:center"><a href="#/documentos" class="btn sm">Ver todos os pedidos</a></div>` : ''}
+        </div>
+
+        <div class="grid two" style="margin-top:20px">
           <div class="card">
-            <div class="card-pad" style="padding-bottom:0"><h2>Precisam de atenção</h2></div>
-            ${attention.items.length ? html`<div class="table-wrap"><table>
-              <thead><tr><th>Documento</th><th>Cliente</th><th>Status</th><th>Operador</th></tr></thead>
-              <tbody>${attention.items.map((d) => html`<tr class="clickable" data-href="#/documentos/${d.id}">
-                <td><strong>${d.number || d.erpKey}</strong></td><td>${d.customerName || '—'}</td>
-                <td>${docStatus(d)}${invoiceBadge(d)}</td><td>${d.finishedByName || d.lock?.userName || d.startedByName || '—'}</td></tr>`)}
-              </tbody></table></div>` : html`<div class="empty">Nada pendente. 👌</div>`}
+            <div class="card-head"><h2>Produtividade de hoje</h2></div>
+            ${s.operators.length ? html`<div class="table-wrap"><table>
+              <thead><tr><th>Operador</th><th class="num">Pedidos</th><th class="num">Leituras</th><th class="num">Unidades</th><th>Última leitura</th></tr></thead>
+              <tbody>${s.operators.map((o) => html`<tr><td><strong>${o.name}</strong></td><td class="num">${o.documentos}</td><td class="num">${o.leituras}</td><td class="num">${fmtQty(o.unidades)}</td><td>${ago(o.ultima_leitura)}</td></tr>`)}</tbody>
+            </table></div>` : html`<div class="empty">Nenhuma leitura hoje.</div>`}
           </div>
           <div class="card card-pad">
             <h2>Integração com o ERP</h2>
             <div class="meta-grid" style="grid-template-columns:1fr 1fr">
-              <div><div class="k">Worker</div><div class="v">${workerOk ? badge('OK', 'Online') : badge('ERRO', 'Offline')} <span class="muted">${ago(s.worker.seenAt)}</span></div></div>
+              <div><div class="k">Worker</div><div class="v">${workerOk ? html`<span class="status s-done">Online</span>` : html`<span class="status s-approval">Offline</span>`}</div><div class="muted" style="font-size:12px;margin-top:4px">${ago(s.worker.seenAt)}</div></div>
               <div><div class="k">Versão</div><div class="v">${s.worker.info?.version || '—'}</div></div>
               <div><div class="k">Retorno ao ERP</div><div class="v">${s.worker.info?.writebackEnabled ? 'Ativo' : 'Desligado'}</div></div>
               <div><div class="k">Pendentes</div><div class="v">${s.writeback.pendentes}</div></div>
             </div>
-            <div style="margin-top:14px">${s.sync.map((x) => html`<div class="count-item" style="padding:6px 0"><span>${x.entity}</span><span class="muted">${ago(x.last_at)}</span></div>`)}</div>
+            <div style="margin-top:14px">${s.sync.map((x) => html`<div class="count-item" style="padding:8px 0"><span>${x.entity}</span><span class="muted">${ago(x.last_at)}</span></div>`)}</div>
           </div>
-        </div>
-        <div class="card" style="margin-top:16px">
-          <div class="card-pad" style="padding-bottom:0"><h2>Produtividade de hoje</h2></div>
-          ${s.operators.length ? html`<div class="table-wrap"><table>
-            <thead><tr><th>Operador</th><th class="num">Documentos</th><th class="num">Leituras</th><th class="num">Unidades</th><th>Última leitura</th></tr></thead>
-            <tbody>${s.operators.map((o) => html`<tr><td>${o.name}</td><td class="num">${o.documentos}</td><td class="num">${o.leituras}</td><td class="num">${fmtQty(o.unidades)}</td><td>${ago(o.ultima_leitura)}</td></tr>`)}</tbody>
-          </table></div>` : html`<div class="empty">Nenhuma leitura hoje.</div>`}
         </div>`.s;
-      $$('tr[data-href]').forEach((tr) => tr.addEventListener('click', () => { location.hash = tr.dataset.href; }));
+
+      bindRows($('#panel-list'));
+      $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
+        tab = b.dataset.tab; store.set('est.panel.tab', tab); load().catch((e) => toast(e.message, true));
+      }));
+      $$('[data-go]').forEach((k) => k.addEventListener('click', () => {
+        store.set('est.docs.status', k.dataset.go); location.hash = '#/documentos';
+      }));
     };
     await load();
     state.view = { onEvent: debounce(() => load().catch(() => {}), 1500) };
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Documentos
+  // Pedidos
   // ───────────────────────────────────────────────────────────────────────────
   const FILTERS = [
-    { key: 'AGUARDANDO,EM_CONFERENCIA,DIVERGENTE,AGUARDANDO_APROVACAO', label: 'Ativos' },
-    { key: '', label: 'Todos' },
-    { key: 'AGUARDANDO', label: 'Aguardando' },
-    { key: 'EM_CONFERENCIA', label: 'Em conferência' },
-    { key: 'DIVERGENTE', label: 'Recontagem' },
-    { key: 'AGUARDANDO_APROVACAO', label: 'Aprovação' },
-    { key: 'CONCLUIDO', label: 'Concluídos' },
+    { key: 'AGUARDANDO,EM_CONFERENCIA,DIVERGENTE,AGUARDANDO_APROVACAO', label: 'Na fila' },
+    { key: 'AGUARDANDO', label: 'Aguardando separação', tone: '' },
+    { key: 'EM_CONFERENCIA', label: 'Em separação' },
+    { key: 'DIVERGENTE,AGUARDANDO_APROVACAO', label: 'Divergências', tone: 'tone-danger' },
+    { key: 'CONCLUIDO', label: 'Liberados / faturados', tone: 'tone-ok' },
     { key: 'CANCELADO', label: 'Cancelados' },
+    { key: '', label: 'Todos' },
   ];
 
   async function viewDocuments() {
+    const saved = store.get('est.docs.status');
     const f = {
-      status: store.get('est.docs.status') ?? FILTERS[0].key,
+      status: FILTERS.some((x) => x.key === saved) ? saved : FILTERS[0].key,
       q: '',
       days: store.get('est.docs.days') || '7',
       offset: 0,
@@ -494,12 +627,12 @@
     let hasMore = false;
 
     main().innerHTML = html`
-      ${pageHead('Documentos', 'Notas e pedidos recebidos do ERP para conferência')}
+      ${pageHead('Pedidos', 'Separação e conferência dos pedidos de venda recebidos do ERP')}
       <div class="card">
         <div class="toolbar">
-          <div class="chips" id="chips">${FILTERS.map((x) => html`<button class="chip ${x.key === f.status ? 'active' : ''}" data-status="${x.key}">${x.label}</button>`)}</div>
-          <input class="input" id="q" placeholder="Número, cliente ou chave" style="margin-left:auto">
-          <select class="input" id="days" style="width:150px">
+          <div class="pills" id="chips">${FILTERS.map((x) => html`<button class="pill ${x.tone || ''} ${x.key === f.status ? 'active' : ''}" data-status="${x.key}">${x.label}</button>`)}</div>
+          <input class="input" id="q" placeholder="Pedido, NF, cliente ou chave" style="margin-left:auto">
+          <select class="input" id="days" style="width:140px">
             ${[['1', 'Hoje'], ['3', '3 dias'], ['7', '7 dias'], ['30', '30 dias'], ['90', '90 dias']].map(([v, l]) => html`<option value="${v}" ${v === f.days ? 'selected' : ''}>${l}</option>`)}
           </select>
         </div>
@@ -519,28 +652,19 @@
     };
 
     const draw = () => {
-      $('#list').innerHTML = items.length ? html`<div class="table-wrap"><table>
-        <thead><tr><th>Documento</th><th>Cliente</th><th>Emissão</th><th class="num">Itens</th><th>Status</th><th>Responsável</th>${isSup() ? html`<th>ERP</th>` : ''}</tr></thead>
-        <tbody>${items.map((d) => html`<tr class="clickable" data-id="${d.id}">
-          <td><strong>${d.number || d.erpKey}</strong>${d.priority > 0 ? html` <span class="badge b-SOBRA">Prioridade</span>` : ''}<div class="muted">${d.source === 'NFS' ? `Nota de saída${d.orderNumber ? ` · pedido ${d.orderNumber}` : ''}` : 'Pedido de venda'}</div></td>
-          <td>${d.customerName || '—'}<div class="muted">${d.sellerName || ''}</div></td>
-          <td>${fmtDateTime(d.issuedAt)}</td>
-          <td class="num">${d.itemCount ?? '—'}</td>
-          <td>${docStatus(d)}${invoiceBadge(d)}${d.erpChanged ? html` <span class="badge b-FALTA" title="O ERP alterou o documento durante a conferência">ERP alterou</span>` : ''}</td>
-          <td>${d.lock ? html`<span title="Reservado até ${fmtDateTime(d.lock.expiresAt)}">🔒 ${d.lock.userName}</span>` : (d.finishedByName || d.startedByName || '—')}</td>
-          ${isSup() ? html`<td>${d.writebackStatus !== 'NAO_APLICAVEL' ? badge(d.writebackStatus, WB_LABEL[d.writebackStatus]) : ''}</td>` : ''}
-        </tr>`)}</tbody></table></div>
-        ${hasMore ? html`<div style="padding:14px;text-align:center"><button class="btn" id="more">Carregar mais</button></div>` : ''}`.s
-        : '<div class="empty">Nenhum documento neste filtro.</div>';
-      $$('#list tr[data-id]').forEach((tr) => tr.addEventListener('click', () => { location.hash = `#/documentos/${tr.dataset.id}`; }));
+      $('#list').innerHTML = items.length
+        ? ordersTable(items, { erpCol: isSup() }).s
+          + (hasMore ? '<div style="padding:14px;text-align:center"><button class="btn" id="more">Carregar mais</button></div>' : '')
+        : '<div class="empty">Nenhum pedido neste filtro.</div>';
+      bindRows($('#list'));
       $('#more')?.addEventListener('click', () => load(true).catch((e) => toast(e.message, true)));
     };
 
-    $$('#chips .chip').forEach((c) => c.addEventListener('click', () => {
+    $$('#chips .pill').forEach((c) => c.addEventListener('click', () => {
       f.status = c.dataset.status;
       f.writeback = null;
       store.set('est.docs.status', f.status);
-      $$('#chips .chip').forEach((x) => x.classList.toggle('active', x === c));
+      $$('#chips .pill').forEach((x) => x.classList.toggle('active', x === c));
       load().catch((e) => toast(e.message, true));
     }));
     $('#q').addEventListener('input', debounce((e) => { f.q = e.target.value.trim(); load().catch((er) => toast(er.message, true)); }, 300));
@@ -1041,6 +1165,138 @@
         toast('Configurações salvas');
       } catch (err) { toast(err.message, true); }
     });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Leitor de código de barras (sem fio Bluetooth/2.4 GHz ou USB)
+  //
+  // Esses leitores funcionam como TECLADO (modo HID): "digitam" o código muito
+  // rápido e mandam Enter. Não precisa de app nem driver. Diferenciamos leitor de
+  // pessoa pelo ritmo: leitor < 40 ms entre teclas; pessoa > 80 ms.
+  // ───────────────────────────────────────────────────────────────────────────
+  const READER_MAX_GAP = 40;   // ms entre teclas para considerar leitor
+  const READER_MIN_LEN = 4;
+  const reader = { buf: '', last: 0, gaps: [] };
+  let scannerModal = null;
+
+  function markReaderDetected() {
+    const dot = $('#reader-dot');
+    if (dot && !dot.classList.contains('on')) {
+      dot.classList.add('on');
+      $('#scan-btn').title = 'Leitor de código de barras detectado — pronto (F2)';
+    }
+  }
+
+  function isTypingTarget(t) {
+    return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (!state.user || !shellBuilt) return;
+    if (e.key === 'F2') { e.preventDefault(); openScanner(); return; }
+    // A conferência e o próprio modal têm campo dedicado ao leitor.
+    if (scannerModal || location.hash.startsWith('#/conferir/') || isTypingTarget(e.target)) return;
+
+    const now = performance.now();
+    if (e.key === 'Enter' || e.key === 'Tab') {
+      const fast = reader.buf.length >= READER_MIN_LEN && reader.gaps.length > 0
+        && reader.gaps.reduce((a, b) => a + b, 0) / reader.gaps.length < READER_MAX_GAP;
+      const code = reader.buf;
+      reader.buf = ''; reader.gaps = [];
+      if (fast) { e.preventDefault(); markReaderDetected(); openScanner(code); }
+      return;
+    }
+    if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (now - reader.last > 120) { reader.buf = ''; reader.gaps = []; }
+    else if (reader.buf) reader.gaps.push(now - reader.last);
+    reader.buf += e.key;
+    reader.last = now;
+  });
+
+  /** Abre o modo leitor. Com `code`, já processa a leitura que chegou fora do modal. */
+  function openScanner(code) {
+    if (scannerModal) { if (code) handleScan(code); return; }
+    let gaps = []; let lastKey = 0;
+    scannerModal = modal({
+      title: 'Leitura de código de barras',
+      body: html`<div class="scanner-panel">
+          <div class="scanner-visual" aria-hidden="true"></div>
+          <div class="scanner-state" id="sc-state">Aponte o leitor para a etiqueta e dispare</div>
+          <div class="muted" style="margin-top:4px">Código do pedido, número da NF ou código de barras do DANFE</div>
+          <input class="input scan-input mono" id="sc-input" autocomplete="off" placeholder="ou digite o código e tecle Enter" style="margin-top:16px;height:54px;font-size:20px">
+          <div class="scanner-results" id="sc-results"></div>
+          <div class="reader-tip"><strong>Leitor sem fio?</strong> Use no modo teclado (HID) com sufixo Enter — Bluetooth ou receptor USB.
+            Não precisa de app nem driver: com o leitor pareado, bipe a etiqueta em qualquer tela do painel.</div>
+        </div>`,
+      submitLabel: null,
+      cancelLabel: 'Fechar',
+      onSubmit: async (form) => {
+        const v = $('#sc-input', form).value.trim();
+        $('#sc-input', form).value = '';
+        const fast = gaps.length && gaps.reduce((a, b) => a + b, 0) / gaps.length < READER_MAX_GAP;
+        if (fast) markReaderDetected();
+        gaps = [];
+        if (v) await handleScan(v);
+        return false; // modal continua aberto para a próxima leitura
+      },
+    });
+    const input = $('#sc-input', scannerModal.el);
+    input.addEventListener('keydown', (e) => {
+      const now = performance.now();
+      if (e.key.length === 1) { if (lastKey && now - lastKey < 120) gaps.push(now - lastKey); lastKey = now; }
+      if (e.key === 'Tab') { e.preventDefault(); input.form.requestSubmit(); }
+    });
+    // Fechar o modal (botão, clique fora) libera o leitor global de novo.
+    const observer = new MutationObserver(() => {
+      if (!document.body.contains(scannerModal?.el)) { scannerModal = null; observer.disconnect(); }
+    });
+    observer.observe(document.body, { childList: true });
+    setTimeout(() => input.focus(), 40);
+    if (code) handleScan(code);
+  }
+
+  async function handleScan(code) {
+    const stateEl = $('#sc-state');
+    const results = $('#sc-results');
+    if (!stateEl) return;
+    stateEl.className = 'scanner-state';
+    stateEl.textContent = `Buscando ${code}…`;
+    results.innerHTML = '';
+    try {
+      const r = await api('GET', `/v1/documents/lookup?code=${encodeURIComponent(code)}`);
+      const open = (d) => {
+        scannerModal?.close(); scannerModal = null;
+        const countable = ['AGUARDANDO', 'EM_CONFERENCIA', 'DIVERGENTE'].includes(d.status) && !d.erpCancelled;
+        location.hash = countable ? `#/conferir/${d.id}` : `#/documentos/${d.id}`;
+      };
+      if (!r.items.length) {
+        beep(false);
+        stateEl.className = 'scanner-state err';
+        stateEl.textContent = r.parsed.kind === 'nfe'
+          ? `Nenhum pedido encontrado para a NF ${r.parsed.number}`
+          : `Nenhum pedido com o código ${code}`;
+        return;
+      }
+      beep(true);
+      if (r.items.length === 1) {
+        stateEl.className = 'scanner-state ok';
+        stateEl.textContent = `${r.items[0].source === 'PED' ? 'Pedido' : 'Nota'} ${r.items[0].number || r.items[0].erpKey} — abrindo…`;
+        setTimeout(() => open(r.items[0]), 250);
+        return;
+      }
+      stateEl.className = 'scanner-state ok';
+      stateEl.textContent = `${r.items.length} documentos encontrados — escolha:`;
+      results.innerHTML = r.items.map((d) => html`<div class="row" data-pick="${d.id}">
+          <div><strong>${d.source === 'PED' ? 'Pedido' : 'Nota'} ${d.number || d.erpKey}</strong><div class="muted">${d.customerName || ''}</div></div>
+          ${docStatus(d)}</div>`.s).join('');
+      $$('[data-pick]', results).forEach((row) => row.addEventListener('click', () => open(r.items.find((d) => d.id === row.dataset.pick))));
+    } catch (err) {
+      beep(false);
+      stateEl.className = 'scanner-state err';
+      stateEl.textContent = err.message;
+    } finally {
+      $('#sc-input')?.focus();
+    }
   }
 
   // ── Delegação: link "Ver documentos" do painel abre filtrado por erro de retorno ──

@@ -73,6 +73,10 @@ function mapHeader(r, user) {
         writebackAt: r.writeback_at,
         writebackError: canSeeExpected(user) ? r.writeback_error : undefined,
         itemCount: r.item_count !== undefined ? Number(r.item_count) : undefined,
+        // Progresso da separação: produtos distintos já lidos nesta rodada ÷ produtos do documento.
+        // Não revela quantidade esperada — seguro para a conferência cega.
+        productCount: r.product_count !== undefined ? Number(r.product_count) : undefined,
+        countedProducts: r.counted_products !== undefined ? Number(r.counted_products) : undefined,
         updatedAt: r.updated_at,
     };
 }
@@ -114,7 +118,14 @@ async function listDocuments(tenantId, user, filters) {
 
     params.push(filters.limit, filters.offset);
     const { rows } = await db.query(
-        `${HEADER_SQL.replace('SELECT d.*,', `SELECT d.*, (SELECT count(*) FROM document_items i WHERE i.document_id = d.id AND NOT i.is_extra) AS item_count,`)}
+        `${HEADER_SQL.replace('SELECT d.*,', `SELECT d.*,
+               (SELECT count(*) FROM document_items i WHERE i.document_id = d.id AND NOT i.is_extra) AS item_count,
+               (SELECT count(DISTINCT i.product_erp_id) FROM document_items i
+                 WHERE i.document_id = d.id AND NOT i.is_extra) AS product_count,
+               (SELECT count(DISTINCT e.product_erp_id) FROM scan_events e
+                 WHERE e.document_id = d.id AND e.round = d.round AND NOT e.voided
+                   AND e.product_erp_id IN (SELECT i.product_erp_id FROM document_items i
+                                             WHERE i.document_id = d.id AND NOT i.is_extra)) AS counted_products,`)}
           WHERE ${where.join(' AND ')}
           ORDER BY CASE d.status WHEN 'DIVERGENTE' THEN 0 WHEN 'EM_CONFERENCIA' THEN 1
                                  WHEN 'AGUARDANDO' THEN 2 WHEN 'AGUARDANDO_APROVACAO' THEN 3 ELSE 4 END,
@@ -123,6 +134,40 @@ async function listDocuments(tenantId, user, filters) {
         params,
     );
     return rows.map((r) => mapHeader(r, user));
+}
+
+/**
+ * Interpreta um código lido no leitor e devolve os documentos correspondentes.
+ *
+ * Aceita: número do pedido, número da NF, chave interna do ERP e a chave de acesso
+ * da NF-e (44 dígitos, código de barras do DANFE) — dela sai a série e o número.
+ * Prefixos de etiqueta (ex.: "PE114536") são ignorados.
+ */
+function parseLookupCode(raw) {
+    const code = String(raw || '').trim();
+    const digits = code.replace(/\D/g, '');
+    if (digits.length === 44) {
+        // cUF(2) AAMM(4) CNPJ(14) modelo(2) série(3) nNF(9) tpEmis(1) cNF(8) DV(1)
+        return { kind: 'nfe', number: String(Number(digits.slice(25, 34))), series: String(Number(digits.slice(22, 25))) };
+    }
+    return { kind: 'code', exact: code, number: digits ? String(Number(digits)) : code };
+}
+
+async function lookupDocuments(tenantId, user, raw) {
+    const p = parseLookupCode(raw);
+    const { rows } = await db.query(
+        `${HEADER_SQL.replace('SELECT d.*,', `SELECT d.*,
+               (SELECT count(*) FROM document_items i WHERE i.document_id = d.id AND NOT i.is_extra) AS item_count,`)}
+          WHERE d.tenant_id = $1
+            AND (d.number = $2 OR d.invoice_number = $2 OR d.order_number = $2 OR d.erp_key = $2 OR d.erp_key = $3)
+          ORDER BY CASE WHEN d.status IN ('AGUARDANDO','EM_CONFERENCIA','DIVERGENTE') THEN 0 ELSE 1 END,
+                   -- pedido antes da NF: é ele que se confere quando há os dois
+                   CASE d.source WHEN 'PED' THEN 0 ELSE 1 END,
+                   d.issued_at DESC NULLS LAST
+          LIMIT 5`,
+        [tenantId, p.number, p.exact ?? p.number],
+    );
+    return { parsed: p, items: rows.map((r) => mapHeader(r, user)) };
 }
 
 /** Soma das leituras válidas da rodada, por produto. */
@@ -551,7 +596,7 @@ async function setPriority(tenantId, user, id, priority) {
 }
 
 module.exports = {
-    listDocuments, getDocument, listScans,
+    listDocuments, getDocument, listScans, lookupDocuments, parseLookupCode,
     claim, release, addScans, voidScan, finalize,
     approve, reopen, reset, setPriority,
     // expostos para testes/relatórios
