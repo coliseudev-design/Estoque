@@ -20,7 +20,7 @@ const { HttpError } = require('./http');
 
 const app = express();
 app.disable('x-powered-by');
-if (config.trustProxy) app.set('trust proxy', 1);
+if (config.trustProxyHops > 0) app.set('trust proxy', config.trustProxyHops);
 
 app.use(helmet({
     contentSecurityPolicy: {

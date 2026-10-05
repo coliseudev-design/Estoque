@@ -7,7 +7,7 @@ ENV NODE_ENV=production \
 
 WORKDIR /app/api
 COPY estoque-api/package*.json ./
-RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 
 COPY estoque-api/src ./src
 COPY estoque-api/sql ./sql

@@ -24,7 +24,9 @@ const int = (name, fallback) => {
 module.exports = {
     isProduction,
     port: int('PORT', 3100),
-    trustProxy: env.TRUST_PROXY !== 'false',
+    // Quantos proxies há na frente da API (Coolify: Traefik + nginx = 2).
+    // Errar para menos faz o rate-limit ver o IP do proxy em vez do usuário.
+    trustProxyHops: int('TRUST_PROXY_HOPS', 1),
 
     pg: {
         connectionString: env.DATABASE_URL || undefined,

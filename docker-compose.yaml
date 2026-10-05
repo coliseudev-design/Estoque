@@ -1,53 +1,65 @@
 # ================================================================
-# ColiseSpeed — Docker Compose PRODUÇÃO
+# Coliseu Estoque — Docker Compose PRODUÇÃO (Coolify)
+# Domínio: estoque.coliseusistemas.com.br  →  serviço "nginx"
 # ================================================================
-# PostgreSQL e Redis removidos — usar os do Coolify central
-# Apenas middleware + nginx, conectados à rede coolify
-# Deploy: speed.coliseusistemas.com.br
+# estoque-api serve a API (/v1, /internal/v1) E o dashboard (/).
+# Banco próprio do módulo (estoque-db), isolado dos demais sistemas.
+#
+# Variáveis no Coolify:
+#   JWT_ACCESS_SECRET           = Jwt:DeviceSigningKey do Coliseu.Identity (já existia)
+#   INTERNAL_API_KEY            = chave interna do Identity (já existia)
+#   ESTOQUE_MODULE_SLUG         = slug do módulo "Estoque Coliseu" no painel (padrão: estoque)
+#   SERVICE_PASSWORD_ESTOQUEDB  e SERVICE_BASE64_64_ESTOQUEJWT são gerados pelo Coolify.
+#
+# O stack de vendas (middleware, coliseu-speed-web, admin-panel) NÃO é
+# publicado por este repositório — ele roda em speed.coliseusistemas.com.br.
 # ================================================================
 
 services:
 
-  # ── Node.js Middleware ──────────────────────────────────────────
-  speed-middleware:
-    build:
-      context: ./middleware
-      dockerfile: Dockerfile
-      target: production
+  estoque-db:
+    image: postgres:16-alpine
     restart: always
     environment:
-      NODE_ENV: production
-      PORT: 3000
-      PG_HOST: ${PG_HOST}
-      PG_PORT: ${PG_PORT:-5432}
-      PG_DATABASE: ${PG_DATABASE:-coliseuspeed}
-      PG_USER: ${PG_USER}
-      PG_PASSWORD: ${PG_PASSWORD}
-      PG_SSL: ${PG_SSL:-false}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      REDIS_URL: ${REDIS_URL:-}
-      API_KEY: ${API_KEY}
-      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-}
-      IDENTITY_BASE_URL: ${IDENTITY_BASE_URL}
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY}
-      COMPANY_NAME: ${COMPANY_NAME:-}
-      COMPANY_ID: ${COMPANY_ID:-}
-      FB_MOCK: ${FB_MOCK:-true}
-      SYNC_MODE: ${SYNC_MODE:-async}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
-      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
-      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-200}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      POSTGRES_DB: coliseu_estoque
+      POSTGRES_USER: estoque
+      POSTGRES_PASSWORD: ${SERVICE_PASSWORD_ESTOQUEDB}
+    volumes:
+      - estoque_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -U estoque -d coliseu_estoque"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - coolify
+
+  estoque-api:
+    build:
+      context: .
+      dockerfile: estoque-api/Dockerfile
+    restart: always
+    depends_on:
+      estoque-db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3100
+      DATABASE_URL: postgres://estoque:${SERVICE_PASSWORD_ESTOQUEDB}@estoque-db:5432/coliseu_estoque
+      PG_SSL: "false"
+      IDENTITY_BASE_URL: ${IDENTITY_BASE_URL:-https://adminlicencas.coliseusistemas.com.br}
+      IDENTITY_INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+      ESTOQUE_MODULE_SLUG: ${ESTOQUE_MODULE_SLUG:-estoque}
+      ESTOQUE_JWT_SECRET: ${SERVICE_BASE64_64_ESTOQUEJWT}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TRUST_PROXY_HOPS: "2"   # Traefik (Coolify) + nginx
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3100/health || exit 1"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 5
-      start_period: 40s
+      start_period: 30s
     logging:
       driver: json-file
       options:
@@ -56,60 +68,21 @@ services:
     networks:
       - coolify
 
-  # ── Nginx — Reverse Proxy ──────────────────────────────────────
+  # Mantido com o mesmo nome: o domínio no Coolify continua vinculado a ele.
   nginx:
     build:
       context: ./nginx
       dockerfile: Dockerfile
     restart: always
     depends_on:
-      speed-middleware:
+      estoque-api:
         condition: service_started
     networks:
       - coolify
 
-  # ── Sales Force Web Client ─────────────────────────────────────
-  coliseu-speed-web:
-    build:
-      context: ./coliseu-speed-web
-      dockerfile: Dockerfile
-    restart: always
-    environment:
-      - MIDDLEWARE_URL=http://speed-middleware:3000
-      - ADMIN_PANEL_URL=http://admin-panel:8000
-      - JWT_SECRET=${JWT_ACCESS_SECRET:-747a7da7a7b9317b9c6a7880abcdef1234567890abcdef1234567890abcdef12}
-      - USE_MOCKS=${FB_MOCK:-true}
-    depends_on:
-      speed-middleware:
-        condition: service_started
-    networks:
-      - coolify
-
-  # ── SaaS Admin Panel ───────────────────────────────────────────
-  admin-panel:
-    build:
-      context: ./admin-panel
-      dockerfile: Dockerfile
-    restart: always
-    environment:
-      - DATABASE_URL=sqlite:////app/data/coliseuspeed_admin.db
-      - IDENTITY_DATABASE_URL=postgresql://${PG_USER:-coliseu_admin}:${PG_PASSWORD}@${PG_HOST:-coliseu-db}:5432/coliseu_identity
-      - REDIS_URL=redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}/0
-      - JWT_SECRET=${JWT_ACCESS_SECRET:-747a7da7a7b9317b9c6a7880abcdef1234567890abcdef1234567890abcdef12}
-      - SALES_API_URL=https://licencas.coliseusistemas.com.br
-      - SEED_ADMIN_EMAIL=admin@coliseu.com.br
-      - SEED_ADMIN_PASSWORD=98683818
-    depends_on:
-      speed-middleware:
-        condition: service_started
-    volumes:
-      - admin_panel_data:/app/data
-    networks:
-      - coolify
-
-# ── Volumes & Networks ────────────────────────────────────────────
 networks:
   coolify:
     external: true
+
 volumes:
-  admin_panel_data:
+  estoque_pg_data:
