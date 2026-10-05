@@ -26,7 +26,7 @@ iOS: adicione em `ios/Runner/Info.plist`:
 
 1. **Ativação do aparelho** — chave de ativação gerada no painel de licenças
    (módulo Estoque → Dispositivos). O app chama `/auth/device-login` do Identity com
-   `moduleSlug: "estoque"`; a URL da API vem do módulo (campo URL do middleware).
+   `moduleSlug: "coliseu-estoque"`; a URL da API vem do módulo (campo URL do middleware).
 2. **Login do operador** — usuário + PIN cadastrados no dashboard (Usuários).
    Funciona offline para o último operador que entrou online no aparelho.
 3. **Fila** → escolhe o documento → **bipa** → **finaliza**.

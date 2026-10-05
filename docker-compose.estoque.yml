@@ -38,7 +38,7 @@ services:
       DATABASE_URL: postgres://postgres:${ESTOQUE_PG_PASSWORD:-dev_password}@estoque-db:5432/coliseu_estoque
       IDENTITY_BASE_URL: ${IDENTITY_BASE_URL:-https://adminlicencas.coliseusistemas.com.br}
       IDENTITY_INTERNAL_API_KEY: ${IDENTITY_INTERNAL_API_KEY:?defina IDENTITY_INTERNAL_API_KEY}
-      ESTOQUE_MODULE_SLUG: ${ESTOQUE_MODULE_SLUG:-estoque}
+      ESTOQUE_MODULE_SLUG: ${ESTOQUE_MODULE_SLUG:-coliseu-estoque}
       ESTOQUE_JWT_SECRET: ${ESTOQUE_JWT_SECRET:?defina ESTOQUE_JWT_SECRET}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?defina JWT_ACCESS_SECRET}
     ports:

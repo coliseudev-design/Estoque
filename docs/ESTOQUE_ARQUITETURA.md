@@ -27,7 +27,7 @@ operada pelo **app** (celular/coletor) e pelo **dashboard** (navegador) com as m
 | `app/` | App Flutter offline-first (Android/iOS, coletores Zebra/Honeywell). |
 | `scripts/firebird/` | DDL das tabelas `COL_EST_*` (retorno ao ERP) e diagnóstico do VetMatriz. |
 | `../workerVet/` | Worker Windows — ganhou o canal Estoque (`docs/ESTOQUE.md` lá). |
-| `Coliseu.Identity/` | Painel de licenças — slug `estoque` registrado. |
+| `Coliseu.Identity/` | Painel de licenças — slug `coliseu-estoque` registrado. |
 
 As pastas `middleware/`, `api/`, `mobile/`, `coliseu-speed-web/`, `worker/` são do
 **Coliseu Speed (vendas)** e não fazem parte do Estoque.
@@ -62,7 +62,7 @@ cliente busca o detalhe pela API, respeitando o perfil.
 **Licença igual ao Vision.** Worker: `X-Internal-Key` (chave do módulo) + `X-Tenant-Id`,
 validados em `/internal/companies/{id}/modules/{slug}/validate-key`, com cache de
 5 min e carência de 24 h se o Identity cair (negativa explícita corta na hora).
-App: ativação do aparelho no Identity (`moduleSlug: estoque`) → conta no limite de
+App: ativação do aparelho no Identity (`moduleSlug: coliseu-estoque`) → conta no limite de
 dispositivos do módulo. Dashboard: Serial + chave do módulo + usuário/senha.
 
 **Retorno ao ERP opcional e confinado.** Desligado por padrão; quando ligado, grava
@@ -76,7 +76,7 @@ Worker continua sem nenhum método de escrita.
   passa a gravar nelas (mudança só no `EstoqueErpWriter`).
 - Conferir **antes** do faturamento depende de saber como o pedido aparece no Siscom
   (`CODTM` 99 / `NUMNOTA = 0`?) — hoje é configurável (`TiposMovimento`, `IncluirSemNumero`).
-- Slug do módulo em produção: confirmar no painel; a API lê `ESTOQUE_MODULE_SLUG`.
+- Slug do módulo em produção: confirmar no painel; confirmado `coliseu-estoque` (a API lê `ESTOQUE_MODULE_SLUG`).
 - Configurador do Worker: os campos do Estoque ainda não têm tela — editar `appsettings.json`.
 
 ## Subir local

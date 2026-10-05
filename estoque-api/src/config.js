@@ -43,7 +43,7 @@ module.exports = {
         baseUrl: required('IDENTITY_BASE_URL', 'https://adminlicencas.coliseusistemas.com.br').replace(/\/+$/, ''),
         internalApiKey: required('IDENTITY_INTERNAL_API_KEY', ''),
         // Slug do módulo "Estoque Coliseu" no painel de licenças.
-        moduleSlug: env.ESTOQUE_MODULE_SLUG || 'estoque',
+        moduleSlug: env.ESTOQUE_MODULE_SLUG || 'coliseu-estoque',
         // Por quanto tempo uma validação de licença positiva fica em cache.
         cacheTtlMs: int('LICENSE_CACHE_TTL_SECONDS', 300) * 1000,
         // Se o Identity cair, aceita a última validação positiva por este período.

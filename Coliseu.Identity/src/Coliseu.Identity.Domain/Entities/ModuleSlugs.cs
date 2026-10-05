@@ -28,7 +28,7 @@ public static class ModuleSlugs
     public const string ColiseSpeed = "coliseuspeed";
 
     /// <summary>Coliseu Estoque — conferência cega e separação (App + Dashboard + Worker).</summary>
-    public const string Estoque = "estoque";
+    public const string Estoque = "coliseu-estoque";
 
     /// <summary>Valida se o slug é conhecido pelo sistema.</summary>
     public static bool IsValid(string slug) =>

@@ -10,7 +10,7 @@ class AppConfig {
   static Future<AppConfig> load() async => AppConfig._(await SharedPreferences.getInstance());
 
   static const defaultIdentityUrl = 'https://adminlicencas.coliseusistemas.com.br';
-  static const moduleSlug = 'estoque';
+  static const moduleSlug = 'coliseu-estoque';
 
   String _s(String k) => _prefs.getString(k) ?? '';
   Future<void> _set(String k, String? v) async =>

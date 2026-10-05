@@ -8,7 +8,7 @@
 # Variáveis no Coolify:
 #   JWT_ACCESS_SECRET           = Jwt:DeviceSigningKey do Coliseu.Identity (já existia)
 #   INTERNAL_API_KEY            = chave interna do Identity (já existia)
-#   ESTOQUE_MODULE_SLUG         = slug do módulo "Estoque Coliseu" no painel (padrão: estoque)
+#   ESTOQUE_MODULE_SLUG         = slug do módulo "Estoque Coliseu" no painel (padrão: coliseu-estoque)
 #   SERVICE_PASSWORD_ESTOQUEDB  e SERVICE_BASE64_64_ESTOQUEJWT são gerados pelo Coolify.
 #
 # O stack de vendas (middleware, coliseu-speed-web, admin-panel) NÃO é
@@ -49,7 +49,7 @@ services:
       PG_SSL: "false"
       IDENTITY_BASE_URL: ${IDENTITY_BASE_URL:-https://adminlicencas.coliseusistemas.com.br}
       IDENTITY_INTERNAL_API_KEY: ${INTERNAL_API_KEY}
-      ESTOQUE_MODULE_SLUG: ${ESTOQUE_MODULE_SLUG:-estoque}
+      ESTOQUE_MODULE_SLUG: ${ESTOQUE_MODULE_SLUG:-coliseu-estoque}
       ESTOQUE_JWT_SECRET: ${SERVICE_BASE64_64_ESTOQUEJWT}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       LOG_LEVEL: ${LOG_LEVEL:-info}
