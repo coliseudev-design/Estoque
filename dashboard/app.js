@@ -59,6 +59,12 @@
   const WB_LABEL = { NAO_APLICAVEL: '—', PENDENTE: 'Pendente', GRAVADO: 'Gravado', ERRO: 'Erro' };
   const ROLE_LABEL = { operador: 'Operador', supervisor: 'Supervisor', admin: 'Administrador' };
   const badge = (code, label) => html`<span class="badge b-${code}">${label}</span>`;
+  // Pedido conferido = liberado para o faturamento emitir a NF.
+  const docStatus = (d) => badge(d.status, d.source === 'PED' && d.status === 'CONCLUIDO' ? 'Liberado p/ faturar' : STATUS_LABEL[d.status]);
+  const invoicedEarly = (d) => d.invoiceNumber && !['CONCLUIDO', 'CANCELADO'].includes(d.status);
+  const invoiceBadge = (d) => (d.invoiceNumber
+    ? html` <span class="badge ${invoicedEarly(d) ? 'b-FALTA' : 'b-OK'}" title="${invoicedEarly(d) ? 'Faturado antes da conferência' : 'Nota fiscal emitida'}">NF ${d.invoiceNumber}</span>`
+    : '');
 
   // ── Toasts, sons e modais ─────────────────────────────────────────────────
   function toast(msg, isError = false) {
@@ -433,7 +439,7 @@
               <thead><tr><th>Documento</th><th>Cliente</th><th>Status</th><th>Operador</th></tr></thead>
               <tbody>${attention.items.map((d) => html`<tr class="clickable" data-href="#/documentos/${d.id}">
                 <td><strong>${d.number || d.erpKey}</strong></td><td>${d.customerName || '—'}</td>
-                <td>${badge(d.status, STATUS_LABEL[d.status])}</td><td>${d.finishedByName || d.lock?.userName || d.startedByName || '—'}</td></tr>`)}
+                <td>${docStatus(d)}${invoiceBadge(d)}</td><td>${d.finishedByName || d.lock?.userName || d.startedByName || '—'}</td></tr>`)}
               </tbody></table></div>` : html`<div class="empty">Nada pendente. 👌</div>`}
           </div>
           <div class="card card-pad">
@@ -516,11 +522,11 @@
       $('#list').innerHTML = items.length ? html`<div class="table-wrap"><table>
         <thead><tr><th>Documento</th><th>Cliente</th><th>Emissão</th><th class="num">Itens</th><th>Status</th><th>Responsável</th>${isSup() ? html`<th>ERP</th>` : ''}</tr></thead>
         <tbody>${items.map((d) => html`<tr class="clickable" data-id="${d.id}">
-          <td><strong>${d.number || d.erpKey}</strong>${d.priority > 0 ? html` <span class="badge b-SOBRA">Prioridade</span>` : ''}<div class="muted">${d.source === 'NFS' ? 'Nota de saída' : 'Pedido'}${d.series ? ` · série ${d.series}` : ''}</div></td>
+          <td><strong>${d.number || d.erpKey}</strong>${d.priority > 0 ? html` <span class="badge b-SOBRA">Prioridade</span>` : ''}<div class="muted">${d.source === 'NFS' ? `Nota de saída${d.orderNumber ? ` · pedido ${d.orderNumber}` : ''}` : 'Pedido de venda'}</div></td>
           <td>${d.customerName || '—'}<div class="muted">${d.sellerName || ''}</div></td>
           <td>${fmtDateTime(d.issuedAt)}</td>
           <td class="num">${d.itemCount ?? '—'}</td>
-          <td>${badge(d.status, STATUS_LABEL[d.status])}${d.erpChanged ? html` <span class="badge b-FALTA" title="O ERP alterou o documento durante a conferência">ERP alterou</span>` : ''}</td>
+          <td>${docStatus(d)}${invoiceBadge(d)}${d.erpChanged ? html` <span class="badge b-FALTA" title="O ERP alterou o documento durante a conferência">ERP alterou</span>` : ''}</td>
           <td>${d.lock ? html`<span title="Reservado até ${fmtDateTime(d.lock.expiresAt)}">🔒 ${d.lock.userName}</span>` : (d.finishedByName || d.startedByName || '—')}</td>
           ${isSup() ? html`<td>${d.writebackStatus !== 'NAO_APLICAVEL' ? badge(d.writebackStatus, WB_LABEL[d.writebackStatus]) : ''}</td>` : ''}
         </tr>`)}</tbody></table></div>
@@ -569,14 +575,18 @@
       main().innerHTML = html`
         ${pageHead(`${d.source === 'NFS' ? 'Nota' : 'Pedido'} ${d.number || d.erpKey}`, d.customerName || '', actions)}
         ${d.erpCancelled ? html`<div class="alert-box danger">Documento cancelado no ERP${d.status === 'CONCLUIDO' ? ' depois de conferido' : ''}.</div>` : ''}
+        ${invoicedEarly(d) ? html`<div class="alert-box danger">Pedido faturado no ERP (NF ${d.invoiceNumber}) antes de terminar a conferência. Confira se a mercadoria já saiu.</div>` : ''}
+        ${d.source === 'PED' && d.status === 'CONCLUIDO' && !d.invoiceNumber ? html`<div class="alert-box ok">Conferido — pedido liberado para o faturamento emitir a nota.</div>` : ''}
         ${d.erpChanged ? html`<div class="alert-box warn">O ERP alterou este documento depois que a conferência começou. Confira os itens e, se necessário, zere a conferência.</div>` : ''}
         ${d.writebackStatus === 'ERRO' && sup ? html`<div class="alert-box danger">Erro ao gravar no ERP: ${d.writebackError || 'desconhecido'}. O Worker tenta novamente a cada 5 minutos.</div>` : ''}
         ${lockedByOther ? html`<div class="alert-box info">Em conferência por <strong>${d.lock.userName}</strong> até ${fmtDateTime(d.lock.expiresAt)}.</div>` : ''}
         <div class="card card-pad">
           <div class="meta-grid">
-            <div><div class="k">Status</div><div class="v">${badge(d.status, STATUS_LABEL[d.status])}${d.round > 0 ? html` <span class="muted">rodada ${d.round + 1}</span>` : ''}</div></div>
+            <div><div class="k">Status</div><div class="v">${docStatus(d)}${d.round > 0 ? html` <span class="muted">rodada ${d.round + 1}</span>` : ''}</div></div>
             <div><div class="k">Emissão</div><div class="v">${fmtDateTime(d.issuedAt)}</div></div>
             <div><div class="k">Vendedor</div><div class="v">${d.sellerName || '—'}</div></div>
+            ${d.invoiceNumber ? html`<div><div class="k">Nota fiscal</div><div class="v">${d.invoiceNumber} <span class="muted">${fmtDateTime(d.invoicedAt)}</span></div></div>` : ''}
+            ${d.orderNumber ? html`<div><div class="k">Pedido</div><div class="v">${d.orderNumber}</div></div>` : ''}
             <div><div class="k">Chave ERP</div><div class="v mono">${d.erpKey}</div></div>
             <div><div class="k">Início</div><div class="v">${fmtDateTime(d.startedAt)} <span class="muted">${d.startedByName || ''}</span></div></div>
             <div><div class="k">Fim</div><div class="v">${fmtDateTime(d.finishedAt)} <span class="muted">${d.finishedByName || ''}</span></div></div>

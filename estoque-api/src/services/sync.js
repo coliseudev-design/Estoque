@@ -122,7 +122,7 @@ async function upsertDocuments(tenantId, docs) {
 
     await db.tx(async (client) => {
         const { rows: existingRows } = await client.query(
-            `SELECT id, source, erp_key, status, round, erp_hash, erp_cancelled
+            `SELECT id, source, erp_key, status, round, erp_hash, erp_cancelled, invoice_number
                FROM documents
               WHERE tenant_id = $1 AND (source, erp_key) IN (SELECT * FROM unnest($2::text[], $3::text[]))
               FOR UPDATE`,
@@ -133,15 +133,18 @@ async function upsertDocuments(tenantId, docs) {
         for (const doc of docs) {
             const hash = documentHash(doc);
             const header = [doc.number ?? null, doc.series ?? null, doc.movementType ?? null, doc.issuedAt ?? null,
-                doc.customerCode ?? null, doc.customerName ?? null, doc.sellerName ?? null, doc.branchCode ?? null];
+                doc.customerCode ?? null, doc.customerName ?? null, doc.sellerName ?? null, doc.branchCode ?? null,
+                doc.invoiceNumber ?? null, doc.orderNumber ?? null];
             const current = existing.get(`${doc.source}|${doc.erpKey}`);
 
             if (!current) {
                 const { rows } = await client.query(
                     `INSERT INTO documents (tenant_id, source, erp_key, number, series, movement_type, issued_at,
                                             customer_code, customer_name, seller_name, branch_code,
+                                            invoice_number, order_number, invoiced_at,
                                             status, erp_hash, erp_cancelled)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                             CASE WHEN $12::text IS NULL THEN NULL ELSE now() END, $14, $15, $16)
                      RETURNING id`,
                     [tenantId, doc.source, doc.erpKey, ...header,
                         doc.cancelled ? 'CANCELADO' : 'AGUARDANDO', hash, !!doc.cancelled],
@@ -155,12 +158,27 @@ async function upsertDocuments(tenantId, docs) {
             // Cabeçalho sempre atualiza (nome do cliente corrigido no ERP etc.).
             await client.query(
                 `UPDATE documents SET number = $3, series = $4, movement_type = $5, issued_at = $6,
-                        customer_code = $7, customer_name = $8, seller_name = $9, branch_code = $10
+                        customer_code = $7, customer_name = $8, seller_name = $9, branch_code = $10,
+                        invoice_number = $11, order_number = $12,
+                        invoiced_at = CASE WHEN $11::text IS NULL THEN NULL ELSE COALESCE(invoiced_at, now()) END,
+                        updated_at = now()
                   WHERE id = $1 AND tenant_id = $2
-                    AND (number, series, movement_type, issued_at, customer_code, customer_name, seller_name, branch_code)
-                        IS DISTINCT FROM ($3, $4, $5, $6::timestamptz, $7, $8, $9, $10)`,
+                    AND (number, series, movement_type, issued_at, customer_code, customer_name, seller_name, branch_code,
+                         invoice_number, order_number)
+                        IS DISTINCT FROM ($3, $4, $5, $6::timestamptz, $7, $8, $9, $10, $11::text, $12::text)`,
                 [current.id, tenantId, ...header],
             );
+
+            // Pedido faturado no ERP: se ainda não foi conferido, a mercadoria pode ter saído sem conferência.
+            if (doc.invoiceNumber && current.invoice_number !== doc.invoiceNumber) {
+                const early = !['CONCLUIDO', 'CANCELADO'].includes(current.status);
+                await audit(client, {
+                    tenantId, documentId: current.id,
+                    action: early ? 'erp.invoiced_before_conference' : 'erp.invoiced',
+                    details: { invoiceNumber: doc.invoiceNumber, status: current.status },
+                });
+                touched.push(current.id);
+            }
             if (current.erp_hash === hash) continue;
 
             const cancelledNow = !!doc.cancelled && !current.erp_cancelled;

@@ -49,6 +49,9 @@ function mapHeader(r, user) {
         customerName: r.customer_name,
         sellerName: r.seller_name,
         branchCode: r.branch_code,
+        invoiceNumber: r.invoice_number,
+        invoicedAt: r.invoiced_at,
+        orderNumber: r.order_number,
         status: r.status,
         priority: r.priority,
         round: r.round,
@@ -103,7 +106,8 @@ async function listDocuments(tenantId, user, filters) {
         params.push(`%${filters.q}%`, filters.q.trim());
         const like = `$${params.length - 1}`;
         const exact = `$${params.length}`;
-        where.push(`(d.number ILIKE ${like} OR d.customer_name ILIKE ${like} OR d.erp_key = ${exact})`);
+        where.push(`(d.number ILIKE ${like} OR d.customer_name ILIKE ${like} OR d.erp_key = ${exact}
+                     OR d.invoice_number = ${exact} OR d.order_number = ${exact})`);
     }
     if (filters.mine) add('d.locked_by = ?', user.id);
     if (filters.writeback) add('d.writeback_status = ?', filters.writeback);

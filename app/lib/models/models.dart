@@ -65,6 +65,8 @@ class DocLock {
 class DocSummary {
   final String id, source, erpKey, status;
   final String? number, customerName, sellerName;
+  /// Pedido já faturado no ERP (número da NF emitida a partir dele).
+  final String? invoiceNumber;
   final DateTime? issuedAt;
   final int round, priority;
   final int? itemCount;
@@ -78,6 +80,7 @@ class DocSummary {
     this.number,
     this.customerName,
     this.sellerName,
+    this.invoiceNumber,
     this.issuedAt,
     this.round = 0,
     this.priority = 0,
@@ -93,6 +96,7 @@ class DocSummary {
         number: j['number'],
         customerName: j['customerName'],
         sellerName: j['sellerName'],
+        invoiceNumber: j['invoiceNumber'],
         issuedAt: DateTime.tryParse(j['issuedAt'] ?? '')?.toLocal(),
         round: j['round'] ?? 0,
         priority: j['priority'] ?? 0,
@@ -101,6 +105,7 @@ class DocSummary {
       );
 
   String get title => '${source == 'NFS' ? 'Nota' : 'Pedido'} ${number ?? erpKey}';
+  bool get invoicedEarly => invoiceNumber != null && status != 'CONCLUIDO' && status != 'CANCELADO';
   bool get isCountable => status == 'AGUARDANDO' || status == 'EM_CONFERENCIA' || status == 'DIVERGENTE';
 }
 

@@ -217,6 +217,7 @@ class _DocCard extends StatelessWidget {
                     if (doc.issuedAt != null) DateFormat('dd/MM HH:mm').format(doc.issuedAt!),
                     if (doc.itemCount != null) '${doc.itemCount} itens',
                     if (doc.lock != null) (doc.lock!.mine ? '🔒 com você' : '🔒 ${doc.lock!.userName}'),
+                    if (doc.invoicedEarly) '⚠ já faturado (NF ${doc.invoiceNumber})',
                   ].join(' · '),
                   style: theme.textTheme.bodySmall,
                 ),
