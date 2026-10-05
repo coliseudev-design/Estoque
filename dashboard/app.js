@@ -518,7 +518,8 @@
       const current = PANEL_TABS.find((t) => t.key === tab) || PANEL_TABS[0];
       const [s, list] = await Promise.all([
         api('GET', '/v1/dashboard/summary'),
-        api('GET', `/v1/documents?status=${current.status}&limit=15&days=${current.key === 'lib' ? 1 : 30}`),
+        // Pendentes: sem janela de data (pedido parado há dias continua sendo trabalho). Liberados: hoje.
+        api('GET', `/v1/documents?status=${current.status}&limit=15${current.key === 'lib' ? '&days=1' : ''}`),
       ]);
       const st = s.byStatus;
       const workerAge = s.worker.seenAt ? (Date.now() - new Date(s.worker.seenAt)) / 60000 : Infinity;
@@ -633,7 +634,7 @@
           <div class="pills" id="chips">${FILTERS.map((x) => html`<button class="pill ${x.tone || ''} ${x.key === f.status ? 'active' : ''}" data-status="${x.key}">${x.label}</button>`)}</div>
           <input class="input" id="q" placeholder="Pedido, NF, cliente ou chave" style="margin-left:auto">
           <select class="input" id="days" style="width:140px">
-            ${[['1', 'Hoje'], ['3', '3 dias'], ['7', '7 dias'], ['30', '30 dias'], ['90', '90 dias']].map(([v, l]) => html`<option value="${v}" ${v === f.days ? 'selected' : ''}>${l}</option>`)}
+            ${[['1', 'Hoje'], ['3', '3 dias'], ['7', '7 dias'], ['30', '30 dias'], ['90', '90 dias'], ['180', '180 dias'], ['365', '1 ano']].map(([v, l]) => html`<option value="${v}" ${v === f.days ? 'selected' : ''}>${l}</option>`)}
           </select>
         </div>
         <div id="list"></div>
