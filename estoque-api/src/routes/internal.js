@@ -17,13 +17,13 @@ const router = express.Router();
 router.use(requireWorker);
 
 const qty = z.union([z.number(), z.string().regex(/^-?\d+(\.\d+)?$/)]).transform(Number);
-const text = (max) => z.string().max(max).nullish().transform((s) => (s == null ? null : s.trim() || null));
+const text = (max) => z.union([z.string(), z.number()]).nullish().transform((s) => (s == null ? null : String(s).trim().slice(0, max) || null));
 
 const productSchema = z.object({
     erpId: z.union([z.string(), z.number()]).transform(String),
     sku: text(60),
-    description: z.string().max(300).default(''),
-    unit: text(10),
+    description: z.union([z.string(), z.number()]).nullish().transform((s) => (s == null ? '' : String(s).trim().slice(0, 300))),
+    unit: text(30),
     brand: text(120),
     group: text(120),
     stock: qty.default(0),
@@ -63,8 +63,8 @@ const documentSchema = z.object({
     items: z.array(z.object({
         seq: z.number().int().min(0).max(99_999),
         productErpId: z.union([z.string(), z.number()]).transform(String),
-        description: z.string().max(300).default(''),
-        unit: text(10),
+        description: z.union([z.string(), z.number()]).nullish().transform((s) => (s == null ? '' : String(s).trim().slice(0, 300))),
+        unit: text(30),
         qty: qty.refine((n) => n >= 0, 'quantidade negativa'),
     })).max(5000),
 });
