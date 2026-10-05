@@ -54,18 +54,41 @@ async function validateModuleKey(tenantId, rawKey) {
     const hit = cache.get(cacheKey);
     if (hit && now - hit.checkedAt < config.identity.cacheTtlMs) return hit;
 
-    const slug = encodeURIComponent(config.identity.moduleSlug);
+    const slugsToTry = [config.identity.moduleSlug, 'coliseu-estoque', 'estoque'].filter((v, i, a) => v && a.indexOf(v) === i);
     try {
-        const { status, body } = await callIdentity(
-            `/internal/companies/${tenantId}/modules/${slug}/validate-key`,
-            { method: 'POST', body: JSON.stringify({ apiKey: String(rawKey).trim() }) },
-        );
+        let lastStatus = 0;
+        let lastBody = {};
+        let success = false;
+        let successfulSlug = config.identity.moduleSlug;
 
-        if (status >= 500) throw new Error(`Identity respondeu ${status}`);
+        for (const currentSlug of slugsToTry) {
+            const slugEnc = encodeURIComponent(currentSlug);
+            const { status, body } = await callIdentity(
+                `/internal/companies/${tenantId}/modules/${slugEnc}/validate-key`,
+                { method: 'POST', body: JSON.stringify({ apiKey: String(rawKey).trim() }) },
+            );
+            lastStatus = status;
+            lastBody = body;
+
+            if (status === 200 && body.valid) {
+                success = true;
+                successfulSlug = currentSlug;
+                break;
+            }
+
+            // Se o módulo não estiver ativado sob este slug, tenta o alternativo (ex: coliseu-estoque vs estoque)
+            const errMsg = String(body.error || body.reason || '').toLowerCase();
+            if (status === 403 && errMsg.includes('não ativado')) {
+                continue;
+            }
+            break;
+        }
+
+        if (lastStatus >= 500 && !success) throw new Error(`Identity respondeu ${lastStatus}`);
 
         let result;
-        if (status === 200 && body.valid) {
-            const info = await callIdentity(`/internal/companies/${tenantId}/modules/${slug}/info`, { method: 'GET' })
+        if (success) {
+            const info = await callIdentity(`/internal/companies/${tenantId}/modules/${encodeURIComponent(successfulSlug)}/info`, { method: 'GET' })
                 .catch(() => ({ body: {} }));
             result = {
                 valid: true,
@@ -75,7 +98,7 @@ async function validateModuleKey(tenantId, rawKey) {
             };
             await rememberTenant(tenantId, keyHash, result.companyName);
         } else {
-            result = { valid: false, reason: body.reason || body.error || `Licença recusada (${status})`, checkedAt: now };
+            result = { valid: false, reason: lastBody.reason || lastBody.error || `Licença recusada (${lastStatus})`, checkedAt: now };
             await db.query('UPDATE tenants SET license_valid = FALSE, license_checked_at = now() WHERE id = $1', [tenantId])
                 .catch(() => {});
         }
