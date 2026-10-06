@@ -525,32 +525,44 @@
   // ───────────────────────────────────────────────────────────────────────────
   function viewLogin() {
     shellBuilt = false;
-    const serial = store.get('est.serial') || '';
-    const key = store.get('est.key') || '';
-    let company = null;
 
-    // Painel da esquerda (marca + o que o sistema faz) fica fixo; a direita troca por passo.
+    // Painel da esquerda (hero escuro estilo Nexus) + painel da direita (login claro)
     const shell = (inner) => {
       $('#root').innerHTML = html`<div class="login">
         <aside class="login-hero" aria-hidden="true">
-          <div class="hero-brand"><span class="hero-mark"><img src="img/coliseu_logo.png" alt=""></span><span>Coliseu Estoque</span></div>
+          <div class="hero-brand">
+            <span class="hero-mark"><img src="img/coliseu_simbolo.png" alt="" onerror="this.src='img/coliseu_logo.png'"></span>
+            <span>Coliseu Estoque</span>
+          </div>
           <div class="hero-copy">
-            <h1>Cada item conferido,<br><span>sem erro e sem retrabalho.</span></h1>
-            <p>Conferência cega de entradas e saídas integrada ao seu ERP. Receba notas pelo XML, separe pedidos com o leitor e resolva divergências em tempo real.</p>
+            <h1>Seus resultados,<br><span class="hero-grad">em tempo real.</span></h1>
+            <p>A plataforma gerencial definitiva de conferência cega e separação do ecossistema Coliseu. Transforme a expedição e o recebimento de mercadorias em processos rápidos, precisos e sem retrabalho.</p>
           </div>
           <div class="hero-cards">
-            <div class="hcard"><div class="hc-top"><span class="hc-ic in">${raw(ICON.arrowIn)}</span>Entradas</div>
-              <div class="hc-val">XML + DANFE</div><div class="hc-sub"><b>Recebimento</b> conferido contra a nota</div></div>
-            <div class="hcard"><div class="hc-top"><span class="hc-ic out">${raw(ICON.arrowOut)}</span>Saídas</div>
-              <div class="hc-val">Pedidos do ERP</div><div class="hc-sub"><b>Separação</b> com coletor ou câmera</div></div>
-            <div class="hcard wide"><div class="hc-top"><span class="hc-ic ok">${raw(ICON.trend)}</span>Críticas automáticas</div>
+            <div class="hcard">
+              <div class="hc-top"><span class="hc-ic in">${raw(ICON.arrowIn)}</span>Entradas Conferidas</div>
+              <div class="hc-val">XML + DANFE</div>
+              <div class="hc-sub"><b>+100%</b> conferência cega</div>
+            </div>
+            <div class="hcard">
+              <div class="hc-top"><span class="hc-ic out">${raw(ICON.arrowOut)}</span>Separação de Pedidos</div>
+              <div class="hc-val">Pedidos do ERP</div>
+              <div class="hc-sub"><b>Leitor & Coletor</b> em tempo real</div>
+            </div>
+            <div class="hcard wide">
+              <div class="hc-top"><span class="hc-ic ok">${raw(ICON.trend)}</span>Críticas Automáticas</div>
               <div class="hc-val">Falta · Sobra · Validade · SLA</div>
-              <div class="hc-bars"><i style="height:30%"></i><i style="height:45%"></i><i style="height:38%"></i><i style="height:60%"></i><i style="height:52%"></i><i style="height:74%"></i><i style="height:88%"></i></div></div>
+              <div class="hc-bars"><i style="height:35%"></i><i style="height:55%"></i><i style="height:42%"></i><i style="height:70%"></i><i style="height:62%"></i><i style="height:84%"></i><i style="height:96%"></i></div>
+            </div>
+          </div>
+          <div class="hero-foot">
+            <span>© 2026 Coliseu Sistemas</span>
+            <div class="hero-live"><i class="live-pulse"></i> Sistemas Operacionais</div>
           </div>
         </aside>
         <main class="login-side">
           <div class="login-box">
-            <img class="login-logo" src="img/coliseu_logo.png" alt="Coliseu Sistemas" width="300" height="76">
+            <img class="login-logo" src="img/coliseu_logo.png" alt="Coliseu Sistemas" width="280">
             ${inner}
           </div>
           <div class="login-foot">Coliseu Sistemas · Coliseu Estoque</div>
@@ -558,114 +570,260 @@
       </div>`.s;
     };
 
-    const busyBtn = (form, on) => { const b = $('button[type=submit]', form); if (b) { b.disabled = on; b.classList.toggle('loading', on); } };
+    const busyBtn = (form, on, label = 'Autenticando…') => {
+      const b = $('button[type=submit]', form);
+      if (b) {
+        b.disabled = on;
+        b.classList.toggle('loading', on);
+        if (on) {
+          b.dataset.prevHtml = b.innerHTML;
+          b.innerHTML = `<span>${label}</span>`;
+        } else if (b.dataset.prevHtml) {
+          b.innerHTML = b.dataset.prevHtml;
+        }
+      }
+    };
+
     const bindEye = () => $$('[data-eye]').forEach((b) => b.addEventListener('click', () => {
-      const i = $(`#${b.dataset.eye}`); const show = i.type === 'password';
-      i.type = show ? 'text' : 'password'; b.classList.toggle('on', show); b.setAttribute('aria-label', show ? 'Ocultar' : 'Mostrar');
+      const i = $(`#${b.dataset.eye}`);
+      const show = i.type === 'password';
+      i.type = show ? 'text' : 'password';
+      b.classList.toggle('on', show);
+      b.setAttribute('aria-label', show ? 'Ocultar' : 'Mostrar');
     }));
+
     const eye = (id) => html`<button type="button" class="eye" data-eye="${id}" aria-label="Mostrar">${raw(ICON.eye)}</button>`;
     const arrow = raw(ICON.enter);
 
-    const stepCompany = () => {
+    // ── Tela Principal: Login direto com E-mail e Senha (Nexus padrão) ───
+    const stepLogin = (errMessage = '') => {
+      const savedEmail = store.get('est_saved_email') || store.get('nexus_remember_email') || store.get('login_saved_email') || store.get('est.login') || '';
+      const savedPass = store.get('est_saved_pass') || store.get('nexus_remember_password') || store.get('login_saved_senha') || '';
+      const rememberMe = store.get('est_remember_me') !== 'false';
+
       shell(html`
         <h2 class="login-title">Bem-vindo de volta.</h2>
-        <p class="login-sub">Identifique a empresa para acessar a conferência de estoque.</p>
+        <p class="login-sub">Entre para acessar seus dashboards gerenciais.</p>
+        ${errMessage ? html`<div class="login-err">${raw(ICON.warn)}<span>${errMessage}</span></div>` : ''}
         <form id="f" class="login-form">
-          <div class="lfield"><label for="serial">Serial da empresa</label>
-            <input class="linput mono" id="serial" required value="${serial}" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off">
-            <small>Painel de licenças → Empresas → campo “Serial”.</small></div>
-          <div class="lfield"><label for="key">Chave do módulo Estoque</label>
-            <div class="pw"><input class="linput mono" id="key" type="password" required value="${key}" placeholder="COL-XXXX-XXXX-XXXX" autocomplete="off">${eye('key')}</div></div>
-          <label class="lcheck"><input type="checkbox" id="remember" ${store.get('est.remember') !== '0' ? 'checked' : ''}><span>Salvar dados de acesso neste computador</span></label>
-          <button class="lbtn" type="submit"><span>Avançar</span>${arrow}</button>
-        </form>`);
+          <div class="lfield">
+            <label for="email">E-mail de Acesso</label>
+            <input class="linput" id="email" name="username" type="text" required placeholder="seu.email@empresa.com.br" value="${savedEmail}" autocomplete="username" inputmode="email">
+          </div>
+          <div class="lfield">
+            <label for="password">Senha</label>
+            <div class="pw">
+              <input class="linput" id="password" name="password" type="password" required placeholder="Digite sua senha" value="${savedPass}" autocomplete="current-password">${eye('password')}
+            </div>
+          </div>
+          <label class="lcheck">
+            <input type="checkbox" id="remember" ${rememberMe ? 'checked' : ''}>
+            <span>Salvar senha & dados de acesso</span>
+          </label>
+          <button class="lbtn" type="submit">
+            <span>Avançar</span>${arrow}
+          </button>
+        </form>
+        <div class="login-links">
+          Ainda não configurou sua empresa? <a href="#" id="link-setup">Ativar licença ✨</a>
+        </div>
+      `);
+
       bindEye();
-      if (serial) $('#key').focus(); else $('#serial').focus();
+      if (savedEmail && !savedPass) {
+        $('#password')?.focus();
+      } else if (savedEmail && savedPass) {
+        $('#password')?.focus();
+      } else {
+        $('#email')?.focus();
+      }
+
+      $('#link-setup')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        stepActivation();
+      });
+
+      $('#f').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = $('#email').value.trim();
+        const password = $('#password').value;
+        const remember = $('#remember').checked;
+
+        busyBtn(e.target, true);
+        try {
+          const resp = await api('POST', '/v1/auth/login', {
+            email,
+            password,
+            tenantId: store.get('est.serial') || undefined,
+            companyKey: store.get('est.key') || undefined,
+          });
+
+          if (resp?.requiresCompanySelection) {
+            busyBtn(e.target, false);
+            return stepSelectCompany(resp.companies, email, password);
+          }
+
+          if (remember) {
+            store.set('est_saved_email', email);
+            store.set('est_saved_pass', password);
+            store.set('est_remember_me', 'true');
+            store.set('nexus_remember_email', email);
+            store.set('nexus_remember_password', password);
+            store.set('login_saved_email', email);
+            store.set('login_saved_senha', password);
+          } else {
+            store.del('est_saved_email');
+            store.del('est_saved_pass');
+            store.del('nexus_remember_email');
+            store.del('nexus_remember_password');
+            store.del('login_saved_email');
+            store.del('login_saved_senha');
+            store.set('est_remember_me', 'false');
+          }
+
+          setSession(resp);
+          location.hash = home();
+          render();
+        } catch (err) {
+          busyBtn(e.target, false);
+          if (err.code === 'SETUP_REQUIRED') {
+            toast('Primeiro acesso necessário: configure a licença da empresa.', true);
+            stepActivation(email);
+          } else {
+            stepLogin(err.message || 'E-mail ou senha incorretos.');
+          }
+        }
+      });
+    };
+
+    // ── Seleção de Empresa (Super Administrador admin@coliseu.com) ───────
+    const stepSelectCompany = (companies, email, password) => {
+      shell(html`
+        <button type="button" class="btn-link" id="back-login">${raw(ICON.back)} Voltar</button>
+        <h2 class="login-title">Selecione a Empresa</h2>
+        <p class="login-sub">Escolha a empresa para acessar como Super Administrador.</p>
+        <div class="company-select-list">
+          ${companies.map((c) => html`
+            <div class="company-select-item" data-id="${c.id}">
+              <div>
+                <div style="font-weight:700;font-size:15px">${c.name || 'Empresa sem nome'}</div>
+                <div class="mono muted" style="font-size:12px">${c.id}</div>
+              </div>
+              ${arrow}
+            </div>
+          `).join('')}
+        </div>
+      `);
+
+      $('#back-login')?.addEventListener('click', () => stepLogin());
+      $$('.company-select-item').forEach((item) => item.addEventListener('click', async () => {
+        const tenantId = item.dataset.id;
+        try {
+          const resp = await api('POST', '/v1/auth/login', {
+            email,
+            password,
+            selectedTenantId: tenantId,
+          });
+          setSession(resp);
+          location.hash = home();
+          render();
+        } catch (err) {
+          toast(err.message, true);
+        }
+      }));
+    };
+
+    // ── Ativação / Primeiro acesso com Chave de Licença ──────────────────
+    const stepActivation = (initialEmail = '') => {
+      const serial = store.get('est.serial') || '';
+      const key = store.get('est.key') || '';
+
+      shell(html`
+        <button type="button" class="btn-link" id="back-login">${raw(ICON.back)} Voltar ao login</button>
+        <h2 class="login-title">Ativar Empresa</h2>
+        <p class="login-sub">Identifique a empresa com os dados do painel de licenças para criar o primeiro administrador.</p>
+        <form id="f" class="login-form">
+          <div class="lfield">
+            <label for="serial">Serial da empresa</label>
+            <input class="linput mono" id="serial" required value="${serial}" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off">
+            <small>Painel de licenças → Empresas → campo “Serial”.</small>
+          </div>
+          <div class="lfield">
+            <label for="key">Chave do módulo Estoque</label>
+            <div class="pw">
+              <input class="linput mono" id="key" type="password" required value="${key}" placeholder="COL-XXXX-XXXX-XXXX" autocomplete="off">${eye('key')}
+            </div>
+          </div>
+          <div class="lfield">
+            <label for="name">Seu nome</label>
+            <input class="linput" id="name" required placeholder="Nome do administrador">
+          </div>
+          <div class="lfield">
+            <label for="setup-login">E-mail de acesso</label>
+            <input class="linput" id="setup-login" required type="email" value="${initialEmail}" placeholder="seu.email@empresa.com.br" autocomplete="username">
+          </div>
+          <div class="lfield">
+            <label for="pass">Senha</label>
+            <div class="pw">
+              <input class="linput" id="pass" type="password" minlength="8" required placeholder="Mínimo 8 caracteres" autocomplete="new-password">${eye('pass')}
+            </div>
+            <small>Mínimo de 8 caracteres.</small>
+          </div>
+          <div class="lfield">
+            <label for="pass2">Confirme a senha</label>
+            <input class="linput" id="pass2" type="password" required placeholder="Repita a senha" autocomplete="new-password">
+          </div>
+          <button class="lbtn" type="submit">
+            <span>Ativar e Entrar</span>${arrow}
+          </button>
+        </form>
+      `);
+
+      bindEye();
+      $('#back-login')?.addEventListener('click', () => stepLogin());
+      if (serial) $('#name')?.focus(); else $('#serial')?.focus();
+
       $('#f').addEventListener('submit', async (e) => {
         e.preventDefault();
         const s = $('#serial').value.trim();
         const k = $('#key').value.trim().toUpperCase();
-        busyBtn(e.target, true);
+        const name = $('#name').value.trim();
+        const login = $('#setup-login').value.trim();
+        const pass = $('#pass').value;
+        const pass2 = $('#pass2').value;
+
+        if (pass !== pass2) return toast('As senhas não conferem', true);
+
+        busyBtn(e.target, true, 'Ativando empresa…');
         try {
-          company = await api('POST', '/v1/auth/company', { tenantId: s, companyKey: k });
+          const resp = await api('POST', '/v1/auth/setup', {
+            tenantId: s,
+            companyKey: k,
+            name,
+            login,
+            email: login,
+            password: pass,
+          });
+
           store.set('est.serial', s);
-          store.set('est.remember', $('#remember').checked ? '1' : '0');
-          if ($('#remember').checked) store.set('est.key', k); else store.del('est.key');
-          company.serial = s; company.key = k;
-          company.needsSetup ? stepSetup() : stepLogin();
-        } catch (err) { toast(err.message, true); busyBtn(e.target, false); }
-      });
-    };
+          store.set('est.key', k);
+          store.set('est_saved_email', login);
+          store.set('est_saved_pass', pass);
+          store.set('est_remember_me', 'true');
 
-    const companyChip = () => html`<button type="button" class="company-chip" id="change" title="Trocar empresa">
-      <span class="cc-ic">${(company.name || 'E').trim().charAt(0).toUpperCase()}</span>
-      <span class="cc-txt"><b>${company.name || 'Empresa'}</b><small>Trocar empresa</small></span>${raw(ICON.back)}</button>`;
-
-    const stepLogin = () => {
-      const lastLogin = store.get('est.login') || '';
-      shell(html`
-        <h2 class="login-title">Bem-vindo de volta.</h2>
-        <p class="login-sub">Entre para acompanhar entradas, saídas e divergências.</p>
-        ${companyChip()}
-        <form id="f" class="login-form">
-          <div class="lfield"><label for="login">Usuário</label>
-            <input class="linput" id="login" required autocomplete="username" value="${lastLogin}"></div>
-          <div class="lfield"><label for="pass">Senha</label>
-            <div class="pw"><input class="linput" id="pass" type="password" required autocomplete="current-password">${eye('pass')}</div></div>
-          <label class="lcheck"><input type="checkbox" id="rememberLogin" ${store.get('est.remember') !== '0' ? 'checked' : ''}><span>Lembrar meu usuário</span></label>
-          <button class="lbtn" type="submit"><span>Entrar</span>${arrow}</button>
-        </form>`);
-      bindEye();
-      (lastLogin ? $('#pass') : $('#login')).focus();
-      $('#change').addEventListener('click', () => stepCompany());
-      $('#f').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        busyBtn(e.target, true);
-        try {
-          setSession(await api('POST', '/v1/auth/login', {
-            tenantId: company.serial, companyKey: company.key, login: $('#login').value, password: $('#pass').value,
-          }));
-          if ($('#rememberLogin').checked) store.set('est.login', $('#login').value.trim()); else store.del('est.login');
+          setSession(resp);
+          toast('Empresa ativada com sucesso! Cadastre os operadores em Usuários.');
           location.hash = home();
           render();
-        } catch (err) { toast(err.message, true); busyBtn(e.target, false); $('#pass').select(); }
+        } catch (err) {
+          toast(err.message, true);
+          busyBtn(e.target, false);
+        }
       });
     };
 
-    const stepSetup = () => {
-      shell(html`
-        <h2 class="login-title">Primeiro acesso.</h2>
-        <p class="login-sub">${company.name || 'Esta empresa'} ainda não tem usuários. Crie o administrador.</p>
-        ${companyChip()}
-        <form id="f" class="login-form">
-          <div class="lfield"><label for="name">Seu nome</label><input class="linput" id="name" required></div>
-          <div class="lfield"><label for="login">Usuário</label><input class="linput" id="login" required autocomplete="username"></div>
-          <div class="lfield"><label for="pass">Senha</label>
-            <div class="pw"><input class="linput" id="pass" type="password" minlength="8" required autocomplete="new-password">${eye('pass')}</div>
-            <small>Mínimo de 8 caracteres.</small></div>
-          <div class="lfield"><label for="pass2">Confirme a senha</label><input class="linput" id="pass2" type="password" required autocomplete="new-password"></div>
-          <button class="lbtn" type="submit"><span>Criar administrador</span>${arrow}</button>
-        </form>`);
-      bindEye();
-      $('#name').focus();
-      $('#change').addEventListener('click', () => stepCompany());
-      $('#f').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if ($('#pass').value !== $('#pass2').value) return toast('As senhas não conferem', true);
-        busyBtn(e.target, true);
-        try {
-          setSession(await api('POST', '/v1/auth/setup', {
-            tenantId: company.serial, companyKey: company.key,
-            name: $('#name').value, login: $('#login').value, password: $('#pass').value,
-          }));
-          toast('Empresa configurada. Cadastre os operadores em Usuários.');
-          location.hash = '#/';
-          render();
-        } catch (err) { toast(err.message, true); busyBtn(e.target, false); }
-      });
-    };
-
-    stepCompany();
+    // Abre diretamente a tela de login unificada (igual ao Nexus)
+    stepLogin();
   }
 
   // ───────────────────────────────────────────────────────────────────────────
