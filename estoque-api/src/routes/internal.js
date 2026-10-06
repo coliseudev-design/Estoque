@@ -62,6 +62,7 @@ const documentSchema = z.object({
     cancelled: z.boolean().default(false),
     invoiceNumber: text(30),   // PED: NF já emitida a partir do pedido
     orderNumber: text(30),     // NFS: pedido de origem
+    status: text(30),
     items: z.array(z.object({
         seq: z.number().int().min(0).max(99_999),
         productErpId: z.union([z.string(), z.number()]).transform(String),

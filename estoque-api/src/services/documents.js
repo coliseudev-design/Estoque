@@ -104,7 +104,10 @@ async function listDocuments(tenantId, user, filters) {
     if (filters.status?.length) add('d.status = ANY(?)', filters.status);
     else where.push(`(d.status <> 'CANCELADO')`);
     if (filters.from) add('d.issued_at >= ?', filters.from);
-    else if (filters.days && !filters.q) add(`d.issued_at >= now() - (? || ' days')::interval`, String(filters.days));
+    else if (filters.days && !filters.q) {
+        add(`(d.status IN ('AGUARDANDO','EM_CONFERENCIA','DIVERGENTE','AGUARDANDO_APROVACAO')
+              OR d.issued_at >= now() - (? || ' days')::interval)`, String(filters.days));
+    }
     else if (!filters.q) {
         // Sem janela explícita (ex.: fila do app): trabalho pendente aparece SEMPRE,
         // qualquer que seja a idade; a janela padrão só limita os já finalizados.

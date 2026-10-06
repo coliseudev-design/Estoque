@@ -147,7 +147,7 @@ async function upsertDocuments(tenantId, docs) {
                              CASE WHEN $12::text IS NULL THEN NULL ELSE now() END, $14, $15, $16)
                      RETURNING id`,
                     [tenantId, doc.source, doc.erpKey, ...header,
-                        doc.cancelled ? 'CANCELADO' : 'AGUARDANDO', hash, !!doc.cancelled],
+                        doc.cancelled ? 'CANCELADO' : (doc.status || (doc.invoiceNumber ? 'CONCLUIDO' : 'AGUARDANDO')), hash, !!doc.cancelled],
                 );
                 await insertItems(client, tenantId, rows[0].id, doc.items);
                 created++;
