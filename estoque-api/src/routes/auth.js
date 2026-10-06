@@ -3,8 +3,9 @@
  *
  *  Dashboard:  Serial da empresa + chave do módulo Estoque + login + senha.
  *              (a chave prova a licença; o navegador pode lembrá-la)
- *  App:        JWT de dispositivo do Coliseu.Identity (X-Device-Token) + login + PIN.
- *              (o aparelho já foi ativado e contado no limite de dispositivos)
+ *  App:        aparelho pareado pelo painel (X-Device-Key) + login + PIN; ou
+ *              JWT de dispositivo do Coliseu.Identity (X-Device-Token) + login + PIN
+ *              (ativação pela chave do painel de licenças).
  *
  * Os dois caminhos devolvem o MESMO tipo de token: daí em diante app e dashboard
  * usam exatamente os mesmos endpoints.
@@ -22,6 +23,7 @@ const { signUserToken, verifyDeviceToken } = require('../auth/tokens');
 const { requireUser, UUID_RE } = require('../auth/middleware');
 const { getSettings } = require('../services/settings');
 const { audit } = require('../services/audit');
+const devices = require('../services/devices');
 
 const router = express.Router();
 
@@ -140,6 +142,36 @@ router.post('/device-login', loginLimit, route(async (req, res) => {
         throw unauthorized('Usuário ou PIN inválidos', 'INVALID_CREDENTIALS');
     }
     res.json(await session(user, device.deviceId));
+}));
+
+// ── Pareamento do app pelo painel (QR Code / código) ─────────────────────────
+router.post('/pair', loginLimit, route(async (req, res) => {
+    const body = parse(z.object({
+        code: z.string().trim().min(8).max(20),
+        deviceUuid: z.string().max(120).optional(),
+        model: z.string().max(120).optional(),
+        os: z.string().max(60).optional(),
+        appVersion: z.string().max(30).optional(),
+    }), req.body);
+    res.status(201).json(await devices.pair(body));
+}));
+
+// ── Login do operador em aparelho pareado ────────────────────────────────────
+router.post('/app-login', loginLimit, route(async (req, res) => {
+    const body = parse(z.object({
+        login: z.string().trim().min(1),
+        pin: z.string().min(4).max(12),
+        appVersion: z.string().max(30).optional(),
+    }), req.body);
+    const device = await devices.authenticate(req.get('X-Device-Key'));
+    if (!(await isTenantLicensed(device.tenant_id))) throw forbidden('Licença do módulo Estoque suspensa', 'LICENSE_DENIED');
+
+    const user = await findUser(device.tenant_id, body.login);
+    if (!user || !user.active || !(await verifySecret(body.pin, user.pin_hash))) {
+        throw unauthorized('Usuário ou PIN inválidos', 'INVALID_CREDENTIALS');
+    }
+    await devices.touch(device.id, user.id, body.appVersion);
+    res.json(await session(user, device.id));
 }));
 
 router.get('/me', requireUser(), route(async (req, res) => {

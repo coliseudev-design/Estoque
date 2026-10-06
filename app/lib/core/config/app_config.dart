@@ -26,12 +26,31 @@ class AppConfig {
   String get apiUrl => _s('apiUrl');
   Future<void> setApiUrl(String v) => _set('apiUrl', _trimUrl(v));
 
+  /// Como o aparelho foi vinculado:
+  ///   pair     — QR Code / código gerado no painel do Estoque (tela Aparelhos)
+  ///   identity — chave de ativação do painel de licenças (Coliseu.Identity)
+  String get authMode => _prefs.getString('authMode') ?? (deviceRefreshToken.isNotEmpty ? 'identity' : 'pair');
+  bool get isPaired => authMode == 'pair';
+
+  /// Credencial do aparelho pareado: `<deviceId>:<segredo>`. Só existe neste aparelho.
+  String get deviceKey => _s('deviceKey');
+
+  Future<void> savePairing({required String apiUrl, required String tenantId, required String companyName,
+      required String deviceId, required String deviceKey}) async {
+    await _set('authMode', 'pair');
+    await setApiUrl(apiUrl);
+    await _set('tenantId', tenantId);
+    await _set('companyName', companyName);
+    await _set('deviceId', deviceId);
+    await _set('deviceKey', deviceKey);
+  }
+
   String get tenantId => _s('tenantId');
   String get companyName => _s('companyName');
   String get deviceId => _s('deviceId');
   String get deviceAccessToken => _s('deviceAccessToken');
   String get deviceRefreshToken => _s('deviceRefreshToken');
-  bool get isActivated => deviceRefreshToken.isNotEmpty && apiUrl.isNotEmpty;
+  bool get isActivated => apiUrl.isNotEmpty && (isPaired ? deviceKey.isNotEmpty : deviceRefreshToken.isNotEmpty);
 
   Future<void> saveActivation({
     required String tenantId,
@@ -41,6 +60,7 @@ class AppConfig {
     required String refreshToken,
     required String apiUrl,
   }) async {
+    await _set('authMode', 'identity');
     await _set('tenantId', tenantId);
     await _set('companyName', companyName);
     await _set('deviceId', deviceId);
@@ -55,7 +75,7 @@ class AppConfig {
   }
 
   Future<void> clearActivation() async {
-    for (final k in ['tenantId', 'companyName', 'deviceId', 'deviceAccessToken', 'deviceRefreshToken']) {
+    for (final k in ['authMode', 'deviceKey', 'tenantId', 'companyName', 'deviceId', 'deviceAccessToken', 'deviceRefreshToken']) {
       await _prefs.remove(k);
     }
     await clearSession();

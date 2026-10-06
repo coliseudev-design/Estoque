@@ -62,9 +62,22 @@ class DocLock {
       );
 }
 
+/// Crítica operacional calculada pela API (SLA, faturado antes, críticas da nota…).
+class DocAlert {
+  final String level, code, message;
+  const DocAlert({required this.level, required this.code, required this.message});
+  factory DocAlert.fromJson(Map<String, dynamic> j) =>
+      DocAlert(level: j['level'] ?? 'info', code: j['code'] ?? '', message: j['message'] ?? '');
+  bool get isError => level == 'erro';
+}
+
 class DocSummary {
   final String id, source, erpKey, status;
-  final String? number, customerName, sellerName;
+  final String? number, series, customerName, customerCode, sellerName, orderNumber;
+  /// entrada = nota de compra (recebimento); saida = pedido/nota de venda (expedição).
+  final String flow;
+  final List<DocAlert> alerts;
+  final int? productCount, countedProducts;
   /// Pedido já faturado no ERP (número da NF emitida a partir dele).
   final String? invoiceNumber;
   final DateTime? issuedAt;
@@ -78,8 +91,15 @@ class DocSummary {
     required this.erpKey,
     required this.status,
     this.number,
+    this.series,
     this.customerName,
+    this.customerCode,
     this.sellerName,
+    this.orderNumber,
+    this.flow = 'saida',
+    this.alerts = const [],
+    this.productCount,
+    this.countedProducts,
     this.invoiceNumber,
     this.issuedAt,
     this.round = 0,
@@ -94,8 +114,15 @@ class DocSummary {
         erpKey: j['erpKey'],
         status: j['status'],
         number: j['number'],
+        series: j['series'],
         customerName: j['customerName'],
+        customerCode: j['customerCode'],
         sellerName: j['sellerName'],
+        orderNumber: j['orderNumber'],
+        flow: j['flow'] ?? (j['source'] == 'NFE' ? 'entrada' : 'saida'),
+        alerts: [for (final a in (j['alerts'] as List? ?? const [])) DocAlert.fromJson(Map<String, dynamic>.from(a as Map))],
+        productCount: j['productCount'],
+        countedProducts: j['countedProducts'],
         invoiceNumber: j['invoiceNumber'],
         issuedAt: DateTime.tryParse(j['issuedAt'] ?? '')?.toLocal(),
         round: j['round'] ?? 0,
@@ -104,7 +131,12 @@ class DocSummary {
         lock: j['lock'] == null ? null : DocLock.fromJson(j['lock']),
       );
 
-  String get title => '${source == 'NFS' ? 'Nota' : 'Pedido'} ${number ?? erpKey}';
+  bool get isEntry => flow == 'entrada';
+  String get title => switch (source) {
+        'NFE' => 'NF ${number ?? '—'}${series != null ? '-$series' : ''}',
+        'NFS' => 'Nota ${number ?? erpKey}',
+        _ => 'Pedido ${number ?? erpKey}',
+      };
   bool get invoicedEarly => invoiceNumber != null && status != 'CONCLUIDO' && status != 'CANCELADO';
   bool get isCountable => status == 'AGUARDANDO' || status == 'EM_CONFERENCIA' || status == 'DIVERGENTE';
 }
@@ -181,6 +213,17 @@ class FinalizeResult {
         ],
       );
 }
+
+/// Rótulo do status no idioma do armazém, conforme o fluxo.
+String statusLabel(DocSummary d) => switch (d.status) {
+      'AGUARDANDO' => d.isEntry ? 'Aguardando conferência' : 'Aguardando separação',
+      'EM_CONFERENCIA' => d.isEntry ? 'Em conferência' : 'Em separação',
+      'DIVERGENTE' => 'Recontagem',
+      'AGUARDANDO_APROVACAO' => 'Com supervisor',
+      'CONCLUIDO' => d.isEntry ? 'Recebido' : (d.invoiceNumber != null ? 'Faturado' : 'Liberado'),
+      'CANCELADO' => 'Cancelado',
+      _ => d.status,
+    };
 
 const statusLabels = {
   'AGUARDANDO': 'Aguardando',

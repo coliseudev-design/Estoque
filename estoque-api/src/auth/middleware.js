@@ -84,6 +84,10 @@ function requireUser(...roles) {
             req.tenantId = user.tenant_id;
             req.user = { id: user.id, name: user.name, login: user.login, role: user.role };
             req.deviceId = claims.dev || null;
+            // Aparelho desvinculado no painel perde a sessão em até 30 s.
+            if (req.deviceId && (await require('../services/devices').isRevoked(req.deviceId))) {
+                throw unauthorized('Este aparelho foi desvinculado no painel', 'DEVICE_REVOKED');
+            }
             next();
         } catch (err) {
             next(err);

@@ -593,3 +593,17 @@ ul.tight { margin: 6px 0 0; padding-left: 18px; }
   .report table th, .report table td { border: 1px solid #999; padding: 6px 8px; font-size: 12px; background: none; color: #000; }
   .report .sign { margin-top: 60px; line-height: 2.4; }
 }
+
+/* ── Aparelhos / pareamento ──────────────────────────────────────────────── */
+.steps.four { grid-template-columns: repeat(4, 1fr); }
+.dev-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--st-cancel); flex: none; }
+.dev-dot.on { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+.dev-dot.idle { background: var(--st-recount); }
+.pair-box { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+.pair-box .qr { width: 240px; height: 240px; image-rendering: pixelated; border-radius: 12px; background: #fff; padding: 6px; border: 1px solid var(--border); }
+.pair-info { flex: 1; min-width: 240px; }
+.pair-steps { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; }
+.pair-info .kv { display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; border-radius: 8px; background: var(--surface-2); margin-top: 6px; word-break: break-all; }
+.pair-info .code { font-size: 20px; letter-spacing: .08em; color: var(--brand-strong); }
+@media (max-width: 1280px) { .steps.four { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 760px) { .steps.four { grid-template-columns: 1fr; } }

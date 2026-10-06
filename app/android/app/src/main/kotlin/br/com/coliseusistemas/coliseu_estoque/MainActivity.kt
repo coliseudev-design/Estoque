@@ -1,4 +1,4 @@
-﻿package br.com.coliseusistemas.coliseu_estoque
+package br.com.coliseusistemas.coliseu_estoque
 
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity

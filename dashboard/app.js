@@ -350,6 +350,7 @@
     print: svg('<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/>'),
     back: svg('<path d="M15 18l-6-6 6-6"/>', 'stroke-width="2.4"'),
     search: svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'),
+    phone: svg('<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>'),
     help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>'),
   };
 
@@ -362,6 +363,7 @@
     { section: 'Cadastros' },
     { href: '#/produtos', label: 'Produtos', icon: 'box' },
     { href: '#/usuarios', label: 'Usuários', icon: 'users', sup: true },
+    { href: '#/aparelhos', label: 'Aparelhos', hint: 'App de conferência', icon: 'phone', sup: true },
     { section: 'Controle', sup: true },
     { href: '#/auditoria', label: 'Auditoria', icon: 'log', sup: true },
     { href: '#/configuracoes', label: 'Configurações', icon: 'gear', sup: true },
@@ -473,6 +475,7 @@
     { re: /^#\/conferir\/([0-9a-f-]{36})$/, view: viewConference },
     { re: /^#\/produtos$/, view: viewProducts },
     { re: /^#\/usuarios$/, view: viewUsers, sup: true },
+    { re: /^#\/aparelhos$/, view: viewDevices, sup: true },
     { re: /^#\/auditoria$/, view: viewAudit, sup: true },
     { re: /^#\/configuracoes$/, view: viewSettings, sup: true },
   ];
@@ -1618,6 +1621,129 @@
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  // Aparelhos (app de conferência)
+  //
+  // Pareamento: o painel gera um código de uso único (10 min) e mostra em QR Code
+  // junto com o endereço da API. O app lê o QR (ou digita endereço + código), recebe
+  // uma credencial própria e o operador passa a entrar com usuário + PIN.
+  // ───────────────────────────────────────────────────────────────────────────
+  const PAIR_PREFIX = 'COLISEU-ESTOQUE';
+  const isLocalHost = (u) => /\/\/(localhost|127\.|\[::1\])/i.test(u);
+
+  async function viewDevices() {
+    const load = async () => {
+      const r = await api('GET', '/v1/devices');
+      const active = r.items.filter((d) => !d.revoked_at);
+      const online = active.filter((d) => d.last_seen_at && Date.now() - new Date(d.last_seen_at) < 15 * 60000).length;
+      main().innerHTML = html`
+        ${pageHead('Aparelhos', 'Celulares e coletores que usam o app de conferência', html`<button class="btn primary" id="pair">${raw(ICON.phone)} Conectar aparelho</button>`, 'Cadastros')}
+        <details class="guide" ${r.items.length ? '' : 'open'} data-guide="devices">
+          <summary>${raw(ICON.help)}<span>Como o app se conecta</span></summary>
+          <ol class="steps four">
+            <li><span class="n">1</span><div><strong>Instale o app</strong><span>APK do Coliseu Estoque no celular ou coletor Android.</span></div></li>
+            <li><span class="n">2</span><div><strong>Gere o QR aqui</strong><span>“Conectar aparelho” cria um código que vale 10 minutos e uma vez só.</span></div></li>
+            <li><span class="n">3</span><div><strong>Leia no app</strong><span>Na primeira tela do app: “Ler QR do painel”. Sem câmera? Digite endereço + código.</span></div></li>
+            <li><span class="n">4</span><div><strong>Operador entra</strong><span>Com usuário + PIN cadastrados em Usuários. Pronto para conferir.</span></div></li>
+          </ol>
+        </details>
+        <section class="card">
+          <div class="card-head"><h2>${raw(ICON.phone)} Aparelhos vinculados</h2><span class="muted small">${active.length} ativo(s) · ${online} em uso agora</span></div>
+          ${r.items.length ? html`<div class="table-wrap"><table>
+            <thead><tr><th>Aparelho</th><th>Modelo</th><th>Último uso</th><th>Último operador</th><th>Vinculado</th><th></th></tr></thead>
+            <tbody>${r.items.map((d) => html`<tr class="${d.revoked_at ? 'voided' : ''}">
+              <td><div class="user-cell"><span class="dev-dot ${d.revoked_at ? '' : d.last_seen_at && Date.now() - new Date(d.last_seen_at) < 15 * 60000 ? 'on' : 'idle'}"></span><strong>${d.name || 'Aparelho'}</strong></div></td>
+              <td>${d.model || '—'}<div class="sub">${[d.os, d.app_version && `app ${d.app_version}`].filter(Boolean).join(' · ')}</div></td>
+              <td>${d.revoked_at ? html`<span class="badge b-CANCELADO">Desvinculado</span>` : ago(d.last_seen_at)}</td>
+              <td>${d.last_user_name || html`<span class="muted">—</span>`}</td>
+              <td>${fmtDateTime(d.created_at)}<div class="sub">${d.created_by_name || ''}</div></td>
+              <td class="num">${d.revoked_at ? '' : html`<button class="btn sm" data-rename="${d.id}">Renomear</button> <button class="btn sm danger" data-revoke="${d.id}">Desvincular</button>`}</td></tr>`)}</tbody>
+          </table></div>` : html`<div class="empty">${raw(ICON.phone)}<div>Nenhum aparelho conectado ainda. Clique em <strong>Conectar aparelho</strong>.</div></div>`}
+        </section>`.s;
+      bindGuide();
+      $('#pair').addEventListener('click', () => pairModal(load));
+      $$('[data-revoke]').forEach((b) => b.addEventListener('click', () => modal({
+        title: 'Desvincular aparelho',
+        body: html`<p style="margin-top:0">O app deste aparelho para de funcionar em até 30 segundos. Leituras ainda não enviadas ficam presas nele. Para usar de novo, será preciso parear outra vez.</p>`,
+        submitLabel: 'Desvincular', danger: true,
+        onSubmit: async () => { await api('POST', `/v1/devices/${b.dataset.revoke}/revoke`); toast('Aparelho desvinculado'); load(); },
+      })));
+      $$('[data-rename]').forEach((b) => b.addEventListener('click', () => {
+        const d = r.items.find((x) => x.id === b.dataset.rename);
+        modal({
+          title: 'Renomear aparelho',
+          body: html`<div class="field"><label>Nome</label><input class="input" name="name" value="${d.name}" placeholder="Ex.: Coletor doca 1" required></div>`,
+          submitLabel: 'Salvar',
+          onSubmit: async (form) => { await api('PATCH', `/v1/devices/${d.id}`, { name: form.elements.name.value }); load(); },
+        });
+      }));
+    };
+    await load();
+  }
+
+  function pairModal(onDone) {
+    const savedUrl = store.get('est.pair.url') || location.origin;
+    const m = modal({
+      title: 'Conectar aparelho',
+      wide: true,
+      submitLabel: 'Gerar QR Code',
+      cancelLabel: 'Fechar',
+      body: html`<div id="pair-step">
+        <div class="field"><label>Nome do aparelho (opcional)</label><input class="input" name="name" placeholder="Ex.: Coletor doca 1, Celular do João"></div>
+        <div class="field"><label>Endereço da API que o celular vai usar</label>
+          <input class="input mono" name="url" value="${savedUrl}" required>
+          <div class="help" id="url-help">Normalmente é o mesmo endereço deste painel.</div></div>
+      </div><div id="pair-out"></div>`,
+      onSubmit: async (form) => {
+        const url = form.elements.url.value.trim().replace(/\/+$/, '');
+        if (!/^https?:\/\/[^\s]+$/i.test(url)) { toast('Informe o endereço com http:// ou https://', true); return false; }
+        store.set('est.pair.url', url);
+        const r = await api('POST', '/v1/devices/pairing', { name: form.elements.name.value });
+        const payload = `${PAIR_PREFIX}|${url}|${r.code}`;
+        const qr = qrcode(0, 'M');
+        qr.addData(payload);
+        qr.make();
+        $('#pair-step', m.el).classList.add('hidden');
+        $('button[type=submit]', m.el).classList.add('hidden');
+        $('#pair-out', m.el).innerHTML = html`<div class="pair-box">
+          <img class="qr" src="${qr.createDataURL(6, 2)}" alt="QR Code de pareamento" width="240" height="240">
+          <div class="pair-info">
+            <ol class="pair-steps">
+              <li>Abra o app <strong>Coliseu Estoque</strong> no aparelho.</li>
+              <li>Toque em <strong>Ler QR do painel</strong> e aponte para este código.</li>
+              <li>O operador entra com <strong>usuário + PIN</strong>.</li>
+            </ol>
+            <div class="k">Sem câmera? Digite no app:</div>
+            <div class="kv"><span>Endereço</span><strong class="mono">${url}</strong></div>
+            <div class="kv"><span>Código</span><strong class="mono code">${r.code}</strong></div>
+            <div class="muted small" id="pair-exp">Válido por ${r.minutes} minutos, uma única vez.</div>
+          </div></div>`.s;
+        // Avisa quando o aparelho concluir (a lista muda) e atualiza a tela por trás.
+        const started = Date.now();
+        const poll = setInterval(async () => {
+          if (!document.body.contains(m.el) || Date.now() - started > r.minutes * 60000) { clearInterval(poll); return; }
+          const list = await api('GET', '/v1/devices').catch(() => null);
+          const fresh = list?.items.find((d) => new Date(d.created_at) > new Date(started - 5000));
+          if (fresh) {
+            clearInterval(poll);
+            $('#pair-out', m.el).innerHTML = html`<div class="result-ok">${raw(ICON.check)}<div><strong>${fresh.name || fresh.model || 'Aparelho'} conectado!</strong><div>O operador já pode entrar com usuário e PIN.</div></div></div>`.s;
+            beep(true);
+            onDone();
+          }
+        }, 3000);
+        return false;
+      },
+    });
+    const url = $('input[name=url]', m.el);
+    const help = () => {
+      $('#url-help', m.el).innerHTML = isLocalHost(url.value)
+        ? html`<span class="warn-t">“localhost” não funciona no celular.</span> Use o IP deste computador na rede (ex.: http://192.168.0.10:3100) ou o domínio publicado.`.s
+        : 'Normalmente é o mesmo endereço deste painel.';
+    };
+    url.addEventListener('input', help);
+    help();
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   // Auditoria
   // ───────────────────────────────────────────────────────────────────────────
   const AUDIT_LABEL = {
@@ -1628,6 +1754,7 @@
     'erp.changed_during_conference': 'ERP alterou durante a conferência', 'writeback.failed': 'Falha ao gravar no ERP',
     'erp.invoiced': 'ERP faturou o pedido', 'erp.invoiced_before_conference': 'ERP faturou antes da conferência',
     'entry.imported': 'Importou XML de entrada', 'entry.item_linked': 'Vinculou item da nota', 'entry.deleted': 'Excluiu importação',
+    'device.pairing_created': 'Gerou código de pareamento', 'device.paired': 'Pareou aparelho', 'device.revoked': 'Desvinculou aparelho',
     'user.created': 'Criou usuário', 'user.updated': 'Alterou usuário', 'settings.updated': 'Alterou configurações',
   };
   const auditTable = (items) => (items.length ? html`<div class="table-wrap"><table>

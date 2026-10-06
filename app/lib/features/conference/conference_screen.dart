@@ -17,9 +17,11 @@ import 'camera_scanner_sheet.dart';
 import 'conference_controller.dart';
 
 class ConferenceScreen extends StatefulWidget {
-  const ConferenceScreen({super.key, required this.documentId, required this.title});
+  const ConferenceScreen({super.key, required this.documentId, required this.title, this.flow = 'saida'});
   final String documentId;
   final String title;
+  /// entrada = conferência da nota de compra; saida = separação do pedido.
+  final String flow;
 
   @override
   State<ConferenceScreen> createState() => _ConferenceScreenState();
@@ -235,13 +237,25 @@ class _ConferenceScreenState extends State<ConferenceScreen> {
 
   Widget _body(BuildContext context, DocDetail d) {
     final s = Services.of(context);
-    final counts = _c.counts.entries.toList()..sort((a, b) => _c.nameOf(a.key).compareTo(_c.nameOf(b.key)));
-    // Na recontagem, mostra também o que ainda não foi bipado (contagem zero).
-    if (_c.isRecount) {
-      for (final p in d.recount) {
-        if (!_c.counts.containsKey(p)) counts.add(MapEntry(p, 0));
-      }
-    }
+    // Lista de conferência: produtos do documento (se a empresa mostra) + o que foi bipado.
+    // Na recontagem, só os produtos a recontar. Nunca mostra a quantidade esperada.
+    final current = _c.counts;
+    final ids = <String>{
+      ...current.keys,
+      if (_c.isRecount) ...d.recount else ...d.items.where((i) => !i.isExtra).map((i) => i.productErpId),
+    };
+    final counts = [for (final id in ids) MapEntry(id, current[id] ?? 0.0)]
+      ..sort((a, b) {
+        final ra = d.recount.contains(a.key) ? 0 : 1, rb = d.recount.contains(b.key) ? 0 : 1;
+        if (ra != rb) return ra - rb;
+        final da = a.value > 0 ? 1 : 0, db = b.value > 0 ? 1 : 0;
+        if (da != db) return da - db; // pendentes primeiro
+        return _c.nameOf(a.key).compareTo(_c.nameOf(b.key));
+      });
+    final scope = _c.isRecount ? d.recount : d.items.where((i) => !i.isExtra).map((i) => i.productErpId).toSet();
+    final done = scope.where((p) => (current[p] ?? 0) > 0).length;
+    final entrada = widget.flow == 'entrada';
+    final fColor = flowColor(widget.flow);
 
     return Column(children: [
       ScannerInput(key: _scanner, onCode: (code) => _onCode(code, 'coletor')),
@@ -250,7 +264,24 @@ class _ConferenceScreenState extends State<ConferenceScreen> {
       if (_c.offlineMode)
         _strip(Colors.grey.shade700, Icons.cloud_off, 'Offline — leituras salvas no aparelho e enviadas quando a conexão voltar.'),
       if (_c.isRecount)
-        _strip(AppColors.warn, Icons.replay, 'Recontagem (rodada ${_c.round + 1}): reconte os ${d.recount.length} produto(s) destacados.'),
+        _strip(AppColors.warn, Icons.replay, 'Recontagem (rodada ${_c.round + 1}): reconte os ${d.recount.length} produto(s) destacados.')
+      else
+        _strip(fColor, entrada ? Icons.move_to_inbox_outlined : Icons.local_shipping_outlined,
+            entrada ? 'Recebimento: bipe cada volume. Caixa com código próprio soma a caixa inteira.' : 'Separação: pegue cada item e bipe. Conte o que separou.'),
+      if (scope.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+          child: Row(children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(99),
+                child: LinearProgressIndicator(value: done / scope.length, minHeight: 8, color: fColor, backgroundColor: fColor.withValues(alpha: .12)),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text('$done/${scope.length} ${_c.isRecount ? 'recontados' : 'produtos'}', style: const TextStyle(fontWeight: FontWeight.w700)),
+          ]),
+        ),
       Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: _feedbackCard(context)),
       if (d.settings.allowManualQty) _packsRow(context),
       Expanded(
@@ -271,7 +302,8 @@ class _ConferenceScreenState extends State<ConferenceScreen> {
                   ),
                 const Divider(),
               ],
-              Text('Contado nesta rodada', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              Text(d.items.isEmpty ? 'Contado nesta rodada' : (entrada ? 'Itens da nota' : 'Lista de separação'),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 4),
               if (counts.isEmpty)
                 const Padding(padding: EdgeInsets.all(24), child: Text('Bipe o primeiro item.', textAlign: TextAlign.center)),
@@ -284,9 +316,11 @@ class _ConferenceScreenState extends State<ConferenceScreen> {
                   ),
                   child: ListTile(
                     dense: true,
+                    leading: Icon(e.value > 0 ? Icons.check_circle : Icons.radio_button_unchecked,
+                        color: e.value > 0 ? AppColors.ok : Theme.of(context).disabledColor),
                     title: Text(_c.nameOf(e.key), maxLines: 2, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(e.key),
-                    trailing: Text(_fmt(e.value), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                    subtitle: Text(e.key.replaceFirst('NFE:', 'cód. fornecedor ')),
+                    trailing: Text(e.value > 0 ? _fmt(e.value) : '—', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
                   ),
                 ),
               if (_c.history.isNotEmpty) ...[

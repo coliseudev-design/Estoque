@@ -92,7 +92,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(session.companyName, textAlign: TextAlign.center,
                     style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 4),
-                Text('Entre para iniciar o turno', textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+                Text('Entre com seu usuário e PIN para iniciar o turno', textAlign: TextAlign.center, style: theme.textTheme.bodyMedium),
+                const SizedBox(height: 10),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.link, size: 16, color: Colors.green),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text('Conectado a ${Services.of(context).config.apiUrl}',
+                        overflow: TextOverflow.ellipsis, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  ),
+                ]),
                 const SizedBox(height: 28),
                 TextField(
                   controller: _login,

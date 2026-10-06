@@ -225,6 +225,29 @@ router.get('/audit', supervisor, route(async (req, res) => {
     res.json({ items: rows });
 }));
 
+// ── Aparelhos (app) ──────────────────────────────────────────────────────────
+const devices = require('../services/devices');
+
+router.get('/devices', supervisor, route(async (req, res) => {
+    res.json({ items: await devices.list(req.tenantId) });
+}));
+
+router.post('/devices/pairing', supervisor, route(async (req, res) => {
+    const { name } = parse(z.object({ name: z.string().trim().max(80).optional() }), req.body ?? {});
+    res.status(201).json(await devices.createPairing(req.tenantId, req.user, name));
+}));
+
+router.post('/devices/:id/revoke', supervisor, route(async (req, res) => {
+    await devices.revoke(req.tenantId, req.user, parse(z.string().regex(UUID_RE), req.params.id));
+    res.status(204).end();
+}));
+
+router.patch('/devices/:id', supervisor, route(async (req, res) => {
+    const { name } = parse(z.object({ name: z.string().trim().min(1).max(80) }), req.body);
+    await devices.rename(req.tenantId, req.user, parse(z.string().regex(UUID_RE), req.params.id), name);
+    res.status(204).end();
+}));
+
 // ── Tempo real (SSE) ─────────────────────────────────────────────────────────
 router.get('/stream', requireUser('__query'), (req, res) => {
     bus.attach(req.tenantId, res);

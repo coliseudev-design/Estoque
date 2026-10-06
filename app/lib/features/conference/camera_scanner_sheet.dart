@@ -27,7 +27,7 @@ class _CameraScannerPageState extends State<_CameraScannerPage> {
     detectionSpeed: DetectionSpeed.normal,
     formats: const [
       BarcodeFormat.ean13, BarcodeFormat.ean8, BarcodeFormat.upcA, BarcodeFormat.upcE,
-      BarcodeFormat.code128, BarcodeFormat.code39, BarcodeFormat.itf, BarcodeFormat.qrCode,
+      BarcodeFormat.code128, BarcodeFormat.code39, BarcodeFormat.itf14, BarcodeFormat.qrCode,
       BarcodeFormat.dataMatrix,
     ],
   );

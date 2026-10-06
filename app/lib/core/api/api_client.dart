@@ -102,6 +102,48 @@ class ApiClient {
     }
   }
 
+  // ── Pareamento pelo painel do Estoque ────────────────────────────────────
+
+  /// Testa se o endereço responde e é uma API do Coliseu Estoque.
+  Future<void> health(String apiUrl) async {
+    try {
+      final res = await _dio.get('$apiUrl/health',
+          options: Options(extra: {'noAuth': true}, receiveTimeout: const Duration(seconds: 8)));
+      final body = res.data;
+      if (body is! Map || body['status'] == null) {
+        throw const ApiException('Esse endereço respondeu, mas não é a API do Coliseu Estoque.');
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      final ex = ApiException.from(e);
+      throw ex.isNetwork
+          ? ApiException('Não consegui falar com $apiUrl. Confira o endereço e se o celular está na mesma rede/internet.')
+          : ex;
+    }
+  }
+
+  /// Troca o código de uso único do painel pela credencial do aparelho.
+  Future<Map<String, dynamic>> pair(String apiUrl, Map<String, dynamic> body) async {
+    try {
+      final res = await _dio.post('$apiUrl/v1/auth/pair', data: body, options: Options(extra: {'noAuth': true}));
+      return res.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ApiException.from(e);
+    }
+  }
+
+  /// Login do operador em aparelho pareado: credencial do aparelho + usuário + PIN.
+  Future<Map<String, dynamic>> appLogin(String deviceKey, String login, String pin, String appVersion) async {
+    try {
+      final res = await _dio.post('$_base/v1/auth/app-login',
+          data: {'login': login, 'pin': pin, 'appVersion': appVersion},
+          options: Options(headers: {'X-Device-Key': deviceKey}, extra: {'noAuth': true}));
+      return res.data as Map<String, dynamic>;
+    } catch (e) {
+      throw ApiException.from(e);
+    }
+  }
+
   /// Login do operador: JWT do aparelho (Identity) + usuário + PIN.
   Future<Map<String, dynamic>> operatorLogin(String deviceToken, String login, String pin) async {
     try {
