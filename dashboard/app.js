@@ -351,6 +351,8 @@
     back: svg('<path d="M15 18l-6-6 6-6"/>', 'stroke-width="2.4"'),
     search: svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'),
     phone: svg('<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/>'),
+    eye: svg('<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>'),
+    enter: svg('<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5M15 12H3"/>', 'stroke-width="2.4"'),
     help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>'),
   };
 
@@ -527,79 +529,130 @@
     const key = store.get('est.key') || '';
     let company = null;
 
+    // Painel da esquerda (marca + o que o sistema faz) fica fixo; a direita troca por passo.
     const shell = (inner) => {
-      $('#root').innerHTML = html`<div class="auth">
-        <div class="auth-art" aria-hidden="true">
-          <div class="art-title">Conferência cega de<br>entradas e saídas</div>
-          <ul><li>${raw(ICON.arrowIn)} Recebimento por XML e DANFE</li><li>${raw(ICON.arrowOut)} Separação de pedidos do ERP</li><li>${raw(ICON.warn)} Críticas automáticas</li></ul>
-        </div>
-        <div class="card"><div class="brand-mark">C</div>${inner}</div></div>`.s;
+      $('#root').innerHTML = html`<div class="login">
+        <aside class="login-hero" aria-hidden="true">
+          <div class="hero-brand"><span class="hero-mark"><img src="img/coliseu_logo.png" alt=""></span><span>Coliseu Estoque</span></div>
+          <div class="hero-copy">
+            <h1>Cada item conferido,<br><span>sem erro e sem retrabalho.</span></h1>
+            <p>Conferência cega de entradas e saídas integrada ao seu ERP. Receba notas pelo XML, separe pedidos com o leitor e resolva divergências em tempo real.</p>
+          </div>
+          <div class="hero-cards">
+            <div class="hcard"><div class="hc-top"><span class="hc-ic in">${raw(ICON.arrowIn)}</span>Entradas</div>
+              <div class="hc-val">XML + DANFE</div><div class="hc-sub"><b>Recebimento</b> conferido contra a nota</div></div>
+            <div class="hcard"><div class="hc-top"><span class="hc-ic out">${raw(ICON.arrowOut)}</span>Saídas</div>
+              <div class="hc-val">Pedidos do ERP</div><div class="hc-sub"><b>Separação</b> com coletor ou câmera</div></div>
+            <div class="hcard wide"><div class="hc-top"><span class="hc-ic ok">${raw(ICON.trend)}</span>Críticas automáticas</div>
+              <div class="hc-val">Falta · Sobra · Validade · SLA</div>
+              <div class="hc-bars"><i style="height:30%"></i><i style="height:45%"></i><i style="height:38%"></i><i style="height:60%"></i><i style="height:52%"></i><i style="height:74%"></i><i style="height:88%"></i></div></div>
+          </div>
+        </aside>
+        <main class="login-side">
+          <div class="login-box">
+            <img class="login-logo" src="img/coliseu_logo.png" alt="Coliseu Sistemas" width="300" height="76">
+            ${inner}
+          </div>
+          <div class="login-foot">Coliseu Sistemas · Coliseu Estoque</div>
+        </main>
+      </div>`.s;
     };
+
+    const busyBtn = (form, on) => { const b = $('button[type=submit]', form); if (b) { b.disabled = on; b.classList.toggle('loading', on); } };
+    const bindEye = () => $$('[data-eye]').forEach((b) => b.addEventListener('click', () => {
+      const i = $(`#${b.dataset.eye}`); const show = i.type === 'password';
+      i.type = show ? 'text' : 'password'; b.classList.toggle('on', show); b.setAttribute('aria-label', show ? 'Ocultar' : 'Mostrar');
+    }));
+    const eye = (id) => html`<button type="button" class="eye" data-eye="${id}" aria-label="Mostrar">${raw(ICON.eye)}</button>`;
+    const arrow = raw(ICON.enter);
 
     const stepCompany = () => {
       shell(html`
-        <h1>Coliseu Estoque</h1>
-        <div class="sub">Identifique a empresa com os dados do painel de licenças.</div>
-        <form id="f">
-          <div class="field"><label for="serial">Serial da empresa</label>
-            <input class="input mono" id="serial" required value="${serial}" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off">
-            <div class="help">Em Empresas, no painel de licenças (campo "Serial").</div></div>
-          <div class="field"><label for="key">Chave do módulo Estoque</label>
-            <input class="input mono" id="key" required value="${key}" placeholder="COL-XXXX-XXXX-XXXX" autocomplete="off"></div>
-          <label class="check"><input type="checkbox" id="remember" ${key ? 'checked' : ''}> Lembrar neste computador</label>
-          <button class="btn primary lg" style="width:100%">Continuar</button>
+        <h2 class="login-title">Bem-vindo de volta.</h2>
+        <p class="login-sub">Identifique a empresa para acessar a conferência de estoque.</p>
+        <form id="f" class="login-form">
+          <div class="lfield"><label for="serial">Serial da empresa</label>
+            <input class="linput mono" id="serial" required value="${serial}" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off">
+            <small>Painel de licenças → Empresas → campo “Serial”.</small></div>
+          <div class="lfield"><label for="key">Chave do módulo Estoque</label>
+            <div class="pw"><input class="linput mono" id="key" type="password" required value="${key}" placeholder="COL-XXXX-XXXX-XXXX" autocomplete="off">${eye('key')}</div></div>
+          <label class="lcheck"><input type="checkbox" id="remember" ${store.get('est.remember') !== '0' ? 'checked' : ''}><span>Salvar dados de acesso neste computador</span></label>
+          <button class="lbtn" type="submit"><span>Avançar</span>${arrow}</button>
         </form>`);
+      bindEye();
+      if (serial) $('#key').focus(); else $('#serial').focus();
       $('#f').addEventListener('submit', async (e) => {
         e.preventDefault();
         const s = $('#serial').value.trim();
         const k = $('#key').value.trim().toUpperCase();
+        busyBtn(e.target, true);
         try {
           company = await api('POST', '/v1/auth/company', { tenantId: s, companyKey: k });
           store.set('est.serial', s);
+          store.set('est.remember', $('#remember').checked ? '1' : '0');
           if ($('#remember').checked) store.set('est.key', k); else store.del('est.key');
           company.serial = s; company.key = k;
           company.needsSetup ? stepSetup() : stepLogin();
-        } catch (err) { toast(err.message, true); }
+        } catch (err) { toast(err.message, true); busyBtn(e.target, false); }
       });
     };
 
+    const companyChip = () => html`<button type="button" class="company-chip" id="change" title="Trocar empresa">
+      <span class="cc-ic">${(company.name || 'E').trim().charAt(0).toUpperCase()}</span>
+      <span class="cc-txt"><b>${company.name || 'Empresa'}</b><small>Trocar empresa</small></span>${raw(ICON.back)}</button>`;
+
     const stepLogin = () => {
+      const lastLogin = store.get('est.login') || '';
       shell(html`
-        <h1>${company.name || 'Entrar'}</h1>
-        <div class="sub">Entre com seu usuário. <a href="#" id="change">Trocar empresa</a></div>
-        <form id="f">
-          <div class="field"><label for="login">Usuário</label><input class="input" id="login" required autocomplete="username"></div>
-          <div class="field"><label for="pass">Senha</label><input class="input" id="pass" type="password" required autocomplete="current-password"></div>
-          <button class="btn primary lg" style="width:100%">Entrar</button>
+        <h2 class="login-title">Bem-vindo de volta.</h2>
+        <p class="login-sub">Entre para acompanhar entradas, saídas e divergências.</p>
+        ${companyChip()}
+        <form id="f" class="login-form">
+          <div class="lfield"><label for="login">Usuário</label>
+            <input class="linput" id="login" required autocomplete="username" value="${lastLogin}"></div>
+          <div class="lfield"><label for="pass">Senha</label>
+            <div class="pw"><input class="linput" id="pass" type="password" required autocomplete="current-password">${eye('pass')}</div></div>
+          <label class="lcheck"><input type="checkbox" id="rememberLogin" ${store.get('est.remember') !== '0' ? 'checked' : ''}><span>Lembrar meu usuário</span></label>
+          <button class="lbtn" type="submit"><span>Entrar</span>${arrow}</button>
         </form>`);
-      $('#change').addEventListener('click', (e) => { e.preventDefault(); stepCompany(); });
+      bindEye();
+      (lastLogin ? $('#pass') : $('#login')).focus();
+      $('#change').addEventListener('click', () => stepCompany());
       $('#f').addEventListener('submit', async (e) => {
         e.preventDefault();
+        busyBtn(e.target, true);
         try {
           setSession(await api('POST', '/v1/auth/login', {
             tenantId: company.serial, companyKey: company.key, login: $('#login').value, password: $('#pass').value,
           }));
+          if ($('#rememberLogin').checked) store.set('est.login', $('#login').value.trim()); else store.del('est.login');
           location.hash = home();
           render();
-        } catch (err) { toast(err.message, true); }
+        } catch (err) { toast(err.message, true); busyBtn(e.target, false); $('#pass').select(); }
       });
     };
 
     const stepSetup = () => {
       shell(html`
-        <h1>Primeiro acesso</h1>
-        <div class="sub">${company.name || 'Empresa'} ainda não tem usuários. Crie o administrador.</div>
-        <form id="f">
-          <div class="field"><label for="name">Seu nome</label><input class="input" id="name" required></div>
-          <div class="field"><label for="login">Usuário</label><input class="input" id="login" required autocomplete="username"></div>
-          <div class="field"><label for="pass">Senha</label><input class="input" id="pass" type="password" minlength="8" required autocomplete="new-password">
-            <div class="help">Mínimo de 8 caracteres.</div></div>
-          <div class="field"><label for="pass2">Confirme a senha</label><input class="input" id="pass2" type="password" required autocomplete="new-password"></div>
-          <button class="btn primary lg" style="width:100%">Criar administrador</button>
+        <h2 class="login-title">Primeiro acesso.</h2>
+        <p class="login-sub">${company.name || 'Esta empresa'} ainda não tem usuários. Crie o administrador.</p>
+        ${companyChip()}
+        <form id="f" class="login-form">
+          <div class="lfield"><label for="name">Seu nome</label><input class="linput" id="name" required></div>
+          <div class="lfield"><label for="login">Usuário</label><input class="linput" id="login" required autocomplete="username"></div>
+          <div class="lfield"><label for="pass">Senha</label>
+            <div class="pw"><input class="linput" id="pass" type="password" minlength="8" required autocomplete="new-password">${eye('pass')}</div>
+            <small>Mínimo de 8 caracteres.</small></div>
+          <div class="lfield"><label for="pass2">Confirme a senha</label><input class="linput" id="pass2" type="password" required autocomplete="new-password"></div>
+          <button class="lbtn" type="submit"><span>Criar administrador</span>${arrow}</button>
         </form>`);
+      bindEye();
+      $('#name').focus();
+      $('#change').addEventListener('click', () => stepCompany());
       $('#f').addEventListener('submit', async (e) => {
         e.preventDefault();
         if ($('#pass').value !== $('#pass2').value) return toast('As senhas não conferem', true);
+        busyBtn(e.target, true);
         try {
           setSession(await api('POST', '/v1/auth/setup', {
             tenantId: company.serial, companyKey: company.key,
@@ -608,7 +661,7 @@
           toast('Empresa configurada. Cadastre os operadores em Usuários.');
           location.hash = '#/';
           render();
-        } catch (err) { toast(err.message, true); }
+        } catch (err) { toast(err.message, true); busyBtn(e.target, false); }
       });
     };
 
