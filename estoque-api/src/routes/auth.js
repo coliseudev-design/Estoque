@@ -17,7 +17,7 @@ const rateLimit = require('express-rate-limit');
 const { z } = require('zod');
 const db = require('../db');
 const { route, parse, unauthorized, forbidden, conflict } = require('../http');
-const { validateModuleKey, isTenantLicensed } = require('../auth/license');
+const { validateModuleKey, isTenantLicensed, hashKey } = require('../auth/license');
 const { hashSecret, verifySecret } = require('../auth/passwords');
 const { signUserToken, verifyDeviceToken } = require('../auth/tokens');
 const { requireUser, UUID_RE } = require('../auth/middleware');
@@ -79,14 +79,16 @@ router.post('/setup', loginLimit, route(async (req, res) => {
 
     const user = await db.tx(async (client) => {
         // Garante que o tenant existe na tabela tenants com status de licença ativa
+        const keyHash = hashKey(body.companyKey);
         await client.query(
-            `INSERT INTO tenants (id, name, license_valid, license_checked_at)
-             VALUES ($1, $2, TRUE, now())
+            `INSERT INTO tenants (id, name, key_hash, license_valid, license_checked_at)
+             VALUES ($1, $2, $3, TRUE, now())
              ON CONFLICT (id) DO UPDATE
-                SET license_valid = TRUE,
-                    name = COALESCE($2, tenants.name),
+                SET key_hash = EXCLUDED.key_hash,
+                    license_valid = TRUE,
+                    name = COALESCE(NULLIF($2, ''), tenants.name),
                     license_checked_at = now()`,
-            [body.tenantId, lic.companyName || 'Empresa'],
+            [body.tenantId, lic.companyName || 'Empresa', keyHash],
         );
 
         // Procura se o usuário já existe na empresa
