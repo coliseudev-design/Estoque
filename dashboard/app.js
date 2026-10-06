@@ -655,7 +655,6 @@
             email,
             password,
             tenantId: store.get('est.serial') || undefined,
-            companyKey: store.get('est.key') || undefined,
           });
 
           if (resp?.requiresCompanySelection) {
@@ -740,8 +739,8 @@
 
       shell(html`
         <button type="button" class="btn-link" id="back-login">${raw(ICON.back)} Voltar ao login</button>
-        <h2 class="login-title">Ativar Empresa</h2>
-        <p class="login-sub">Identifique a empresa com os dados do painel de licenças para criar o primeiro administrador.</p>
+        <h2 class="login-title">Ativar Licença / Cadastrar Usuário</h2>
+        <p class="login-sub">Informe o serial da empresa e a chave do módulo Estoque para ativar ou criar seu acesso de administrador.</p>
         <form id="f" class="login-form">
           <div class="lfield">
             <label for="serial">Serial da empresa</label>

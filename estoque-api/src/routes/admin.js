@@ -98,7 +98,7 @@ const ROLES = ['operador', 'supervisor', 'admin'];
 
 router.get('/users', supervisor, route(async (req, res) => {
     const { rows } = await db.query(
-        `SELECT id, login, name, role, active, last_login_at, created_at,
+        `SELECT id, login, name, email, role, active, last_login_at, created_at,
                 password_hash IS NOT NULL AS has_password, pin_hash IS NOT NULL AS has_pin
            FROM users WHERE tenant_id = $1 ORDER BY active DESC, name`,
         [req.tenantId],
@@ -118,6 +118,7 @@ const passwordSchema = z.string().min(8, 'Senha com no mínimo 8 caracteres').ma
 router.post('/users', supervisor, route(async (req, res) => {
     const body = parse(z.object({
         login: z.string().trim().min(2).max(60).regex(/^[\w.@-]+$/, 'Use letras, números, ponto, hífen ou @'),
+        email: z.string().trim().email().optional(),
         name: z.string().trim().min(2).max(120),
         role: z.enum(ROLES),
         password: passwordSchema.optional(),
@@ -125,16 +126,18 @@ router.post('/users', supervisor, route(async (req, res) => {
     }).refine((b) => b.password || b.pin, 'Informe senha (painel) e/ou PIN (app)'), req.body);
     assertCanManage(req.user, body.role);
 
+    const email = body.email || (body.login.includes('@') ? body.login : null);
+
     try {
         const { rows } = await db.query(
-            `INSERT INTO users (tenant_id, login, name, role, password_hash, pin_hash)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-            [req.tenantId, body.login, body.name, body.role,
+            `INSERT INTO users (tenant_id, login, email, name, role, password_hash, pin_hash)
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+            [req.tenantId, body.login, email, body.name, body.role,
                 body.password ? await hashSecret(body.password) : null,
                 body.pin ? await hashSecret(body.pin) : null],
         );
         await audit(null, { tenantId: req.tenantId, userId: req.user.id, action: 'user.created',
-            details: { id: rows[0].id, login: body.login, role: body.role } });
+            details: { id: rows[0].id, login: body.login, email, role: body.role } });
         res.status(201).json({ id: rows[0].id });
     } catch (err) {
         if (err.code === '23505') throw conflict('Já existe um usuário com este login', 'DUPLICATE_LOGIN');
@@ -146,6 +149,7 @@ router.patch('/users/:id', supervisor, route(async (req, res) => {
     const id = parse(z.string().regex(UUID_RE), req.params.id);
     const body = parse(z.object({
         name: z.string().trim().min(2).max(120).optional(),
+        email: z.string().trim().email().optional(),
         role: z.enum(ROLES).optional(),
         active: z.boolean().optional(),
         password: passwordSchema.optional(),
@@ -164,6 +168,7 @@ router.patch('/users/:id', supervisor, route(async (req, res) => {
     const params = [id, req.tenantId];
     const set = (col, val) => { params.push(val); sets.push(`${col} = $${params.length}`); };
     if (body.name !== undefined) set('name', body.name);
+    if (body.email !== undefined) set('email', body.email);
     if (body.role !== undefined) set('role', body.role);
     if (body.active !== undefined) set('active', body.active);
     if (body.password) set('password_hash', await hashSecret(body.password));

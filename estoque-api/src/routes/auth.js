@@ -60,34 +60,72 @@ async function findUser(tenantId, login) {
     return rows[0] || null;
 }
 
-// ── Primeiro acesso: cria o administrador da empresa ─────────────────────────
+// ── Primeiro acesso / Ativação: cria ou reativa o administrador da empresa ─────
 router.post('/setup', loginLimit, route(async (req, res) => {
     const body = parse(z.object({
         tenantId: tenantSchema,
         companyKey: z.string().min(8),
         name: z.string().trim().min(2).max(120),
-        login: z.string().trim().min(2).max(60),
-        email: z.string().email().optional(),
+        login: z.string().trim().min(2).max(60).optional(),
+        email: z.string().trim().email().optional(),
         password: z.string().min(8, 'Senha com no mínimo 8 caracteres').max(200),
-    }), req.body);
+    }).refine((b) => b.login || b.email, 'Informe e-mail ou login'), req.body);
 
     const lic = await validateModuleKey(body.tenantId, body.companyKey);
     if (!lic.valid) throw forbidden(lic.reason || 'Licença inválida', 'LICENSE_DENIED');
 
-    const email = body.email || (body.login.includes('@') ? body.login : null);
+    const effectiveLogin = (body.login || body.email).trim();
+    const effectiveEmail = body.email || (effectiveLogin.includes('@') ? effectiveLogin : null);
 
     const user = await db.tx(async (client) => {
-        // Serializa setups concorrentes da mesma empresa.
-        await client.query('SELECT 1 FROM tenants WHERE id = $1 FOR UPDATE', [body.tenantId]);
-        const { rows: existing } = await client.query('SELECT 1 FROM users WHERE tenant_id = $1 LIMIT 1', [body.tenantId]);
-        if (existing.length) throw conflict('Esta empresa já foi configurada. Entre com seu e-mail e senha.', 'ALREADY_SETUP');
-        const { rows } = await client.query(
-            `INSERT INTO users (tenant_id, login, email, name, role, password_hash)
-             VALUES ($1, $2, $3, $4, 'admin', $5) RETURNING *`,
-            [body.tenantId, body.login, email, body.name, await hashSecret(body.password)],
+        // Garante que o tenant existe na tabela tenants com status de licença ativa
+        await client.query(
+            `INSERT INTO tenants (id, name, license_valid, license_checked_at)
+             VALUES ($1, $2, TRUE, now())
+             ON CONFLICT (id) DO UPDATE
+                SET license_valid = TRUE,
+                    name = COALESCE($2, tenants.name),
+                    license_checked_at = now()`,
+            [body.tenantId, lic.companyName || 'Empresa'],
         );
-        await audit(client, { tenantId: body.tenantId, userId: rows[0].id, action: 'tenant.setup' });
-        return rows[0];
+
+        // Procura se o usuário já existe na empresa
+        const { rows: existingUser } = await client.query(
+            `SELECT id FROM users
+              WHERE tenant_id = $1
+                AND (lower(trim(login)) = lower(trim($2))
+                     OR (email IS NOT NULL AND lower(trim(email)) = lower(trim($3))))`,
+            [body.tenantId, effectiveLogin, effectiveEmail || effectiveLogin],
+        );
+
+        let targetUser;
+        if (existingUser.length) {
+            const { rows } = await client.query(
+                `UPDATE users
+                    SET name = $3,
+                        login = $4,
+                        email = $5,
+                        password_hash = $6,
+                        role = 'admin',
+                        active = TRUE,
+                        updated_at = now()
+                  WHERE id = $1 AND tenant_id = $2
+              RETURNING *`,
+                [existingUser[0].id, body.tenantId, body.name, effectiveLogin, effectiveEmail, await hashSecret(body.password)],
+            );
+            targetUser = rows[0];
+            await audit(client, { tenantId: body.tenantId, userId: targetUser.id, action: 'tenant.admin_updated' });
+        } else {
+            const { rows } = await client.query(
+                `INSERT INTO users (tenant_id, login, email, name, role, password_hash, active)
+                 VALUES ($1, $2, $3, $4, 'admin', $5, TRUE)
+              RETURNING *`,
+                [body.tenantId, effectiveLogin, effectiveEmail, body.name, await hashSecret(body.password)],
+            );
+            targetUser = rows[0];
+            await audit(client, { tenantId: body.tenantId, userId: targetUser.id, action: 'tenant.setup' });
+        }
+        return targetUser;
     });
     res.status(201).json(await session(user, null));
 }));
@@ -174,29 +212,39 @@ router.post('/login', loginLimit, route(async (req, res) => {
         }
     }
 
-    // 2. Fluxo com tenantId e companyKey explícitos (legado / caso fornecido)
-    if (req.body.tenantId && req.body.companyKey) {
-        const lic = await validateModuleKey(req.body.tenantId, req.body.companyKey);
-        if (!lic.valid) throw forbidden(lic.reason || 'Licença inválida', 'LICENSE_DENIED');
-
-        const user = await findUser(req.body.tenantId, rawLogin);
-        if (!user || !user.active || !(await verifySecret(rawPassword, user.password_hash))) {
-            throw unauthorized('Usuário ou senha inválidos', 'INVALID_CREDENTIALS');
-        }
-        return res.json(await session(user, null));
+    // 2. Busca de usuário por E-mail ou Login
+    const usernamePrefix = normalizedEmail.includes('@') ? normalizedEmail.split('@')[0] : normalizedEmail;
+    const queryParams = [normalizedEmail, usernamePrefix];
+    let tenantFilter = '';
+    if (req.body.tenantId) {
+        queryParams.push(req.body.tenantId);
+        tenantFilter = 'AND u.tenant_id = $3';
     }
 
-    // 3. Login direto unificado por E-mail ou Usuário (Nexus / Vision padrão)
-    const usernamePrefix = normalizedEmail.includes('@') ? normalizedEmail.split('@')[0] : normalizedEmail;
-
-    const { rows: candidates } = await db.query(`
+    let { rows: candidates } = await db.query(`
         SELECT u.*, t.name AS company_name, t.license_valid
           FROM users u
           JOIN tenants t ON t.id = u.tenant_id
-         WHERE lower(trim(u.login)) = lower(trim($1))
+         WHERE (lower(trim(u.login)) = lower(trim($1))
             OR (u.email IS NOT NULL AND lower(trim(u.email)) = lower(trim($1)))
-            OR lower(trim(u.login)) = lower(trim($2))
-    `, [normalizedEmail, usernamePrefix]);
+            OR lower(trim(u.login)) = lower(trim($2)))
+            ${tenantFilter}
+    `, queryParams);
+
+    // Se filtrou por tenantId e não achou, tenta busca global antes de falhar
+    if (!candidates.length && req.body.tenantId) {
+        const { rows: globalCandidates } = await db.query(`
+            SELECT u.*, t.name AS company_name, t.license_valid
+              FROM users u
+              JOIN tenants t ON t.id = u.tenant_id
+             WHERE lower(trim(u.login)) = lower(trim($1))
+                OR (u.email IS NOT NULL AND lower(trim(u.email)) = lower(trim($1)))
+                OR lower(trim(u.login)) = lower(trim($2))
+        `, [normalizedEmail, usernamePrefix]);
+        if (globalCandidates.length) {
+            candidates = globalCandidates;
+        }
+    }
 
     if (!candidates.length) {
         const { rows: userCount } = await db.query('SELECT count(*)::int AS count FROM users');

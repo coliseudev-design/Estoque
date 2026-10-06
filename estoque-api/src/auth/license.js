@@ -22,6 +22,35 @@ function hashKey(raw) {
     return crypto.createHash('sha256').update(String(raw).trim().toUpperCase(), 'utf8').digest('hex');
 }
 
+function generateKeyCandidates(rawKey) {
+    const base = String(rawKey || '').trim().toUpperCase();
+    if (!base) return [];
+
+    const candidates = [base];
+
+    // Se o usuário digitou sem prefixo COL- (ex: KGYZ-FXUY-SFHQ)
+    if (!base.startsWith('COL-') && base.includes('-')) {
+        candidates.push(`COL-${base}`);
+    }
+
+    // Se o usuário digitou sem hífens (ex: COLKGYZFXUYSFHQ)
+    if (base.startsWith('COL') && !base.includes('-') && base.length === 15) {
+        const formatted = `COL-${base.slice(3, 7)}-${base.slice(7, 11)}-${base.slice(11, 15)}`;
+        candidates.push(formatted);
+    }
+
+    // Ambiguidade visual frequente: '5' <-> 'S' (ex: COL-KGYZ-FXUY-5FHQ vs COL-KGYZ-FXUY-SFHQ)
+    const currentList = [...candidates];
+    for (const c of currentList) {
+        if (c.includes('5')) candidates.push(c.replace(/5/g, 'S'));
+        if (c.includes('S')) candidates.push(c.replace(/S/g, '5'));
+        if (c.includes('8')) candidates.push(c.replace(/8/g, 'B'));
+        if (c.includes('B')) candidates.push(c.replace(/B/g, '8'));
+    }
+
+    return [...new Set(candidates)];
+}
+
 const cache = new Map(); // `${tenant}|${hash}` → { valid, reason, checkedAt }
 
 async function callIdentity(path, init) {
@@ -54,34 +83,33 @@ async function validateModuleKey(tenantId, rawKey) {
     const hit = cache.get(cacheKey);
     if (hit && now - hit.checkedAt < config.identity.cacheTtlMs) return hit;
 
-    const slugsToTry = [config.identity.moduleSlug, 'coliseu-estoque', 'estoque'].filter((v, i, a) => v && a.indexOf(v) === i);
+    const slugsToTry = [config.identity.moduleSlug, 'coliseu-estoque', 'estoque', 'coliseuspeed', 'coliseu-speed']
+        .filter((v, i, a) => v && a.indexOf(v) === i);
+    const keyCandidates = generateKeyCandidates(rawKey);
+
     try {
         let lastStatus = 0;
         let lastBody = {};
         let success = false;
         let successfulSlug = config.identity.moduleSlug;
 
-        for (const currentSlug of slugsToTry) {
-            const slugEnc = encodeURIComponent(currentSlug);
-            const { status, body } = await callIdentity(
-                `/internal/companies/${tenantId}/modules/${slugEnc}/validate-key`,
-                { method: 'POST', body: JSON.stringify({ apiKey: String(rawKey).trim() }) },
-            );
-            lastStatus = status;
-            lastBody = body;
+        validationSearch:
+        for (const candidate of keyCandidates) {
+            for (const currentSlug of slugsToTry) {
+                const slugEnc = encodeURIComponent(currentSlug);
+                const { status, body } = await callIdentity(
+                    `/internal/companies/${tenantId}/modules/${slugEnc}/validate-key`,
+                    { method: 'POST', body: JSON.stringify({ apiKey: candidate }) },
+                );
+                lastStatus = status;
+                lastBody = body;
 
-            if (status === 200 && body.valid) {
-                success = true;
-                successfulSlug = currentSlug;
-                break;
+                if (status === 200 && body.valid) {
+                    success = true;
+                    successfulSlug = currentSlug;
+                    break validationSearch;
+                }
             }
-
-            // Se o módulo não estiver ativado sob este slug, tenta o alternativo (ex: coliseu-estoque vs estoque)
-            const errMsg = String(body.error || body.reason || '').toLowerCase();
-            if (status === 403 && errMsg.includes('não ativado')) {
-                continue;
-            }
-            break;
         }
 
         if (lastStatus >= 500 && !success) throw new Error(`Identity respondeu ${lastStatus}`);
@@ -146,4 +174,4 @@ async function isTenantLicensed(tenantId) {
     return rows[0]?.license_valid === true;
 }
 
-module.exports = { hashKey, validateModuleKey, isTenantLicensed };
+module.exports = { hashKey, validateModuleKey, isTenantLicensed, generateKeyCandidates };
