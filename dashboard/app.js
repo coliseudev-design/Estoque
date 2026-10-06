@@ -1027,23 +1027,102 @@
   // Produtos
   // ───────────────────────────────────────────────────────────────────────────
   async function viewProducts() {
+    // Filtros lembrados neste navegador; a busca de texto começa sempre vazia.
+    let saved = {};
+    try { saved = JSON.parse(store.get('est.prod.filters') || '{}'); } catch { /* ignora */ }
+    const f = { q: '', brand: saved.brand || '', group: saved.group || '', inStock: Boolean(saved.inStock) };
+    let items = [];
+    let hasMore = false;
+    const persist = () => store.set('est.prod.filters', JSON.stringify({ brand: f.brand, group: f.group, inStock: f.inStock }));
+
     main().innerHTML = html`
       ${pageHead('Produtos', 'Catálogo sincronizado do ERP')}
       <div class="card">
-        <div class="toolbar"><input class="input" id="q" placeholder="Descrição, código ou EAN" style="max-width:420px"></div>
+        <div class="toolbar">
+          <input class="input" id="q" placeholder="Buscar por descrição, código ou EAN" style="max-width:320px">
+          <select class="input" id="brand" style="width:200px"><option value="">Todas as marcas</option></select>
+          <select class="input" id="group" style="width:200px"><option value="">Todos os grupos</option></select>
+          <button class="pill tone-ok ${f.inStock ? 'active' : ''}" id="instock" type="button" aria-pressed="${f.inStock}">Somente com estoque</button>
+          <button class="btn sm" id="clear" type="button" style="margin-left:auto">Limpar filtros</button>
+        </div>
+        <div class="toolbar muted" id="summary" style="padding-top:10px;padding-bottom:10px;font-size:13px"></div>
         <div id="list"></div>
       </div>`.s;
-    const load = async (q) => {
-      const r = await api('GET', `/v1/products?q=${encodeURIComponent(q)}&limit=100`);
-      $('#list').innerHTML = r.items.length ? html`<div class="table-wrap"><table>
-        <thead><tr><th>Código</th><th>Descrição</th><th>Un</th><th>Marca</th><th>Grupo</th><th>Códigos de barras</th><th class="num">Saldo</th></tr></thead>
-        <tbody>${r.items.map((p) => html`<tr><td class="mono">${p.erpId}</td><td>${p.description}</td><td>${p.unit || ''}</td><td>${p.brand || ''}</td><td>${p.group || ''}</td>
-          <td class="mono muted">${(p.barcodes || []).join(', ')}</td><td class="num">${fmtQty(p.stock)}</td></tr>`)}</tbody></table></div>`.s
-        : '<div class="empty">Nenhum produto encontrado.</div>';
+
+    const fillFacets = async () => {
+      const r = await api('GET', `/v1/products/facets${f.inStock ? '?inStock=1' : ''}`);
+      const opts = (list, current, all) => [html`<option value="">${all}</option>`,
+        ...list.map((x) => html`<option value="${x.name}" ${x.name === current ? 'selected' : ''}>${x.name} (${x.n})</option>`)];
+      // Filtro salvo que deixou de existir (ex.: marca sem estoque) é descartado.
+      if (f.brand && !r.brands.some((b) => b.name === f.brand)) f.brand = '';
+      if (f.group && !r.groups.some((g) => g.name === f.group)) f.group = '';
+      $('#brand').innerHTML = html`${opts(r.brands, f.brand, 'Todas as marcas')}`.s;
+      $('#group').innerHTML = html`${opts(r.groups, f.group, 'Todos os grupos')}`.s;
+      $('#summary').textContent = `${r.total.toLocaleString('pt-BR')} produtos no catálogo · ${r.com_estoque.toLocaleString('pt-BR')} com estoque`;
     };
-    $('#q').addEventListener('input', debounce((e) => load(e.target.value.trim()).catch((er) => toast(er.message, true)), 300));
+
+    const load = async (append = false) => {
+      const params = new URLSearchParams({ limit: '100', offset: String(append ? items.length : 0) });
+      if (f.q) params.set('q', f.q);
+      if (f.brand) params.set('brand', f.brand);
+      if (f.group) params.set('group', f.group);
+      if (f.inStock) params.set('inStock', '1');
+      const r = await api('GET', `/v1/products?${params}`);
+      items = append ? items.concat(r.items) : r.items;
+      hasMore = r.hasMore;
+      draw();
+    };
+
+    const stockCell = (s) => {
+      const n = Number(s);
+      return n > 0 ? html`<strong style="color:var(--ok)">${fmtQty(s)}</strong>`
+        : n < 0 ? html`<strong style="color:var(--danger)">${fmtQty(s)}</strong>`
+          : html`<span class="muted">0</span>`;
+    };
+
+    const draw = () => {
+      const active = [f.q && `"${f.q}"`, f.brand, f.group, f.inStock && 'com estoque'].filter(Boolean);
+      $('#list').innerHTML = items.length ? html`<div class="table-wrap"><table>
+        <thead><tr><th>Código</th><th>Descrição</th><th>Un</th><th>Marca</th><th>Grupo</th><th>Códigos de barras</th><th class="num">Saldo</th></tr></thead>
+        <tbody>${items.map((p) => html`<tr>
+          <td class="mono">${p.erpId}</td><td><strong style="font-weight:600">${p.description}</strong></td><td>${p.unit || ''}</td>
+          <td>${p.brand ? html`<a href="#" data-brand="${p.brand}">${p.brand}</a>` : ''}</td>
+          <td>${p.group ? html`<a href="#" data-group="${p.group}">${p.group}</a>` : ''}</td>
+          <td class="mono muted">${(p.barcodes || []).join(', ')}</td><td class="num">${stockCell(p.stock)}</td></tr>`)}</tbody></table></div>
+        <div class="toolbar muted" style="justify-content:space-between;border-top:1px solid var(--border);border-bottom:none">
+          <span>${items.length} produto(s)${hasMore ? ' — há mais' : ''}${active.length ? ` · filtro: ${active.join(' · ')}` : ''}</span>
+          ${hasMore ? html`<button class="btn sm" id="more">Carregar mais</button>` : ''}</div>`.s
+        : html`<div class="empty">Nenhum produto encontrado${active.length ? ` para ${active.join(' · ')}` : ''}.</div>`.s;
+      $('#more')?.addEventListener('click', () => load(true).catch((e) => toast(e.message, true)));
+      // Clicar numa marca/grupo da tabela aplica o filtro.
+      $$('[data-brand]', $('#list')).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); f.brand = a.dataset.brand; $('#brand').value = f.brand; persist(); load().catch(() => {}); }));
+      $$('[data-group]', $('#list')).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); f.group = a.dataset.group; $('#group').value = f.group; persist(); load().catch(() => {}); }));
+    };
+
+    const reload = () => load().catch((er) => toast(er.message, true));
+    $('#q').addEventListener('input', debounce((e) => { f.q = e.target.value.trim(); reload(); }, 300));
+    $('#brand').addEventListener('change', (e) => { f.brand = e.target.value; persist(); reload(); });
+    $('#group').addEventListener('change', (e) => { f.group = e.target.value; persist(); reload(); });
+    $('#instock').addEventListener('click', async (e) => {
+      f.inStock = !f.inStock;
+      e.currentTarget.classList.toggle('active', f.inStock);
+      e.currentTarget.setAttribute('aria-pressed', String(f.inStock));
+      persist();
+      await fillFacets().catch(() => {});
+      reload();
+    });
+    $('#clear').addEventListener('click', async () => {
+      Object.assign(f, { q: '', brand: '', group: '', inStock: false });
+      $('#q').value = '';
+      $('#instock').classList.remove('active');
+      persist();
+      await fillFacets().catch(() => {});
+      reload();
+    });
+
+    await fillFacets();
+    await load();
     $('#q').focus();
-    await load('');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

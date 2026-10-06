@@ -71,8 +71,17 @@ app.use(['/v1', '/internal'], (req, res) => res.status(404).json({ error: 'Rota 
 
 // Dashboard: arquivos estáticos + fallback do roteador por hash.
 if (fs.existsSync(config.dashboardDir)) {
-    app.use(express.static(config.dashboardDir, { index: 'index.html', maxAge: '1h' }));
-    app.get('*', (req, res) => res.sendFile(path.join(config.dashboardDir, 'index.html')));
+    // HTML/JS/CSS sempre revalidados (ETag → 304 barato): após um deploy o navegador
+    // pega a versão nova na hora, em vez de ficar até 1 h com o painel antigo.
+    // Imagens mudam raramente e ficam em cache.
+    app.use(express.static(config.dashboardDir, {
+        index: 'index.html',
+        setHeaders: (res, filePath) => {
+            res.setHeader('Cache-Control', /\.(png|jpe?g|svg|webp|ico)$/i.test(filePath)
+                ? 'public, max-age=86400' : 'no-cache');
+        },
+    }));
+    app.get('*', (req, res) => res.set('Cache-Control', 'no-cache').sendFile(path.join(config.dashboardDir, 'index.html')));
 } else {
     log.warn('[App] pasta do dashboard não encontrada — servindo só a API', { dir: config.dashboardDir });
 }

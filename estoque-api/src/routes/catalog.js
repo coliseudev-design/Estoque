@@ -10,33 +10,81 @@ const { route, parse, notFound } = require('../http');
 const { requireUser } = require('../auth/middleware');
 
 const router = express.Router();
-router.use(requireUser());
+// Autenticação POR ROTA, não router.use(): este router fica montado em /v1 e um
+// router.use() aqui interceptava TODA requisição /v1/* — inclusive /v1/stream, que
+// autentica pelo token na query (EventSource não envia header) e caía em 401.
+const auth = requireUser();
 
-router.get('/products', route(async (req, res) => {
+/**
+ * Busca no catálogo.
+ *   q        código, EAN ou palavras da descrição em qualquer ordem
+ *   brand    marca exata          group  grupo exato
+ *   inStock  1 = só saldo > 0
+ */
+router.get('/products', auth, route(async (req, res) => {
     const q = parse(z.object({
         q: z.string().trim().max(80).default(''),
-        limit: z.coerce.number().int().min(1).max(100).default(30),
+        brand: z.string().trim().max(120).optional(),
+        group: z.string().trim().max(120).optional(),
+        inStock: z.enum(['1', 'true']).optional().transform(Boolean),
+        limit: z.coerce.number().int().min(1).max(200).default(50),
+        offset: z.coerce.number().int().min(0).default(0),
     }), req.query);
-    const term = q.q;
+
+    const where = ['p.tenant_id = $1', 'p.active'];
+    const params = [req.tenantId];
+    const add = (sql, value) => { params.push(value); where.push(sql.replaceAll('?', `$${params.length}`)); };
+
+    if (q.brand) add('p.brand = ?', q.brand);
+    if (q.group) add('p.group_name = ?', q.group);
+    if (q.inStock) where.push('p.stock > 0');
+
+    let exactParam = null;
+    if (q.q) {
+        params.push(q.q);
+        exactParam = `$${params.length}`;
+        // Cada palavra precisa aparecer na descrição (ordem livre); ou bate código/EAN exato.
+        const words = q.q.split(/\s+/).filter(Boolean).slice(0, 6);
+        const wordConds = words.map((w) => { params.push(`%${w}%`); return `p.description ILIKE $${params.length}`; });
+        where.push(`(p.erp_id = ${exactParam} OR p.sku = ${exactParam}
+                     OR EXISTS (SELECT 1 FROM product_barcodes b WHERE b.tenant_id = p.tenant_id
+                                 AND b.erp_id = p.erp_id AND b.barcode = ${exactParam})
+                     OR (${wordConds.join(' AND ')}))`);
+    }
+
+    params.push(q.limit + 1, q.offset);
     const { rows } = await db.query(
         `SELECT p.erp_id, p.sku, p.description, p.unit, p.brand, p.group_name, p.stock::text AS stock,
                 (SELECT array_agg(b.barcode) FROM product_barcodes b
                   WHERE b.tenant_id = p.tenant_id AND b.erp_id = p.erp_id) AS barcodes
            FROM products p
-          WHERE p.tenant_id = $1 AND p.active
-            AND ($2 = '' OR p.erp_id = $2 OR p.sku = $2
-                 OR lower(p.description) LIKE lower($2) || '%'
-                 OR p.description ILIKE '%' || $2 || '%'
-                 OR EXISTS (SELECT 1 FROM product_barcodes b WHERE b.tenant_id = p.tenant_id
-                             AND b.erp_id = p.erp_id AND b.barcode = $2))
-          ORDER BY (p.erp_id = $2 OR p.sku = $2) DESC, p.description
-          LIMIT $3`,
-        [req.tenantId, term, q.limit],
+          WHERE ${where.join(' AND ')}
+          ORDER BY ${exactParam ? `(p.erp_id = ${exactParam} OR p.sku = ${exactParam}) DESC,` : ''} p.description, p.erp_id
+          LIMIT $${params.length - 1} OFFSET $${params.length}`,
+        params,
     );
-    res.json({ items: rows.map(mapProduct) });
+    const hasMore = rows.length > q.limit;
+    res.json({ items: rows.slice(0, q.limit).map(mapProduct), hasMore });
 }));
 
-router.get('/products/barcode/:code', route(async (req, res) => {
+/** Marcas e grupos (com contagem) para os filtros — respeita "somente com estoque". */
+router.get('/products/facets', auth, route(async (req, res) => {
+    const { inStock } = parse(z.object({ inStock: z.enum(['1', 'true']).optional().transform(Boolean) }), req.query);
+    const stockCond = inStock ? 'AND stock > 0' : '';
+    const [brands, groups, totals] = await Promise.all([
+        db.query(`SELECT brand AS name, count(*)::int AS n FROM products
+                   WHERE tenant_id = $1 AND active AND brand IS NOT NULL ${stockCond}
+                   GROUP BY brand ORDER BY brand`, [req.tenantId]),
+        db.query(`SELECT group_name AS name, count(*)::int AS n FROM products
+                   WHERE tenant_id = $1 AND active AND group_name IS NOT NULL ${stockCond}
+                   GROUP BY group_name ORDER BY group_name`, [req.tenantId]),
+        db.query(`SELECT count(*)::int AS total, count(*) FILTER (WHERE stock > 0)::int AS com_estoque
+                    FROM products WHERE tenant_id = $1 AND active`, [req.tenantId]),
+    ]);
+    res.json({ brands: brands.rows, groups: groups.rows, ...totals.rows[0] });
+}));
+
+router.get('/products/barcode/:code', auth, route(async (req, res) => {
     const { rows } = await db.query(
         `SELECT p.erp_id, p.sku, p.description, p.unit, p.brand, p.group_name, p.stock::text AS stock,
                 b.factor::text AS factor
@@ -53,7 +101,7 @@ router.get('/products/barcode/:code', route(async (req, res) => {
  * Delta do catálogo para o app trabalhar offline.
  * Cursor composto (updated_at, chave) — estável mesmo com muitos registros no mesmo instante.
  */
-router.get('/catalog/delta', route(async (req, res) => {
+router.get('/catalog/delta', auth, route(async (req, res) => {
     const q = parse(z.object({
         entity: z.enum(['products', 'barcodes']),
         since: z.string().datetime({ offset: true }).optional(),
