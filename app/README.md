@@ -3,34 +3,34 @@
 App Flutter de conferência cega para expedição. Funciona em celular comum (câmera)
 e em coletores Zebra / Honeywell (leitor físico), online e offline.
 
-## Primeira execução
-
-As pastas de plataforma ainda não foram geradas. Gere uma vez e versione o resultado —
-o `MainActivity.kt` já presente (ANDROID_ID para o vínculo de licença) é preservado:
+## Gerar o APK
 
 ```bash
 cd app
-flutter create . --org br.com.coliseusistemas --project-name coliseu_estoque --platforms=android,ios
 flutter pub get
-flutter run
+flutter build apk --release      # build/app/outputs/flutter-apk/app-release.apk
 ```
 
-iOS: adicione em `ios/Runner/Info.plist`:
-
-```xml
-<key>NSCameraUsageDescription</key>
-<string>A câmera é usada para ler códigos de barras na conferência.</string>
-```
+As pastas de plataforma Android já estão no repositório (`MainActivity.kt` expõe o
+ANDROID_ID). O manifesto libera `http` (`usesCleartextTraffic`) para testar com a API na
+rede local; em produção a API fica em `https`. Guia de teste: `../APP-TESTE/COMO-TESTAR.md`.
 
 ## Fluxo
 
-1. **Ativação do aparelho** — chave de ativação gerada no painel de licenças
-   (módulo Estoque → Dispositivos). O app chama `/auth/device-login` do Identity com
-   `moduleSlug: "coliseu-estoque"`; a URL da API vem do módulo (campo URL do middleware).
+1. **Conexão do aparelho** (uma vez):
+   - **QR Code do painel** (padrão) — Painel → Cadastros → Aparelhos → Conectar aparelho.
+     O QR traz `COLISEU-ESTOQUE|<endereço da API>|<código>`; o app troca o código
+     (10 min, uso único) por uma credencial própria (`POST /v1/auth/pair`).
+     Sem câmera: digita endereço + código. O supervisor desvincula na mesma tela.
+   - **Chave de ativação** do painel de licenças (Coliseu.Identity) — `/auth/device-login`
+     com `moduleSlug: "coliseu-estoque"`; a URL da API vem do módulo.
 2. **Login do operador** — usuário + PIN cadastrados no dashboard (Usuários).
    Funciona offline para o último operador que entrou online no aparelho.
-3. **Fila** → escolhe o documento → **bipa** → **finaliza**.
-   A API responde: concluído, recontar (lista de produtos) ou enviado ao supervisor.
+3. **Fila** separada em **Entradas** (notas de compra importadas pelo XML) e **Saídas**
+   (pedidos do ERP), com as críticas de cada documento. Bipar o DANFE ou o nº do pedido
+   na fila abre a conferência direto.
+4. **Conferência** → bipa → **finaliza**. A API responde: concluído, recontar (lista de
+   produtos) ou enviado ao supervisor.
 
 ## Offline
 

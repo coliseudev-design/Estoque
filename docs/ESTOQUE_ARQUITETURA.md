@@ -97,6 +97,21 @@ faturado antes de conferir, erro no retorno ao ERP, divergência pendente. A reg
 "precisa de atenção" também existe em SQL (`ATTENTION_SQL`) para filtros e contadores.
 Configurações novas: `companyCnpj`, `outboundSlaHours`, `expiryAlertDays`, `entryOldDays`.
 
+## App: conexão do aparelho
+
+Dois caminhos, o mesmo token de usuário no fim:
+
+| | Pareamento pelo painel (padrão) | Chave de ativação (Identity) |
+|---|---|---|
+| Onde gera | Dashboard → Aparelhos → Conectar aparelho (QR / código) | Painel de licenças → Dispositivos |
+| App chama | `POST /v1/auth/pair` → `X-Device-Key` | Identity `/auth/device-login` → `X-Device-Token` |
+| Login operador | `POST /v1/auth/app-login` (+ usuário + PIN) | `POST /v1/auth/device-login` |
+| Revogação | Dashboard → Desvincular (corta sessões em ≤ 30 s) | Painel de licenças |
+
+Código de pareamento: 8 caracteres sem ambíguos, 10 min, uso único; só o SHA-256 do código
+e do segredo do aparelho ficam no banco (`device_pairings`, `devices`). O pareamento não
+consome o limite de dispositivos do Identity — controle pela tela Aparelhos.
+
 ## Pendências conhecidas
 
 - **Diagnóstico do VetMatriz** (`scripts/diagnostico_conferencia_vetmatriz.sql`):
@@ -108,7 +123,7 @@ Configurações novas: `companyCnpj`, `outboundSlaHours`, `expiryAlertDays`, `en
 - Configurador do Worker: os campos do Estoque ainda não têm tela — editar `appsettings.json`.
 - Entradas: cruzar a nota com o **pedido de compra do ERP** (quantidade/preço) depende de o Worker
   sincronizar os pedidos de compra; hoje só se critica a ausência de `xPed`.
-- App Flutter: ainda mostra notas de entrada como "Pedido" (`models.dart` → `title`); falta o filtro `flow`.
+- App: assinar o APK com chave própria antes de distribuir (hoje usa a chave de debug).
 
 ## Subir local
 

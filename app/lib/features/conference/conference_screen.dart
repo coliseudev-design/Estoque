@@ -108,7 +108,7 @@ class _ConferenceScreenState extends State<ConferenceScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Finalizar conferência?'),
+        title: Text(widget.flow == 'entrada' ? 'Finalizar conferência da nota?' : 'Finalizar separação?'),
         content: Text(_c.isRecount
             ? 'Confirma que recontou todos os produtos indicados?'
             : 'Confirma que contou todos os itens? O sistema vai comparar com o documento.'),
@@ -148,7 +148,9 @@ class _ConferenceScreenState extends State<ConferenceScreen> {
     switch (r.status) {
       case 'CONCLUIDO':
         SystemSound.play(SystemSoundType.click);
-        await _resultDialog(Icons.check_circle, AppColors.ok, 'Conferência concluída', 'Tudo confere.');
+        await _resultDialog(Icons.check_circle, AppColors.ok,
+            widget.flow == 'entrada' ? 'Nota recebida' : 'Separação concluída',
+            widget.flow == 'entrada' ? 'Tudo confere com a nota fiscal.' : 'Tudo confere. Pedido liberado para faturar.');
         if (mounted) Navigator.pop(context);
       case 'DIVERGENTE':
         HapticFeedback.heavyImpact();

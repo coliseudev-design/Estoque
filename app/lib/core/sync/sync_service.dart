@@ -75,7 +75,11 @@ class SyncService {
   /// Envia a fila de um documento. Chamadas concorrentes para o mesmo documento são unificadas.
   Future<void> flushDocument(String documentId) {
     if (!_canSend) return Future.value();
-    return _flushing[documentId] ??= _flush(documentId).whenComplete(() => _flushing.remove(documentId));
+    // Bloco com chaves: `=> _flushing.remove(...)` devolveria o próprio Future e o
+    // whenComplete ficaria esperando por ele mesmo (finalizar travava para sempre).
+    return _flushing[documentId] ??= _flush(documentId).whenComplete(() {
+      _flushing.remove(documentId);
+    });
   }
 
   Future<void> _flush(String documentId) async {

@@ -81,3 +81,6 @@ publish_release/
 
 # XML de NF-e usado nos testes do Estoque
 !estoque-api/tests/fixtures/*.xml
+
+# APK de teste (gerado; ~70 MB)
+APP-TESTE/*.apk
