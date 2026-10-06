@@ -13,6 +13,9 @@ const { audit } = require('./audit');
 const { getSettings } = require('./settings');
 const { canSeeExpected } = require('../auth/middleware');
 const { evaluateRound, productsToRecount, blindItem, toUnits, fromUnits } = require('../domain/conference');
+const { documentAlerts, flowOf, ATTENTION_SQL } = require('../domain/alerts');
+const { parseAccessKey } = require('../domain/nfe');
+const { critiquesFor } = require('./entries');
 const { notFound, conflict, forbidden, badRequest } = require('../http');
 
 const OPEN_STATUSES = ['AGUARDANDO', 'EM_CONFERENCIA', 'DIVERGENTE'];
@@ -33,13 +36,16 @@ const mapItem = (r) => ({
     result: r.result,
     isExtra: r.is_extra,
     countedRound: r.counted_round,
+    meta: r.meta && Object.keys(r.meta).length ? r.meta : undefined,
 });
 
-function mapHeader(r, user) {
+function mapHeader(r, user, settings) {
     const lockActive = r.locked_by && r.lock_expires_at && new Date(r.lock_expires_at) > new Date();
-    return {
+    const full = canSeeExpected(user);
+    const header = {
         id: r.id,
         source: r.source,
+        flow: flowOf(r.source),
         erpKey: r.erp_key,
         number: r.number,
         series: r.series,
@@ -78,7 +84,17 @@ function mapHeader(r, user) {
         productCount: r.product_count !== undefined ? Number(r.product_count) : undefined,
         countedProducts: r.counted_products !== undefined ? Number(r.counted_products) : undefined,
         updatedAt: r.updated_at,
+        importedAt: r.imported_at || undefined,
+        // Dados da NF-e de entrada (valor, protocolo, pedidos de compra) — só para quem vê o esperado.
+        entry: r.source === 'NFE' && full ? {
+            supplierCnpj: r.customer_code, totalValue: r.meta?.totalValue, orderNumbers: r.meta?.orderNumbers || [],
+            operation: r.meta?.operation, protocol: r.meta?.protocol, recipient: r.meta?.recipient,
+            supplier: r.meta?.supplier, critiques: r.meta?.critiques,
+        } : undefined,
     };
+    // Críticas operacionais (SLA, ERP alterou, retorno com erro…) — iguais no app e no painel.
+    header.alerts = documentAlerts(header, { slaHours: settings?.outboundSlaHours, critiques: r.meta?.critiques });
+    return header;
 }
 
 const HEADER_SQL = `
@@ -124,6 +140,10 @@ async function listDocuments(tenantId, user, filters) {
     }
     if (filters.mine) add('d.locked_by = ?', user.id);
     if (filters.writeback) add('d.writeback_status = ?', filters.writeback);
+    if (filters.flow === 'entrada') where.push(`d.source = 'NFE'`);
+    else if (filters.flow === 'saida') where.push(`d.source <> 'NFE'`);
+    if (filters.attention) add(ATTENTION_SQL, String(settings.outboundSlaHours));
+    if (filters.priority) where.push('d.priority > 0');
 
     params.push(filters.limit, filters.offset);
     const { rows } = await db.query(
@@ -142,7 +162,30 @@ async function listDocuments(tenantId, user, filters) {
           LIMIT $${params.length - 1} OFFSET $${params.length}`,
         params,
     );
-    return rows.map((r) => mapHeader(r, user));
+    return rows.map((r) => mapHeader(r, user, settings));
+}
+
+/**
+ * Contagem por status para as pílulas de filtro. Pendentes contam sempre;
+ * concluídos e cancelados, só dentro da janela de dias.
+ */
+async function countDocuments(tenantId, { flow, days = 7 }) {
+    const settings = await getSettings(tenantId);
+    const flowSql = flow === 'entrada' ? `AND d.source = 'NFE'` : flow === 'saida' ? `AND d.source <> 'NFE'` : '';
+    const { rows } = await db.query(
+        `SELECT d.status, count(*)::int AS n,
+                count(*) FILTER (WHERE ${ATTENTION_SQL.replace('?', '$3')})::int AS attention
+           FROM documents d
+          WHERE d.tenant_id = $1 ${flowSql}
+            AND (d.status IN ('AGUARDANDO','EM_CONFERENCIA','DIVERGENTE','AGUARDANDO_APROVACAO')
+                 OR COALESCE(d.finished_at, d.updated_at) >= now() - ($2 || ' days')::interval)
+          GROUP BY d.status`,
+        [tenantId, String(days), String(settings.outboundSlaHours)],
+    );
+    return {
+        byStatus: Object.fromEntries(rows.map((r) => [r.status, r.n])),
+        attention: rows.reduce((sum, r) => sum + r.attention, 0),
+    };
 }
 
 /**
@@ -157,26 +200,43 @@ function parseLookupCode(raw) {
     const digits = code.replace(/\D/g, '');
     if (digits.length === 44) {
         // cUF(2) AAMM(4) CNPJ(14) modelo(2) série(3) nNF(9) tpEmis(1) cNF(8) DV(1)
-        return { kind: 'nfe', number: String(Number(digits.slice(25, 34))), series: String(Number(digits.slice(22, 25))) };
+        const k = parseAccessKey(digits);
+        return { kind: 'nfe', key: digits, number: k.number, series: k.series, cnpj: k.cnpj, valid: k.valid };
     }
     return { kind: 'code', exact: code, number: digits ? String(Number(digits)) : code };
 }
 
 async function lookupDocuments(tenantId, user, raw) {
     const p = parseLookupCode(raw);
+    const settings = await getSettings(tenantId);
+    const own = String(settings.companyCnpj || '').replace(/\D/g, '');
+    // DANFE de fornecedor (CNPJ da chave ≠ empresa): só a nota de entrada com a mesma chave.
+    // Sem o CNPJ configurado não dá para separar: procura entrada pela chave e saída pelo número.
+    let match;
+    if (p.kind === 'nfe') {
+        match = own && p.cnpj !== own
+            ? `d.source = 'NFE' AND d.erp_key = $3 AND $2::text IS NOT NULL`
+            : `((d.source = 'NFE' AND d.erp_key = $3)
+                OR (d.source <> 'NFE' AND (d.erp_key = $3 OR (d.source = 'NFS' AND d.number = $2) OR d.invoice_number = $2)))`;
+    } else {
+        match = `(d.number = $2 OR d.invoice_number = $2 OR d.order_number = $2 OR d.erp_key = $2 OR d.erp_key = $3)`;
+    }
     const { rows } = await db.query(
         `${HEADER_SQL.replace('SELECT d.*,', `SELECT d.*,
                (SELECT count(*) FROM document_items i WHERE i.document_id = d.id AND NOT i.is_extra) AS item_count,`)}
           WHERE d.tenant_id = $1
-            AND (d.number = $2 OR d.invoice_number = $2 OR d.order_number = $2 OR d.erp_key = $2 OR d.erp_key = $3)
+            AND ${match}
           ORDER BY CASE WHEN d.status IN ('AGUARDANDO','EM_CONFERENCIA','DIVERGENTE') THEN 0 ELSE 1 END,
                    -- pedido antes da NF: é ele que se confere quando há os dois
                    CASE d.source WHEN 'PED' THEN 0 ELSE 1 END,
                    d.issued_at DESC NULLS LAST
           LIMIT 5`,
-        [tenantId, p.number, p.exact ?? p.number],
+        [tenantId, p.number, p.kind === 'nfe' ? p.key : p.exact],
     );
-    return { parsed: p, items: rows.map((r) => mapHeader(r, user)) };
+    return {
+        parsed: { ...p, incoming: p.kind === 'nfe' && own ? p.cnpj !== own : undefined },
+        items: rows.map((r) => mapHeader(r, user, settings)),
+    };
 }
 
 /** Soma das leituras válidas da rodada, por produto. */
@@ -205,8 +265,8 @@ async function unknownScans(runner, documentId, round) {
 async function getDocument(tenantId, user, id) {
     const { rows } = await db.query(`${HEADER_SQL} WHERE d.tenant_id = $1 AND d.id = $2`, [tenantId, id]);
     if (!rows[0]) throw notFound('Documento não encontrado');
-    const header = mapHeader(rows[0], user);
     const settings = await getSettings(tenantId);
+    const header = mapHeader(rows[0], user, settings);
 
     const [{ rows: itemRows }, totals, unknown] = await Promise.all([
         db.query('SELECT * FROM document_items WHERE document_id = $1 ORDER BY seq', [id]),
@@ -217,16 +277,24 @@ async function getDocument(tenantId, user, id) {
     const recount = productsToRecount(items, header.round);
 
     // Códigos de barras dos itens: o app guarda para conferir offline.
+    // Os da própria nota (entrada) vêm por último e prevalecem sobre os do cadastro.
     const { rows: barcodeRows } = await db.query(
         `SELECT b.erp_id, b.barcode, b.factor::text AS factor
            FROM product_barcodes b
-          WHERE b.tenant_id = $1 AND b.erp_id = ANY($2)`,
-        [tenantId, [...new Set(items.map((i) => i.productErpId))]],
+          WHERE b.tenant_id = $1 AND b.erp_id = ANY($2)
+            AND NOT EXISTS (SELECT 1 FROM document_barcodes x WHERE x.document_id = $3 AND x.barcode = b.barcode)
+         UNION ALL
+         SELECT product_erp_id, barcode, factor::text FROM document_barcodes WHERE document_id = $3`,
+        [tenantId, [...new Set(items.map((i) => i.productErpId))], id],
     );
 
     const full = canSeeExpected(user);
+    const critiques = full && header.source === 'NFE'
+        ? await critiquesFor(tenantId, { meta: rows[0].meta, issuedAt: header.issuedAt }, items.filter((i) => !i.isExtra))
+        : undefined;
     return {
         ...header,
+        critiques,
         items: full
             ? items
             : settings.showItemList || header.round > 0
@@ -372,14 +440,18 @@ async function addScans(tenantId, user, deviceId, id, events) {
                 `INSERT INTO scan_events (id, tenant_id, document_id, round, product_erp_id, barcode, qty,
                                           user_id, device_id, origin, scanned_at)
                  SELECT e.id, $1, $2, e.round,
-                        COALESCE(b.erp_id, p.erp_id),
+                        COALESCE(x.product_erp_id, b.erp_id, p.erp_id,
+                                 (SELECT i.product_erp_id FROM document_items i
+                                   WHERE i.document_id = $2 AND i.product_erp_id = e."productErpId" LIMIT 1)),
                         e.barcode,
-                        e.qty * COALESCE(b.factor, 1),
+                        e.qty * COALESCE(x.factor, b.factor, 1),
                         $3, $4, e.origin, e."scannedAt"
                    FROM jsonb_to_recordset($5::jsonb) AS e(id uuid, round int, barcode text,
                         "productErpId" text, qty numeric, origin text, "scannedAt" timestamptz)
-                   LEFT JOIN product_barcodes b ON b.tenant_id = $1 AND b.barcode = e.barcode
-                   LEFT JOIN products p ON p.tenant_id = $1 AND p.erp_id = e."productErpId" AND b.erp_id IS NULL
+                   -- código da própria nota (entrada) > código do cadastro > produto escolhido
+                   LEFT JOIN document_barcodes x ON x.document_id = $2 AND x.barcode = e.barcode
+                   LEFT JOIN product_barcodes b ON b.tenant_id = $1 AND b.barcode = e.barcode AND x.barcode IS NULL
+                   LEFT JOIN products p ON p.tenant_id = $1 AND p.erp_id = e."productErpId" AND b.erp_id IS NULL AND x.barcode IS NULL
                  ON CONFLICT (id) DO NOTHING`,
                 [tenantId, id, user.id, deviceId, JSON.stringify(accepted)],
             );
@@ -478,7 +550,7 @@ async function finalize(tenantId, user, id) {
                     locked_by = CASE WHEN $6 OR $7 THEN NULL ELSE locked_by END,
                     locked_device = CASE WHEN $6 OR $7 THEN NULL ELSE locked_device END,
                     lock_expires_at = CASE WHEN $6 OR $7 THEN NULL ELSE lock_expires_at END,
-                    writeback_status = CASE WHEN $6 THEN 'PENDENTE' ELSE writeback_status END,
+                    writeback_status = CASE WHEN $6 AND source <> 'NFE' THEN 'PENDENTE' ELSE writeback_status END,
                     updated_at = now()
               WHERE tenant_id = $1 AND id = $2`,
             [tenantId, id, evaluation.nextStatus, evaluation.nextRound, !evaluation.allOk, done, toSupervisor, user.id],
@@ -525,7 +597,7 @@ async function approve(tenantId, user, id, justification) {
                 SET status = 'CONCLUIDO', approved_by = $3, approved_at = now(), justification = $4,
                     finished_by = COALESCE(finished_by, $3), finished_at = COALESCE(finished_at, now()),
                     locked_by = NULL, locked_device = NULL, lock_expires_at = NULL,
-                    writeback_status = 'PENDENTE', updated_at = now()
+                    writeback_status = CASE WHEN source = 'NFE' THEN 'NAO_APLICAVEL' ELSE 'PENDENTE' END, updated_at = now()
               WHERE tenant_id = $1 AND id = $2`,
             [tenantId, id, user.id, justification?.trim() || null],
         );
@@ -605,7 +677,7 @@ async function setPriority(tenantId, user, id, priority) {
 }
 
 module.exports = {
-    listDocuments, getDocument, listScans, lookupDocuments, parseLookupCode,
+    listDocuments, countDocuments, getDocument, listScans, lookupDocuments, parseLookupCode,
     claim, release, addScans, voidScan, finalize,
     approve, reopen, reset, setPriority,
     // expostos para testes/relatórios

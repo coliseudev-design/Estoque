@@ -12,6 +12,7 @@ const { requireUser, invalidateUser, UUID_RE } = require('../auth/middleware');
 const { hashSecret } = require('../auth/passwords');
 const { getSettings, updateSettings, DEFAULTS } = require('../services/settings');
 const { audit } = require('../services/audit');
+const { documentAlerts, flowOf, ATTENTION_SQL } = require('../domain/alerts');
 
 const router = express.Router();
 const supervisor = requireUser('supervisor', 'admin');
@@ -20,7 +21,8 @@ const admin = requireUser('admin');
 // ── Painel ───────────────────────────────────────────────────────────────────
 router.get('/dashboard/summary', supervisor, route(async (req, res) => {
     const t = req.tenantId;
-    const [byStatus, today, operators, worker, sync, writeback] = await Promise.all([
+    const settings = await getSettings(t);
+    const [byStatus, today, operators, worker, sync, writeback, byFlow, attention] = await Promise.all([
         db.query(
             `SELECT status, count(*)::int AS n FROM documents
               WHERE tenant_id = $1 AND (status NOT IN ('CONCLUIDO','CANCELADO') OR finished_at >= current_date)
@@ -45,7 +47,29 @@ router.get('/dashboard/summary', supervisor, route(async (req, res) => {
             `SELECT count(*) FILTER (WHERE writeback_status = 'PENDENTE')::int AS pendentes,
                     count(*) FILTER (WHERE writeback_status = 'ERRO')::int AS erros
                FROM documents WHERE tenant_id = $1 AND status = 'CONCLUIDO'`, [t]),
+        // Entradas × saídas: fila atual + concluídos hoje + conformidade e tempo médio do dia.
+        db.query(
+            `SELECT CASE WHEN source = 'NFE' THEN 'entrada' ELSE 'saida' END AS flow, status, count(*)::int AS n,
+                    count(*) FILTER (WHERE status = 'CONCLUIDO' AND has_divergence)::int AS com_divergencia,
+                    COALESCE(avg(EXTRACT(EPOCH FROM finished_at - started_at)) FILTER (WHERE status = 'CONCLUIDO'), 0)::int AS tempo_medio_s
+               FROM documents
+              WHERE tenant_id = $1 AND (status NOT IN ('CONCLUIDO','CANCELADO') OR finished_at >= current_date)
+              GROUP BY 1, 2`, [t]),
+        // Críticas abertas mais graves primeiro — o "o que fazer agora" do supervisor.
+        db.query(
+            `SELECT d.id, d.source, d.number, d.customer_name, d.status, d.issued_at, d.imported_at, d.invoice_number,
+                    d.erp_changed, d.erp_cancelled, d.writeback_status, d.lock_expires_at, d.locked_by, d.meta->'critiques' AS critiques
+               FROM documents d
+              WHERE d.tenant_id = $1 AND ${ATTENTION_SQL.replace('?', '$2')}
+              ORDER BY CASE d.status WHEN 'AGUARDANDO_APROVACAO' THEN 0 WHEN 'DIVERGENTE' THEN 1 ELSE 2 END,
+                       d.priority DESC, COALESCE(d.imported_at, d.issued_at)
+              LIMIT 12`, [t, String(settings.outboundSlaHours)]),
     ]);
+    const flows = { entrada: { byStatus: {}, divergentToday: 0, avgSeconds: 0 }, saida: { byStatus: {}, divergentToday: 0, avgSeconds: 0 } };
+    for (const r of byFlow.rows) {
+        flows[r.flow].byStatus[r.status] = r.n;
+        if (r.status === 'CONCLUIDO') { flows[r.flow].divergentToday = r.com_divergencia; flows[r.flow].avgSeconds = r.tempo_medio_s; }
+    }
     res.json({
         byStatus: Object.fromEntries(byStatus.rows.map((r) => [r.status, r.n])),
         today: today.rows[0],
@@ -53,6 +77,19 @@ router.get('/dashboard/summary', supervisor, route(async (req, res) => {
         worker: { seenAt: worker.rows[0]?.worker_seen_at, info: worker.rows[0]?.worker_info },
         sync: sync.rows,
         writeback: writeback.rows[0],
+        flows,
+        attention: attention.rows.map((r) => {
+            const header = {
+                status: r.status, invoiceNumber: r.invoice_number, erpChanged: r.erp_changed, erpCancelled: r.erp_cancelled,
+                writebackStatus: r.writeback_status, issuedAt: r.issued_at, importedAt: r.imported_at,
+                lock: r.locked_by && r.lock_expires_at && new Date(r.lock_expires_at) > new Date() ? {} : null,
+            };
+            return {
+                id: r.id, source: r.source, flow: flowOf(r.source), number: r.number, customerName: r.customer_name, status: r.status,
+                alerts: documentAlerts(header, { slaHours: settings.outboundSlaHours, critiques: r.critiques }),
+            };
+        }),
+        settings: { outboundSlaHours: settings.outboundSlaHours, companyCnpj: Boolean(settings.companyCnpj) },
     });
 }));
 
@@ -154,6 +191,11 @@ router.patch('/settings', admin, route(async (req, res) => {
         requireJustification: z.boolean().optional(),
         showItemList: z.boolean().optional(),
         queueDays: z.number().int().min(1).max(90).optional(),
+        companyCnpj: z.string().trim().transform((s) => s.replace(/\D/g, ''))
+            .refine((s) => s === '' || s.length === 14, 'CNPJ com 14 dígitos').optional(),
+        outboundSlaHours: z.number().int().min(1).max(24 * 30).optional(),
+        expiryAlertDays: z.number().int().min(0).max(730).optional(),
+        entryOldDays: z.number().int().min(1).max(365).optional(),
     }).strict(), req.body);
     const settings = await updateSettings(req.tenantId, body);
     await audit(null, { tenantId: req.tenantId, userId: req.user.id, action: 'settings.updated', details: body });

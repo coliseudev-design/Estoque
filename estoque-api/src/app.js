@@ -64,6 +64,7 @@ app.get('/health', async (req, res) => {
 app.use('/internal/v1', require('./routes/internal'));
 app.use('/v1/auth', require('./routes/auth'));
 app.use('/v1/documents', require('./routes/documents'));
+app.use('/v1/entries', require('./routes/entries'));
 app.use('/v1', require('./routes/catalog'));
 app.use('/v1', require('./routes/admin'));
 

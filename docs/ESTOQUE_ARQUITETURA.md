@@ -69,6 +69,34 @@ dispositivos do módulo. Dashboard: Serial + chave do módulo + usuário/senha.
 apenas em `COL_EST_CONFERENCIA(_ITEM)` (DDL roda o DBA). O `FirebirdService` do
 Worker continua sem nenhum método de escrita.
 
+## Entradas × saídas
+
+O painel separa os dois fluxos; a conferência cega é a mesma.
+
+| | Entradas (recebimento) | Saídas (expedição) |
+|---|---|---|
+| Origem | XML da NF-e importado no painel (`POST /v1/entries/import`) | Worker (`/internal/v1/sync/documents`) |
+| `documents.source` | `NFE` (`erp_key` = chave de acesso) | `PED` / `NFS` |
+| Leitor | DANFE do fornecedor → nota importada; se não existir, oferece importar o XML (validando que é a mesma chave) | Pedido, NF ou DANFE próprio |
+| Retorno ao ERP | não grava (entrada continua manual no ERP) | `COL_EST_*` quando ligado |
+
+**Códigos da nota** (`document_barcodes`) valem só dentro do documento e têm precedência
+sobre o cadastro: caixa com GTIN próprio (`cEAN`) e unidade com outro (`cEANTrib`) é
+conferida em unidades — bipar a caixa soma o fator `qTrib ÷ qCom`. O código do fornecedor
+(`cProd`) também identifica o item (itens sem GTIN).
+
+**Vínculo de produto**: item sem GTIN no cadastro entra como `NFE:<cProd>`. O supervisor
+vincula ao produto do ERP e o de-para fica em `supplier_products` — a próxima nota do
+mesmo fornecedor já chega vinculada.
+
+**Críticas** (`domain/nfe.js` → `entryCritiques`, `domain/alerts.js` → `documentAlerts`):
+nota destinada a outro CNPJ, sem protocolo/não autorizada, homologação, emissão antiga,
+sem pedido de compra, item sem vínculo, sem GTIN, unidade diferente do cadastro, lote
+vencido / validade curta; e na operação: SLA estourado, conferência abandonada, ERP alterou,
+faturado antes de conferir, erro no retorno ao ERP, divergência pendente. A regra de
+"precisa de atenção" também existe em SQL (`ATTENTION_SQL`) para filtros e contadores.
+Configurações novas: `companyCnpj`, `outboundSlaHours`, `expiryAlertDays`, `entryOldDays`.
+
 ## Pendências conhecidas
 
 - **Diagnóstico do VetMatriz** (`scripts/diagnostico_conferencia_vetmatriz.sql`):
@@ -78,6 +106,9 @@ Worker continua sem nenhum método de escrita.
   (`CODTM` 99 / `NUMNOTA = 0`?) — hoje é configurável (`TiposMovimento`, `IncluirSemNumero`).
 - Slug do módulo em produção: confirmar no painel; confirmado `coliseu-estoque` (a API lê `ESTOQUE_MODULE_SLUG`).
 - Configurador do Worker: os campos do Estoque ainda não têm tela — editar `appsettings.json`.
+- Entradas: cruzar a nota com o **pedido de compra do ERP** (quantidade/preço) depende de o Worker
+  sincronizar os pedidos de compra; hoje só se critica a ausência de `xPed`.
+- App Flutter: ainda mostra notas de entrada como "Pedido" (`models.dart` → `title`); falta o filtro `flow`.
 
 ## Subir local
 

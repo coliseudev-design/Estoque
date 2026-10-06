@@ -19,6 +19,15 @@ const DEFAULTS = Object.freeze({
     showItemList: true,
     // Dias de documentos mantidos na fila (os mais antigos somem da lista padrão).
     queueDays: 7,
+    // CNPJ da empresa: separa DANFE de fornecedor (entrada) do próprio (saída) e
+    // critica nota de entrada destinada a outro CNPJ. Vazio = sem essas críticas.
+    companyCnpj: '',
+    // Horas que um documento pode ficar aguardando na fila antes de virar crítica.
+    outboundSlaHours: 24,
+    // Lote com validade abaixo destes dias gera alerta no recebimento.
+    expiryAlertDays: 90,
+    // Nota de entrada emitida há mais destes dias gera alerta (possível duplicidade).
+    entryOldDays: 30,
 });
 
 const cache = new Map();

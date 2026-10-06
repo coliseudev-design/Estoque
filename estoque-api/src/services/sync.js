@@ -239,7 +239,7 @@ async function pendingWriteback(tenantId, limit) {
            FROM documents d
            LEFT JOIN users fu ON fu.id = d.finished_by
            LEFT JOIN users au ON au.id = d.approved_by
-          WHERE d.tenant_id = $1 AND d.status = 'CONCLUIDO'
+          WHERE d.tenant_id = $1 AND d.status = 'CONCLUIDO' AND d.source <> 'NFE'
             AND (d.writeback_status = 'PENDENTE'
                  OR (d.writeback_status = 'ERRO' AND d.writeback_at < now() - interval '5 minutes'))
           ORDER BY d.finished_at

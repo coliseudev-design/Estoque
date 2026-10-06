@@ -26,10 +26,22 @@ router.get('/', anyone, route(async (req, res) => {
         days: z.coerce.number().int().min(1).max(365).optional(),
         mine: z.enum(['1', 'true']).optional().transform(Boolean),
         writeback: z.enum(['PENDENTE', 'GRAVADO', 'ERRO']).optional(),
+        flow: z.enum(['entrada', 'saida']).optional(),
+        attention: z.enum(['1', 'true']).optional().transform(Boolean),
+        priority: z.enum(['1', 'true']).optional().transform(Boolean),
         limit: z.coerce.number().int().min(1).max(200).default(50),
         offset: z.coerce.number().int().min(0).default(0),
     }), req.query);
     res.json({ items: await docs.listDocuments(req.tenantId, req.user, q) });
+}));
+
+// Contagem por status (pílulas de filtro). Precisa vir antes de '/:id'.
+router.get('/counts', anyone, route(async (req, res) => {
+    const q = parse(z.object({
+        flow: z.enum(['entrada', 'saida']).optional(),
+        days: z.coerce.number().int().min(1).max(365).default(7),
+    }), req.query);
+    res.json(await docs.countDocuments(req.tenantId, q));
 }));
 
 // Leitor de código de barras: pedido, NF, chave do ERP ou chave de acesso da NF-e.

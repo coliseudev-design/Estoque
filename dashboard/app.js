@@ -2,6 +2,10 @@
  *
  * Usa exatamente a mesma API do app mobile. O perfil do usuário define o que aparece:
  * operador faz conferência cega; supervisor/admin acompanham, aprovam e configuram.
+ *
+ * Dois fluxos, mesma conferência cega:
+ *   Entradas (recebimento) — NF-e de compra: bipa o DANFE / importa o XML → confere → recebe.
+ *   Saídas (expedição)     — pedidos e notas do ERP: separa → confere → libera para faturar.
  */
 'use strict';
 
@@ -31,12 +35,17 @@
   const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
   const fmtDateTime = (v) => (v ? new Date(v).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—');
-  const fmtDate = (v) => (v ? new Date(v).toLocaleDateString('pt-BR') : '—');
   const fmtQty = (v) => {
     if (v === null || v === undefined || v === '') return '—';
     const n = Number(v);
     return Number.isInteger(n) ? n.toLocaleString('pt-BR') : n.toLocaleString('pt-BR', { maximumFractionDigits: 4 });
   };
+  const fmtMoney = (v) => (v == null || v === '' ? '—' : Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
+  const fmtCnpj = (v) => {
+    const d = String(v || '').replace(/\D/g, '');
+    return d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5') : (v || '—');
+  };
+  const fmtKey = (k) => String(k || '').replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ');
   const fmtDuration = (s) => {
     if (!s) return '—';
     const m = Math.round(s / 60);
@@ -50,48 +59,125 @@
     if (s < 86400) return `há ${Math.round(s / 3600)} h`;
     return `há ${Math.round(s / 86400)} d`;
   };
-
-  const STATUS_LABEL = {
-    AGUARDANDO: 'Aguardando', EM_CONFERENCIA: 'Em conferência', DIVERGENTE: 'Recontagem',
-    AGUARDANDO_APROVACAO: 'Aprovação', CONCLUIDO: 'Concluído', CANCELADO: 'Cancelado',
+  const shortDate = (v) => {
+    if (!v) return '—';
+    const d = new Date(v);
+    return d.toDateString() === new Date().toDateString() ? 'Hoje' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
+
   const RESULT_LABEL = { OK: 'OK', FALTA: 'Falta', SOBRA: 'Sobra', PENDENTE: 'Pendente' };
   const WB_LABEL = { NAO_APLICAVEL: '—', PENDENTE: 'Pendente', GRAVADO: 'Gravado', ERRO: 'Erro' };
   const ROLE_LABEL = { operador: 'Operador', supervisor: 'Supervisor', admin: 'Administrador' };
   const badge = (code, label) => html`<span class="badge b-${code}">${label}</span>`;
 
+  // ── Fluxos ────────────────────────────────────────────────────────────────
+  const flowOf = (d) => d.flow || (d.source === 'NFE' ? 'entrada' : 'saida');
+  const FLOW = {
+    entrada: {
+      key: 'entrada', href: '#/entradas', label: 'Entradas', area: 'Recebimento', noun: 'Nota', nounPl: 'notas',
+      party: 'Fornecedor', countVerb: 'conferência', icon: 'inbox',
+      steps: [
+        ['Chegou a mercadoria', 'Bipe o código de barras do DANFE ou importe o XML da NF-e.'],
+        ['Revise as críticas', 'Vincule itens sem cadastro, confira validade e destinatário.'],
+        ['Conferência cega', 'O conferente bipa item a item sem ver a quantidade da nota.'],
+        ['Divergência?', 'Falta ou sobra volta para recontagem; persistindo, vai ao supervisor.'],
+        ['Recebido', 'Nota conferida — pronta para dar entrada no ERP.'],
+      ],
+    },
+    saida: {
+      key: 'saida', href: '#/saidas', label: 'Saídas', area: 'Expedição', noun: 'Pedido', nounPl: 'pedidos',
+      party: 'Cliente', countVerb: 'separação', icon: 'truck',
+      steps: [
+        ['Pedido no ERP', 'O Worker traz os pedidos de venda automaticamente.'],
+        ['Separação', 'O separador pega os itens e bipa cada produto (conferência cega).'],
+        ['Divergência?', 'Falta ou sobra volta para recontagem; persistindo, vai ao supervisor.'],
+        ['Liberado', 'Conferido — o faturamento pode emitir a nota.'],
+        ['Faturado', 'NF emitida; a mercadoria pode sair.'],
+      ],
+    },
+  };
+  const docTitle = (d) => `${d.source === 'NFE' ? 'NF' : d.source === 'NFS' ? 'Nota' : 'Pedido'} ${d.number || d.erpKey}${d.source === 'NFE' && d.series ? `-${d.series}` : ''}`;
+
   /**
-   * Status da separação como o armazém fala — com cor própria e consistente em todas as telas.
-   * Pedido conferido = liberado para o faturamento; com NF emitida = faturado.
+   * Status como o armazém fala — cor própria e consistente em todas as telas.
+   * Saída conferida = liberada para faturar; com NF emitida = faturada.
+   * Entrada conferida = recebida (com ou sem divergência aprovada).
    */
   function statusInfo(d) {
+    const entrada = flowOf(d) === 'entrada';
     switch (d.status) {
-      case 'AGUARDANDO': return { cls: 's-wait', label: 'Aguardando separação' };
-      case 'EM_CONFERENCIA': return { cls: 's-sep', label: 'Em separação', pulse: true };
-      case 'DIVERGENTE': return { cls: 's-recount', label: 'Recontagem', pulse: true };
-      case 'AGUARDANDO_APROVACAO': return { cls: 's-approval', label: 'Divergência · supervisor' };
+      case 'AGUARDANDO': return { cls: 's-wait', label: entrada ? 'Aguardando conferência' : 'Aguardando separação', stage: 0 };
+      case 'EM_CONFERENCIA': return { cls: 's-sep', label: entrada ? 'Em conferência' : 'Em separação', pulse: true, stage: 1 };
+      case 'DIVERGENTE': return { cls: 's-recount', label: 'Recontagem', pulse: true, stage: 2 };
+      case 'AGUARDANDO_APROVACAO': return { cls: 's-approval', label: 'Divergência · supervisor', stage: 2 };
       case 'CONCLUIDO':
-        if (d.source === 'PED') return d.invoiceNumber ? { cls: 's-invoiced', label: 'Faturado' } : { cls: 's-done', label: 'Liberado p/ faturar' };
-        return { cls: 's-done', label: 'Conferido' };
-      default: return { cls: 's-cancel', label: STATUS_LABEL[d.status] || d.status };
+        if (entrada) return { cls: 's-done', label: d.hasDivergence ? 'Recebido c/ divergência' : 'Recebido', stage: 3 };
+        if (d.source === 'PED') return d.invoiceNumber ? { cls: 's-invoiced', label: 'Faturado', stage: 4 } : { cls: 's-done', label: 'Liberado p/ faturar', stage: 3 };
+        return { cls: 's-done', label: 'Conferido', stage: 3 };
+      default: return { cls: 's-cancel', label: 'Cancelado', stage: -1 };
     }
   }
   const docStatus = (d) => {
     const s = statusInfo(d);
     return html`<span class="status ${s.cls}${s.pulse ? ' pulse' : ''}">${s.label}</span>`;
   };
-  const invoicedEarly = (d) => d.invoiceNumber && !['CONCLUIDO', 'CANCELADO'].includes(d.status);
-  const invoiceBadge = (d) => (d.invoiceNumber
-    ? html` <span class="badge ${invoicedEarly(d) ? 'b-FALTA' : 'b-NF'}" title="${invoicedEarly(d) ? 'Faturado antes de terminar a conferência' : 'Nota fiscal emitida'}">NF ${d.invoiceNumber}</span>`
-    : '');
-  /** Barra de progresso: produtos já lidos ÷ produtos do pedido (não revela quantidade esperada). */
+  const flowTag = (d) => {
+    const f = flowOf(d);
+    return html`<span class="flow-tag f-${f}">${raw(ICON[f === 'entrada' ? 'arrowIn' : 'arrowOut'])}${f === 'entrada' ? 'Entrada' : 'Saída'}</span>`;
+  };
+  /** Barra de progresso: produtos já lidos ÷ produtos do documento (não revela quantidade esperada). */
   const progressBar = (d) => {
-    if (!d.productCount) return '';
-    const done = ['CONCLUIDO'].includes(d.status);
-    const n = done ? d.productCount : Math.min(d.countedProducts || 0, d.productCount);
+    if (!d.productCount) return html`<span class="muted">—</span>`;
+    const n = d.status === 'CONCLUIDO' ? d.productCount : Math.min(d.countedProducts || 0, d.productCount);
     const pct = Math.round((n / d.productCount) * 100);
     return html`<div class="progress ${statusInfo(d).cls}" title="${n} de ${d.productCount} produtos lidos">
       <div class="bar"><i style="width:${pct}%"></i></div><span class="txt">${n}/${d.productCount}</span></div>`;
+  };
+
+  // ── Críticas ──────────────────────────────────────────────────────────────
+  const LEVEL = {
+    erro: { label: 'Grave', cls: 'lv-erro', icon: 'alert' },
+    alerta: { label: 'Atenção', cls: 'lv-alerta', icon: 'warn' },
+    info: { label: 'Info', cls: 'lv-info', icon: 'info' },
+  };
+  /** Chips compactos para a tabela: contagem por nível, com o texto no tooltip. */
+  function alertChips(alerts) {
+    if (!alerts?.length) return html`<span class="ok-mark" title="Sem críticas">${raw(ICON.check)}</span>`;
+    return html`<span class="crit-chips">${['erro', 'alerta', 'info'].map((lv) => {
+      const list = alerts.filter((a) => a.level === lv);
+      return list.length ? html`<span class="crit ${LEVEL[lv].cls}" title="${list.map((a) => `• ${a.message}`).join('\n')}">${raw(ICON[LEVEL[lv].icon])}${list.length}</span>` : '';
+    })}</span>`;
+  }
+  /** Lista completa, com orientação do que fazer. */
+  function critiqueList(list, { empty = 'Nenhuma crítica. Tudo certo para seguir.' } = {}) {
+    if (!list?.length) return html`<div class="crit-empty">${raw(ICON.check)}<span>${empty}</span></div>`;
+    return html`<ul class="crit-list">${list.map((c) => html`<li class="${LEVEL[c.level].cls}">
+      <span class="ic">${raw(ICON[LEVEL[c.level].icon])}</span>
+      <div><div class="msg">${c.message}</div>${CRIT_HELP[c.code] ? html`<div class="hint">${CRIT_HELP[c.code]}</div>` : ''}</div>
+      <span class="lv">${LEVEL[c.level].label}</span></li>`)}</ul>`;
+  }
+  const CRIT_HELP = {
+    DEST_MISMATCH: 'Não receba a mercadoria sem confirmar com o comprador — pode ser nota de outra filial.',
+    NOT_AUTHORIZED: 'Nota sem autorização não tem validade fiscal. Recuse ou peça a nota correta ao fornecedor.',
+    NO_PROTOCOL: 'Importe o XML de distribuição (procNFe), que contém o protocolo, ou consulte a chave no portal.',
+    HOMOLOGATION: 'XML de teste. Peça ao fornecedor o XML de produção.',
+    OLD_INVOICE: 'Confirme no ERP se a nota já não teve entrada para evitar duplicidade.',
+    NO_PURCHASE_ORDER: 'Confira com o comprador se a compra foi autorizada.',
+    UNLINKED: 'Use “Vincular” nos itens marcados. O vínculo fica salvo para as próximas notas do fornecedor.',
+    NO_GTIN: 'Na conferência, o conferente digita o código do fornecedor ou o código do produto.',
+    UNIT_DIFF: 'Confira o fator de conversão antes de dar entrada no ERP.',
+    LOT_EXPIRED: 'Não receba lote vencido: separe para devolução.',
+    LOT_SHORT_EXPIRY: 'Avalie aceitar ou devolver; priorize a saída deste lote (PVPS/FEFO).',
+    INVOICED_EARLY: 'A NF saiu antes de terminar a conferência — confirme se a mercadoria já foi entregue.',
+    WRITEBACK_ERROR: 'O Worker tenta de novo a cada 5 minutos. Persistindo, verifique o serviço no servidor do cliente.',
+    ERP_CHANGED: 'Confira os itens; se mudou muito, zere a conferência.',
+    NEEDS_APPROVAL: 'Abra o documento, analise falta/sobra e aprove com justificativa ou reabra a recontagem.',
+    RECOUNT: 'O conferente precisa recontar só os itens destacados.',
+    SLA: 'Priorize este documento ou redistribua a equipe.',
+    STALLED: 'Alguém começou e não terminou. Retome a conferência ou libere o documento.',
+    CANCELLED_AFTER: 'Se a mercadoria já saiu, providencie o retorno.',
+    ENTRY_ERRORS: 'Abra a nota e resolva as críticas graves antes de receber.',
+    ENTRY_WARNINGS: 'Abra a nota e revise as críticas.',
   };
 
   // ── Toasts, sons e modais ─────────────────────────────────────────────────
@@ -119,23 +205,24 @@
   }
 
   /** Abre um modal. `onSubmit(form)` retorna false para manter aberto. */
-  function modal({ title, body, submitLabel = 'Confirmar', danger = false, onSubmit, cancelLabel = 'Cancelar' }) {
+  function modal({ title, body, submitLabel = 'Confirmar', danger = false, onSubmit, cancelLabel = 'Cancelar', wide = false }) {
     const bg = document.createElement('div');
     bg.className = 'modal-bg';
     bg.innerHTML = html`
-      <form class="modal" novalidate>
-        <header>${title}</header>
+      <form class="modal${wide ? ' wide' : ''}" novalidate>
+        <header>${title}<button type="button" class="x" data-close aria-label="Fechar">×</button></header>
         <div class="body">${body}</div>
-        <footer>
+        ${cancelLabel || submitLabel ? html`<footer>
           ${cancelLabel ? html`<button type="button" class="btn" data-close>${cancelLabel}</button>` : ''}
-          ${submitLabel ? html`<button type="submit" class="btn ${danger ? 'danger' : 'primary'}">${submitLabel}</button>` : ''}
-        </footer>
+          ${submitLabel ? html`<button type="submit" class="btn ${danger ? 'danger-solid' : 'primary'}">${submitLabel}</button>` : ''}
+        </footer>` : ''}
       </form>`.s;
     document.body.appendChild(bg);
     const form = $('form', bg);
     const close = () => bg.remove();
     $$('[data-close]', bg).forEach((b) => b.addEventListener('click', close));
     bg.addEventListener('mousedown', (e) => { if (e.target === bg) close(); });
+    bg.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = $('button[type=submit]', form);
@@ -149,7 +236,7 @@
         if (btn) btn.disabled = false;
       }
     });
-    setTimeout(() => $('input, textarea, select', form)?.focus(), 30);
+    setTimeout(() => $('input:not([type=file]), textarea, select', form)?.focus(), 30);
     return { close, el: bg };
   }
 
@@ -220,15 +307,14 @@
     if (stream || !state.token) return;
     stream = new EventSource(`/v1/stream?access_token=${encodeURIComponent(state.token)}`);
     const setLive = (on) => {
-      $('#live-dot')?.classList.toggle('on', on);
       $('#live-status')?.classList.toggle('on', on);
-      const t = $('#live-text'); if (t) t.textContent = on ? 'Online' : 'Reconectando…';
+      const t = $('#live-text'); if (t) t.textContent = on ? 'Tempo real' : 'Reconectando…';
     };
     stream.onopen = () => setLive(true);
     stream.onerror = () => setLive(false);
     for (const type of ['document.updated', 'scan.added', 'documents.synced', 'worker.heartbeat']) {
       stream.addEventListener(type, (e) => {
-        try { state.view?.onEvent?.(JSON.parse(e.data)); } catch { /* evento malformado */ }
+        try { state.view?.onEvent?.({ type, ...JSON.parse(e.data) }); } catch { /* evento malformado */ }
       });
     }
   }
@@ -238,27 +324,45 @@
   // ───────────────────────────────────────────────────────────────────────────
   // Layout
   // ───────────────────────────────────────────────────────────────────────────
+  const svg = (body, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${body}</svg>`;
   const ICON = {
-    panel: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>',
-    docs: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
-    box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/></svg>',
-    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-    log: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>',
-    menu: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>',
-    scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/></svg>',
-    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
-    boxes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 9l9-5 9 5-9 5-9-5z"/><path d="M3 9v6l9 5 9-5V9"/><path d="M12 14v6"/></svg>',
-    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>',
-    alert: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm1 15h-2v-2h2v2zm0-4h-2V9h2v4z"/></svg>',
-    trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
+    panel: svg('<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'),
+    inbox: svg('<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'),
+    truck: svg('<path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>'),
+    box: svg('<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>'),
+    users: svg('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>'),
+    gear: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'),
+    log: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>'),
+    menu: svg('<path d="M3 12h18M3 6h18M3 18h18"/>', 'width="22" height="22"'),
+    scan: svg('<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M10 8v8M13 8v8M16 8v8"/>'),
+    upload: svg('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/>'),
+    file: svg('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/>'),
+    clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+    boxes: svg('<path d="M3 9l9-5 9 5-9 5-9-5z"/><path d="M3 9v6l9 5 9-5V9"/><path d="M12 14v6"/>'),
+    check: svg('<path d="M4 12l5 5L20 6"/>', 'stroke-width="3"'),
+    alert: svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/>', 'stroke-width="2.4"'),
+    warn: svg('<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>', 'stroke-width="2.2"'),
+    info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>', 'stroke-width="2.2"'),
+    trend: svg('<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>'),
+    arrowIn: svg('<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>', 'stroke-width="2.4"'),
+    arrowOut: svg('<path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 21h14"/>', 'stroke-width="2.4"'),
+    link: svg('<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'),
+    print: svg('<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/>'),
+    back: svg('<path d="M15 18l-6-6 6-6"/>', 'stroke-width="2.4"'),
+    search: svg('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'),
+    help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>'),
   };
 
   const NAV = [
+    { section: 'Visão geral' },
     { href: '#/', label: 'Painel', icon: 'panel', sup: true },
-    { href: '#/documentos', label: 'Pedidos', icon: 'docs' },
+    { section: 'Operação' },
+    { href: '#/entradas', label: 'Entradas', hint: 'Recebimento', icon: 'inbox', flow: 'entrada' },
+    { href: '#/saidas', label: 'Saídas', hint: 'Expedição', icon: 'truck', flow: 'saida' },
+    { section: 'Cadastros' },
     { href: '#/produtos', label: 'Produtos', icon: 'box' },
     { href: '#/usuarios', label: 'Usuários', icon: 'users', sup: true },
+    { section: 'Controle', sup: true },
     { href: '#/auditoria', label: 'Auditoria', icon: 'log', sup: true },
     { href: '#/configuracoes', label: 'Configurações', icon: 'gear', sup: true },
   ];
@@ -273,53 +377,88 @@
             <img class="brand-logo" src="img/coliseu_logo.png" alt="Coliseu Sistemas" width="150" height="38">
             <span class="brand-sub">Estoque · ${state.company?.name || ''}</span>
           </div>
-          ${links.map((n) => html`<a class="nav-link" href="${n.href}" data-nav="${n.href}">${raw(ICON[n.icon])}<span>${n.label}</span></a>`)}
+          <nav>${links.map((n) => (n.section ? html`<div class="nav-section">${n.section}</div>`
+            : html`<a class="nav-link ${n.flow ? `nf-${n.flow}` : ''}" href="${n.href}" data-nav="${n.href}">
+                <span class="nav-ic">${raw(ICON[n.icon])}</span>
+                <span class="nav-txt">${n.label}${n.hint ? html`<small>${n.hint}</small>` : ''}</span>
+                ${n.flow ? html`<span class="nav-count" id="nc-${n.flow}"></span>` : ''}</a>`))}</nav>
           <div class="sidebar-foot">
-            <div class="who">${state.user.name}</div>
-            <div class="muted">${ROLE_LABEL[state.user.role]}</div>
-            <button class="btn sm" id="logout" style="margin-top:12px;width:100%">Sair</button>
+            <div class="me"><div class="avatar">${(state.user.name || '?').trim().charAt(0).toUpperCase()}</div>
+              <div><div class="who">${state.user.name}</div><div class="muted">${ROLE_LABEL[state.user.role]}</div></div></div>
+            <button class="btn sm ghost" id="logout" style="margin-top:12px;width:100%">Sair</button>
           </div>
         </aside>
-        <div style="min-width:0">
-          <div class="app-stripe"></div>
+        <div class="main-col">
           <header class="topbar">
             <button class="btn sm topbar-mobile" id="menu-btn" aria-label="Menu">${raw(ICON.menu)}</button>
-            <div><h1 id="tb-title">Coliseu Estoque</h1><div class="sub" id="tb-sub"></div></div>
+            <div class="tb-titles"><div class="crumb" id="tb-crumb"></div><h1 id="tb-title">Coliseu Estoque</h1><div class="sub" id="tb-sub"></div></div>
             <div class="spacer"></div>
+            <span class="pstatus" id="live-status"><span class="live-dot"></span><span id="live-text">Conectando…</span></span>
+            ${isSup() ? html`<button class="btn btn-xml" id="xml-btn" title="Importar XML de NF-e de entrada">${raw(ICON.upload)}<span>Importar XML</span></button>` : ''}
             <button class="btn btn-scan" id="scan-btn" title="Ler código de barras (F2)">
               <span class="reader-dot" id="reader-dot"></span>${raw(ICON.scan)}<span>Ler código</span><kbd>F2</kbd></button>
-            <div class="presence">
-              <div class="who"><strong>${state.user.name}</strong>
-                <span class="pstatus" id="live-status"><span class="live-dot" id="live-dot"></span><span id="live-text">Conectando…</span></span></div>
-              <div class="avatar">${(state.user.name || '?').trim().charAt(0).toUpperCase()}</div>
-            </div>
           </header>
           <main id="main"></main>
         </div>
       </div>`.s;
     $('#scan-btn').addEventListener('click', () => openScanner());
+    $('#xml-btn')?.addEventListener('click', () => openImport());
     $('#logout').addEventListener('click', () => logout());
     $('#menu-btn').addEventListener('click', () => $('#sidebar').classList.toggle('open'));
     $$('.nav-link').forEach((a) => a.addEventListener('click', () => $('#sidebar').classList.remove('open')));
     shellBuilt = true;
     startStream();
+    refreshNavCounts();
   }
 
-  function markNav(hash) {
+  /** Contadores na barra lateral: quanto trabalho há em cada fluxo. */
+  const refreshNavCounts = debounce(async () => {
+    for (const flow of ['entrada', 'saida']) {
+      try {
+        const c = await api('GET', `/v1/documents/counts?flow=${flow}&days=1`);
+        const open = ['AGUARDANDO', 'EM_CONFERENCIA', 'DIVERGENTE', 'AGUARDANDO_APROVACAO'].reduce((s, k) => s + (c.byStatus[k] || 0), 0);
+        const el = $(`#nc-${flow}`);
+        if (el) { el.textContent = open || ''; el.classList.toggle('hot', c.attention > 0); el.title = c.attention ? `${c.attention} com críticas` : ''; }
+      } catch { /* silencioso */ }
+    }
+  }, 600);
+
+  function markNav(hash, flow) {
     $$('.nav-link').forEach((a) => {
       const href = a.dataset.nav;
-      a.classList.toggle('active', href === '#/' ? hash === '#/' : hash.startsWith(href));
+      const active = href === '#/' ? hash === '#/' : hash.startsWith(href) || Boolean(flow && href === FLOW[flow].href);
+      a.classList.toggle('active', active);
     });
   }
 
   const main = () => $('#main');
   /** Título vai para o cabeçalho fixo; na página ficam só as ações. */
-  const pageHead = (title, sub, actions = '') => {
+  const pageHead = (title, sub, actions = '', crumb = '') => {
     const t = $('#tb-title');
-    if (t) { t.textContent = title; $('#tb-sub').textContent = sub || ''; document.title = `${title} · Coliseu Estoque`; }
+    if (t) {
+      t.textContent = title; $('#tb-sub').textContent = sub || '';
+      $('#tb-crumb').innerHTML = crumb ? out(crumb) : '';
+      document.title = `${title} · Coliseu Estoque`;
+    }
     const hasActions = Array.isArray(actions) ? actions.some(Boolean) : Boolean(actions);
     return hasActions ? html`<div class="page-head"><div></div><div class="btn-row">${actions}</div></div>` : html``;
   };
+
+  /** Passo a passo do fluxo (didático), recolhível e lembrado por navegador. */
+  function flowGuide(flow, current = -1) {
+    const f = FLOW[flow];
+    // No celular começa recolhido para a fila aparecer logo.
+    const pref = store.get(`est.guide.${flow}`);
+    const hidden = pref === '0' || (pref === null && window.innerWidth < 760);
+    return html`<details class="guide f-${flow}" ${hidden ? '' : 'open'} data-guide="${flow}">
+      <summary>${raw(ICON.help)}<span>Como funciona ${f.area === 'Recebimento' ? 'o recebimento' : 'a expedição'}</span></summary>
+      <ol class="steps">${f.steps.map(([t, d], i) => html`<li class="${i < current ? 'done' : i === current ? 'now' : ''}">
+        <span class="n">${i < current ? raw(ICON.check) : i + 1}</span><div><strong>${t}</strong><span>${d}</span></div></li>`)}</ol>
+    </details>`;
+  }
+  function bindGuide(root = document) {
+    $$('details[data-guide]', root).forEach((d) => d.addEventListener('toggle', () => store.set(`est.guide.${d.dataset.guide}`, d.open ? '1' : '0')));
+  }
 
   // ───────────────────────────────────────────────────────────────────────────
   // Roteador
@@ -327,7 +466,9 @@
   const ROUTES = [
     { re: /^#\/login$/, view: viewLogin, public: true },
     { re: /^#\/$/, view: viewPanel, sup: true },
-    { re: /^#\/documentos$/, view: viewDocuments },
+    { re: /^#\/entradas$/, view: () => viewQueue('entrada') },
+    { re: /^#\/saidas$/, view: () => viewQueue('saida') },
+    { re: /^#\/documentos$/, view: () => { location.hash = '#/saidas'; } },
     { re: /^#\/documentos\/([0-9a-f-]{36})$/, view: viewDocument },
     { re: /^#\/conferir\/([0-9a-f-]{36})$/, view: viewConference },
     { re: /^#\/produtos$/, view: viewProducts },
@@ -335,11 +476,15 @@
     { re: /^#\/auditoria$/, view: viewAudit, sup: true },
     { re: /^#\/configuracoes$/, view: viewSettings, sup: true },
   ];
+  const home = () => (isSup() ? '#/' : '#/saidas');
 
   async function render() {
     const hash = location.hash || '#/';
     state.view?.dispose?.();
     state.view = null;
+    // Modal aberto não sobrevive à troca de tela (ex.: importação → abrir a nota).
+    $$('.modal-bg').forEach((m) => m.remove());
+    scannerModal = null;
 
     if (!state.token) {
       if (hash !== '#/login') { location.hash = '#/login'; return; }
@@ -355,13 +500,13 @@
         return;
       }
     }
-    if (hash === '#/login') { location.hash = isSup() ? '#/' : '#/documentos'; return; }
+    if (hash === '#/login') { location.hash = home(); return; }
 
     const routeDef = ROUTES.find((r) => r.re.test(hash));
-    if (!routeDef || (routeDef.sup && !isSup())) { location.hash = isSup() ? '#/' : '#/documentos'; return; }
+    if (!routeDef || (routeDef.sup && !isSup())) { location.hash = home(); return; }
     if (!shellBuilt) buildShell();
     markNav(hash);
-    main().innerHTML = '<div class="empty">Carregando…</div>';
+    main().innerHTML = '<div class="skeleton"><i></i><i></i><i></i></div>';
     try {
       await routeDef.view(...(hash.match(routeDef.re).slice(1)));
     } catch (err) {
@@ -380,10 +525,12 @@
     let company = null;
 
     const shell = (inner) => {
-      $('#root').innerHTML = html`<div class="auth"><div class="card">
-        <div class="brand-mark">C</div>
-        ${inner}
-      </div></div>`.s;
+      $('#root').innerHTML = html`<div class="auth">
+        <div class="auth-art" aria-hidden="true">
+          <div class="art-title">Conferência cega de<br>entradas e saídas</div>
+          <ul><li>${raw(ICON.arrowIn)} Recebimento por XML e DANFE</li><li>${raw(ICON.arrowOut)} Separação de pedidos do ERP</li><li>${raw(ICON.warn)} Críticas automáticas</li></ul>
+        </div>
+        <div class="card"><div class="brand-mark">C</div>${inner}</div></div>`.s;
     };
 
     const stepCompany = () => {
@@ -429,7 +576,7 @@
           setSession(await api('POST', '/v1/auth/login', {
             tenantId: company.serial, companyKey: company.key, login: $('#login').value, password: $('#pass').value,
           }));
-          location.hash = isSup() ? '#/' : '#/documentos';
+          location.hash = home();
           render();
         } catch (err) { toast(err.message, true); }
       });
@@ -466,33 +613,34 @@
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Tabela de pedidos (painel e lista usam a mesma)
+  // Tabela de documentos (painel e filas usam a mesma)
   // ───────────────────────────────────────────────────────────────────────────
-  const shortDate = (v) => {
-    if (!v) return '—';
-    const d = new Date(v);
-    const today = new Date();
-    return d.toDateString() === today.toDateString() ? 'Hoje' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  };
-
-  function ordersTable(items, { erpCol = false } = {}) {
-    return html`<div class="table-wrap"><table>
+  function docsTable(items, flow, { compact = false } = {}) {
+    const sup = isSup();
+    const entrada = flow === 'entrada';
+    return html`<div class="table-wrap"><table class="docs">
       <thead><tr>
-        <th>Pedido #</th><th>Cliente</th><th class="num">Itens</th><th>Emissão</th>
-        <th>Separação</th><th>Status</th><th>Responsável</th>${erpCol ? html`<th>ERP</th>` : ''}
+        <th>${entrada ? 'Nota fiscal' : 'Pedido'}</th><th>${entrada ? 'Fornecedor' : 'Cliente'}</th>
+        ${entrada && sup && !compact ? html`<th class="num">Valor</th>` : ''}
+        <th class="num">Itens</th><th>${entrada ? 'Chegada' : 'Emissão'}</th>
+        <th>Progresso</th><th>Status</th><th>Críticas</th>${compact ? '' : html`<th>Responsável</th>`}
       </tr></thead>
       <tbody>${items.map((d) => {
         const s = statusInfo(d);
         return html`<tr class="clickable row-s ${s.cls}" data-id="${d.id}">
-          <td><div class="doc-no">${d.number || d.erpKey}${d.priority > 0 ? html` <span class="badge b-FALTA">Urgente</span>` : ''}</div>
-            <div class="sub">${d.source === 'NFS' ? `Nota de saída${d.orderNumber ? ` · pedido ${d.orderNumber}` : ''}` : 'Pedido de venda'}${invoiceBadge(d)}</div></td>
-          <td>${d.customerName || '—'}<div class="sub">${d.sellerName || ''}</div></td>
+          <td><div class="doc-no">${entrada ? `${d.number || '—'}${d.series ? `-${d.series}` : ''}` : d.number || d.erpKey}
+              ${d.priority > 0 ? html`<span class="badge b-URG">${d.priority >= 10 ? 'Urgente' : 'Alta'}</span>` : ''}</div>
+            <div class="sub">${entrada
+              ? (d.orderNumber ? `Pedido de compra ${d.orderNumber}` : 'Sem pedido de compra')
+              : html`${d.source === 'NFS' ? `Nota de saída${d.orderNumber ? ` · pedido ${d.orderNumber}` : ''}` : 'Pedido de venda'}${d.invoiceNumber ? html` · <span class="nf">NF ${d.invoiceNumber}</span>` : ''}`}</div></td>
+          <td><div class="party">${d.customerName || '—'}</div><div class="sub">${entrada ? fmtCnpj(d.customerCode) : d.sellerName || ''}</div></td>
+          ${entrada && sup && !compact ? html`<td class="num">${fmtMoney(d.entry?.totalValue)}</td>` : ''}
           <td class="num">${d.itemCount ?? '—'}</td>
-          <td>${shortDate(d.issuedAt)}<div class="sub">atualizado ${ago(d.updatedAt)}</div></td>
+          <td>${shortDate(entrada ? d.importedAt || d.issuedAt : d.issuedAt)}<div class="sub">${entrada ? `emitida ${shortDate(d.issuedAt)}` : `atualizado ${ago(d.updatedAt)}`}</div></td>
           <td>${progressBar(d)}</td>
-          <td>${docStatus(d)}${d.erpChanged ? html` <span class="badge b-FALTA" title="O ERP alterou o pedido durante a separação">ERP alterou</span>` : ''}</td>
-          <td>${d.lock ? html`<span title="Reservado até ${fmtDateTime(d.lock.expiresAt)}">🔒 ${d.lock.userName}</span>` : (d.finishedByName || d.startedByName || html`<span class="muted">—</span>`)}</td>
-          ${erpCol ? html`<td>${d.writebackStatus !== 'NAO_APLICAVEL' ? badge(d.writebackStatus, WB_LABEL[d.writebackStatus]) : ''}</td>` : ''}
+          <td>${docStatus(d)}</td>
+          <td>${alertChips(d.alerts)}</td>
+          ${compact ? '' : html`<td>${d.lock ? html`<span class="lock" title="Reservado até ${fmtDateTime(d.lock.expiresAt)}">🔒 ${d.lock.userName}</span>` : (d.finishedByName || d.startedByName || html`<span class="muted">—</span>`)}</td>`}
         </tr>`;
       })}</tbody></table></div>`;
   }
@@ -504,191 +652,338 @@
   // ───────────────────────────────────────────────────────────────────────────
   // Painel operacional
   // ───────────────────────────────────────────────────────────────────────────
-  const PANEL_TABS = [
-    { key: 'ativos', label: 'Na fila', status: 'AGUARDANDO,EM_CONFERENCIA,DIVERGENTE,AGUARDANDO_APROVACAO' },
-    { key: 'sep', label: 'Em separação', status: 'EM_CONFERENCIA', tone: '' },
-    { key: 'div', label: 'Divergências', status: 'DIVERGENTE,AGUARDANDO_APROVACAO', tone: 'tone-danger' },
-    { key: 'lib', label: 'Liberados', status: 'CONCLUIDO', tone: 'tone-ok' },
-  ];
-
   async function viewPanel() {
-    let tab = store.get('est.panel.tab') || 'ativos';
-
     const load = async () => {
-      const current = PANEL_TABS.find((t) => t.key === tab) || PANEL_TABS[0];
-      const [s, list] = await Promise.all([
-        api('GET', '/v1/dashboard/summary'),
-        // Pendentes: sem janela de data (pedido parado há dias continua sendo trabalho). Liberados: hoje.
-        api('GET', `/v1/documents?status=${current.status}&limit=15${current.key === 'lib' ? '&days=1' : ''}`),
-      ]);
-      const st = s.byStatus;
+      const s = await api('GET', '/v1/dashboard/summary');
       const workerAge = s.worker.seenAt ? (Date.now() - new Date(s.worker.seenAt)) / 60000 : Infinity;
       const workerOk = workerAge < 15;
-      const divergencias = (st.DIVERGENTE || 0) + (st.AGUARDANDO_APROVACAO || 0);
-      const conformidade = s.today.concluidos ? ((s.today.concluidos - s.today.com_divergencia) / s.today.concluidos) * 100 : null;
       const ativos = s.operators.filter((o) => o.ultima_leitura && Date.now() - new Date(o.ultima_leitura) < 10 * 60000).length;
-      const counts = {
-        ativos: (st.AGUARDANDO || 0) + (st.EM_CONFERENCIA || 0) + divergencias,
-        sep: st.EM_CONFERENCIA || 0,
-        div: divergencias,
-        lib: s.today.concluidos,
+
+      const flowCard = (flow) => {
+        const f = FLOW[flow];
+        const st = s.flows?.[flow]?.byStatus || {};
+        const done = st.CONCLUIDO || 0;
+        const div = (st.DIVERGENTE || 0) + (st.AGUARDANDO_APROVACAO || 0);
+        const divToday = s.flows?.[flow]?.divergentToday || 0;
+        const conf = done ? ((done - divToday) / done) * 100 : null;
+        const mini = (cls, label, value, tab, hint) => html`<button class="mini ${cls}" data-flow="${flow}" data-tab="${tab}">
+          <span class="v">${value}</span><span class="l">${label}</span>${hint ? html`<span class="h">${hint}</span>` : ''}</button>`;
+        return html`<section class="card flow-card f-${flow}">
+          <div class="flow-head">
+            <div class="fic">${raw(ICON[f.icon])}</div>
+            <div><h2>${f.label}</h2><div class="muted">${f.area} · ${flow === 'entrada' ? 'notas de compra' : 'pedidos de venda'}</div></div>
+            <a class="btn sm" href="${f.href}">Abrir fila</a>
+          </div>
+          <div class="minis">
+            ${mini('s-wait', flow === 'entrada' ? 'Aguardando' : 'Aguardando', st.AGUARDANDO || 0, 'ag')}
+            ${mini('s-sep', flow === 'entrada' ? 'Em conferência' : 'Em separação', st.EM_CONFERENCIA || 0, 'conf')}
+            ${mini('s-approval', 'Divergências', div, 'div', st.AGUARDANDO_APROVACAO ? `${st.AGUARDANDO_APROVACAO} c/ supervisor` : '')}
+            ${mini('s-done', flow === 'entrada' ? 'Recebidas hoje' : 'Liberados hoje', done, 'ok', done ? `${fmtDuration(s.flows?.[flow]?.avgSeconds)} médio` : '')}
+          </div>
+          <div class="conformity">
+            <div class="row"><span>Conformidade hoje</span><strong class="${conf === null ? '' : conf >= 95 ? 'good' : conf >= 85 ? 'mid' : 'bad'}">${conf === null ? '—' : `${conf.toFixed(1).replace('.', ',')}%`}</strong></div>
+            <div class="meter"><i style="width:${conf ?? 0}%" class="${conf === null ? '' : conf >= 95 ? 'good' : conf >= 85 ? 'mid' : 'bad'}"></i></div>
+            <div class="muted small">${conf === null ? 'Sem conferências concluídas hoje.' : `${done - divToday} de ${done} sem divergência`}</div>
+          </div>
+        </section>`;
       };
 
-      const kpi = (cls, label, icon, value, hint, hintCls, go) => html`
-        <div class="card kpi ${cls} ${go ? 'clickable' : ''}" ${go ? raw(`data-go="${esc(go)}"`) : ''}>
-          <div class="top"><div class="label">${label}</div><div class="icon">${raw(ICON[icon])}</div></div>
-          <div class="value">${value}</div>
-          <div class="hint ${hintCls || ''}">${hint}</div>
-        </div>`;
-
       main().innerHTML = html`
-        ${pageHead('Dashboard Operacional', `Monitoramento em tempo real · ${state.company.name}`)}
-        ${!workerOk ? html`<div class="alert-box warn">O Worker do ERP não se comunica ${s.worker.seenAt ? ago(s.worker.seenAt) : 'desde a instalação'}. Pedidos novos e o retorno ao ERP estão parados — verifique o serviço ColiseuWorkervett no servidor do cliente.</div>` : ''}
-        ${s.writeback.erros ? html`<div class="alert-box danger">${s.writeback.erros} conferência(s) com erro ao gravar no ERP. <a href="#/documentos" data-wb="ERRO">Ver pedidos</a></div>` : ''}
-        <div class="grid kpis">
-          ${kpi('kpi-wait', 'Aguardando', 'clock', st.AGUARDANDO || 0, 'na fila de separação', '', 'AGUARDANDO')}
-          ${kpi('kpi-sep', 'Em separação', 'boxes', st.EM_CONFERENCIA || 0, ativos ? `${ativos} operador(es) ativos agora` : 'nenhum operador lendo agora', '', 'EM_CONFERENCIA')}
-          ${kpi('kpi-warn', 'Divergências', 'alert', divergencias,
-            divergencias ? (st.AGUARDANDO_APROVACAO ? `${st.AGUARDANDO_APROVACAO} aguardando supervisor` : 'em recontagem') : 'Nenhuma pendente',
-            divergencias ? 'bad' : 'good', 'DIVERGENTE,AGUARDANDO_APROVACAO')}
-          ${kpi('kpi-done', 'Liberados hoje', 'check', s.today.concluidos,
-            s.today.concluidos ? `${fmtDuration(s.today.tempo_medio_s)} em média por pedido` : 'nenhum ainda', '', 'CONCLUIDO')}
-          ${kpi('kpi-rate', 'Conformidade', 'trend', conformidade === null ? '—' : `${conformidade.toFixed(1).replace('.', ',')}%`,
-            conformidade === null ? 'sem conferências hoje' : conformidade >= 95 ? '↑ Ótimo nível' : conformidade >= 85 ? 'Atenção' : '↓ Abaixo do esperado',
-            conformidade === null ? '' : conformidade >= 95 ? 'good' : 'bad')}
-        </div>
+        ${pageHead('Painel operacional', `Tempo real · ${state.company.name}`, '', 'Visão geral')}
+        ${!workerOk ? html`<div class="alert-box warn">${raw(ICON.warn)}<div><strong>Worker do ERP sem comunicação ${s.worker.seenAt ? ago(s.worker.seenAt) : 'desde a instalação'}.</strong> Pedidos novos e o retorno ao ERP estão parados — verifique o serviço ColiseuWorkervett no servidor do cliente.</div></div>` : ''}
+        ${s.writeback.erros ? html`<div class="alert-box danger">${raw(ICON.alert)}<div>${s.writeback.erros} conferência(s) com erro ao gravar no ERP. <a href="#/saidas" data-wb="ERRO">Ver documentos</a></div></div>` : ''}
+        ${!s.settings?.companyCnpj && isAdmin() ? html`<div class="alert-box info">${raw(ICON.info)}<div>Informe o <strong>CNPJ da empresa</strong> em <a href="#/configuracoes">Configurações</a> para o sistema criticar notas de entrada destinadas a outro CNPJ e separar DANFE de fornecedor do DANFE próprio.</div></div>` : ''}
 
-        <div class="card" style="margin-top:20px">
-          <div class="card-head">
-            <h2>Pedidos na fila</h2>
-            <div class="pills">${PANEL_TABS.map((t) => html`<button class="pill ${t.tone || ''} ${t.key === tab ? 'active' : ''}" data-tab="${t.key}">${t.label}<span class="n">${counts[t.key]}</span></button>`)}</div>
-          </div>
-          <div id="panel-list">${list.items.length ? ordersTable(list.items)
-            : html`<div class="empty">${tab === 'div' ? 'Nenhuma divergência. 👌' : tab === 'lib' ? 'Nenhum pedido liberado hoje ainda.' : 'Nenhum pedido aqui agora.'}</div>`}</div>
-          ${list.items.length >= 15 ? html`<div style="padding:12px;text-align:center"><a href="#/documentos" class="btn sm">Ver todos os pedidos</a></div>` : ''}
-        </div>
+        <div class="grid flows">${flowCard('entrada')}${flowCard('saida')}</div>
 
         <div class="grid two" style="margin-top:20px">
-          <div class="card">
-            <div class="card-head"><h2>Produtividade de hoje</h2></div>
-            ${s.operators.length ? html`<div class="table-wrap"><table>
-              <thead><tr><th>Operador</th><th class="num">Pedidos</th><th class="num">Leituras</th><th class="num">Unidades</th><th>Última leitura</th></tr></thead>
-              <tbody>${s.operators.map((o) => html`<tr><td><strong>${o.name}</strong></td><td class="num">${o.documentos}</td><td class="num">${o.leituras}</td><td class="num">${fmtQty(o.unidades)}</td><td>${ago(o.ultima_leitura)}</td></tr>`)}</tbody>
-            </table></div>` : html`<div class="empty">Nenhuma leitura hoje.</div>`}
-          </div>
-          <div class="card card-pad">
+          <section class="card">
+            <div class="card-head"><h2>${raw(ICON.warn)} Críticas — resolva agora</h2><span class="muted small">${s.attention.length ? `${s.attention.length} documento(s)` : ''}</span></div>
+            ${s.attention.length ? html`<ul class="todo">${s.attention.map((a) => html`<li data-id="${a.id}">
+                ${flowTag(a)}<div class="t"><strong>${docTitle(a)}</strong> <span class="muted">${a.customerName || ''}</span>
+                <div class="why">${a.alerts.slice(0, 2).map((x) => html`<span class="${LEVEL[x.level].cls}">${raw(ICON[LEVEL[x.level].icon])}${x.message}</span>`)}</div></div>
+                ${docStatus(a)}</li>`)}</ul>`
+              : html`<div class="crit-empty big">${raw(ICON.check)}<span>Nenhuma crítica aberta. Operação em dia.</span></div>`}
+          </section>
+          <section class="card card-pad">
             <h2>Integração com o ERP</h2>
             <div class="meta-grid" style="grid-template-columns:1fr 1fr">
-              <div><div class="k">Worker</div><div class="v">${workerOk ? html`<span class="status s-done">Online</span>` : html`<span class="status s-approval">Offline</span>`}</div><div class="muted" style="font-size:12px;margin-top:4px">${ago(s.worker.seenAt)}</div></div>
+              <div><div class="k">Worker</div><div class="v">${workerOk ? html`<span class="status s-done">Online</span>` : html`<span class="status s-approval">Offline</span>`}</div><div class="muted small" style="margin-top:4px">${ago(s.worker.seenAt)}</div></div>
               <div><div class="k">Versão</div><div class="v">${s.worker.info?.version || '—'}</div></div>
               <div><div class="k">Retorno ao ERP</div><div class="v">${s.worker.info?.writebackEnabled ? 'Ativo' : 'Desligado'}</div></div>
               <div><div class="k">Pendentes</div><div class="v">${s.writeback.pendentes}</div></div>
             </div>
-            <div style="margin-top:14px">${s.sync.map((x) => html`<div class="count-item" style="padding:8px 0"><span>${x.entity}</span><span class="muted">${ago(x.last_at)}</span></div>`)}</div>
-          </div>
-        </div>`.s;
+            <div style="margin-top:14px">${s.sync.map((x) => html`<div class="kv-row"><span>${x.entity}</span><span class="muted">${ago(x.last_at)}</span></div>`)}</div>
+          </section>
+        </div>
 
-      bindRows($('#panel-list'));
-      $$('[data-tab]').forEach((b) => b.addEventListener('click', () => {
-        tab = b.dataset.tab; store.set('est.panel.tab', tab); load().catch((e) => toast(e.message, true));
+        <section class="card" style="margin-top:20px">
+          <div class="card-head"><h2>Produtividade de hoje</h2><span class="muted small">${ativos ? `${ativos} operador(es) lendo agora` : 'ninguém lendo agora'}</span></div>
+          ${s.operators.length ? html`<div class="table-wrap"><table>
+            <thead><tr><th>Operador</th><th class="num">Documentos</th><th class="num">Leituras</th><th class="num">Unidades</th><th>Última leitura</th></tr></thead>
+            <tbody>${s.operators.map((o) => html`<tr><td><strong>${o.name}</strong></td><td class="num">${o.documentos}</td><td class="num">${o.leituras}</td><td class="num">${fmtQty(o.unidades)}</td><td>${ago(o.ultima_leitura)}</td></tr>`)}</tbody>
+          </table></div>` : html`<div class="empty">Nenhuma leitura hoje.</div>`}
+        </section>`.s;
+
+      $$('[data-flow][data-tab]').forEach((b) => b.addEventListener('click', () => {
+        store.set(`est.q.${b.dataset.flow}.tab`, b.dataset.tab);
+        location.hash = FLOW[b.dataset.flow].href;
       }));
-      $$('[data-go]').forEach((k) => k.addEventListener('click', () => {
-        store.set('est.docs.status', k.dataset.go); location.hash = '#/documentos';
-      }));
+      $$('.todo li[data-id]').forEach((li) => li.addEventListener('click', () => { location.hash = `#/documentos/${li.dataset.id}`; }));
     };
     await load();
-    state.view = { onEvent: debounce(() => load().catch(() => {}), 1500) };
+    state.view = { onEvent: debounce(() => { load().catch(() => {}); refreshNavCounts(); }, 1500) };
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  // Pedidos
+  // Filas: Entradas e Saídas
   // ───────────────────────────────────────────────────────────────────────────
-  const FILTERS = [
-    { key: 'AGUARDANDO,EM_CONFERENCIA,DIVERGENTE,AGUARDANDO_APROVACAO', label: 'Na fila' },
-    { key: 'AGUARDANDO', label: 'Aguardando separação', tone: '' },
-    { key: 'EM_CONFERENCIA', label: 'Em separação' },
-    { key: 'DIVERGENTE,AGUARDANDO_APROVACAO', label: 'Divergências', tone: 'tone-danger' },
-    { key: 'CONCLUIDO', label: 'Liberados / faturados', tone: 'tone-ok' },
-    { key: 'CANCELADO', label: 'Cancelados' },
-    { key: '', label: 'Todos' },
+  const OPEN_ST = 'AGUARDANDO,EM_CONFERENCIA,DIVERGENTE,AGUARDANDO_APROVACAO';
+  const queueTabs = (flow) => [
+    { key: 'fila', label: 'Na fila', status: OPEN_ST },
+    { key: 'ag', label: flow === 'entrada' ? 'Aguardando conferência' : 'Aguardando separação', status: 'AGUARDANDO', cls: 's-wait' },
+    { key: 'conf', label: flow === 'entrada' ? 'Em conferência' : 'Em separação', status: 'EM_CONFERENCIA', cls: 's-sep' },
+    { key: 'div', label: 'Divergências', status: 'DIVERGENTE,AGUARDANDO_APROVACAO', cls: 's-approval' },
+    { key: 'ok', label: flow === 'entrada' ? 'Recebidas' : 'Liberados / faturados', status: 'CONCLUIDO', cls: 's-done' },
+    { key: 'canc', label: 'Cancelados', status: 'CANCELADO', cls: 's-cancel' },
+    { key: 'all', label: 'Todos', status: '' },
   ];
 
-  async function viewDocuments() {
-    const saved = store.get('est.docs.status');
+  async function viewQueue(flow) {
+    const F = FLOW[flow];
+    const TABS = queueTabs(flow);
+    markNav(location.hash, flow);
+    const k = (n) => `est.q.${flow}.${n}`;
+    const savedTab = store.get(k('tab'));
     const f = {
-      status: FILTERS.some((x) => x.key === saved) ? saved : FILTERS[0].key,
+      tab: TABS.some((t) => t.key === savedTab) ? savedTab : 'fila',
       q: '',
-      days: store.get('est.docs.days') || '7',
-      offset: 0,
-      // Filtro de retorno ao ERP vem só do link do painel e vale uma vez.
-      writeback: pendingWritebackFilter,
+      days: store.get(k('days')) || '7',
+      attention: store.get(k('att')) === '1',
+      priority: false,
+      mine: false,
+      writeback: flow === 'saida' ? pendingWritebackFilter : null,
     };
     pendingWritebackFilter = null;
     let items = [];
     let hasMore = false;
 
+    const actions = flow === 'entrada' ? [
+      html`<button class="btn" id="q-scan">${raw(ICON.scan)} Bipar DANFE</button>`,
+      isSup() ? html`<button class="btn primary" id="q-import">${raw(ICON.upload)} Importar XML</button>` : '',
+    ] : [html`<button class="btn" id="q-scan">${raw(ICON.scan)} Ler pedido</button>`];
+
     main().innerHTML = html`
-      ${pageHead('Pedidos', 'Separação e conferência dos pedidos de venda recebidos do ERP')}
-      <div class="card">
+      ${pageHead(F.label, flow === 'entrada'
+        ? 'Recebimento de mercadorias — conferência cega das notas de compra'
+        : 'Expedição — separação e conferência cega dos pedidos de venda do ERP', actions, F.area)}
+      ${flowGuide(flow)}
+      ${flow === 'entrada' && isSup() ? html`<div class="dropzone slim" id="q-drop">${raw(ICON.file)}<span><strong>Arraste os XML das NF-e aqui</strong> ou clique para escolher — vários de uma vez.</span>
+        <input type="file" id="q-file" accept=".xml,text/xml,application/xml" multiple hidden></div>` : ''}
+      <section class="card">
+        <div class="tabs" id="tabs"></div>
         <div class="toolbar">
-          <div class="pills" id="chips">${FILTERS.map((x) => html`<button class="pill ${x.tone || ''} ${x.key === f.status ? 'active' : ''}" data-status="${x.key}">${x.label}</button>`)}</div>
-          <input class="input" id="q" placeholder="Pedido, NF, cliente ou chave" style="margin-left:auto">
-          <select class="input" id="days" style="width:140px">
+          <label class="search">${raw(ICON.search)}<input class="input" id="q" placeholder="${flow === 'entrada' ? 'NF, fornecedor, CNPJ, chave ou pedido de compra' : 'Pedido, NF, cliente ou chave'}"></label>
+          <select class="input" id="days" title="Período dos concluídos (pendentes aparecem sempre)">
             ${[['1', 'Hoje'], ['3', '3 dias'], ['7', '7 dias'], ['30', '30 dias'], ['90', '90 dias'], ['180', '180 dias'], ['365', '1 ano']].map(([v, l]) => html`<option value="${v}" ${v === f.days ? 'selected' : ''}>${l}</option>`)}
           </select>
+          <button class="toggle tone-danger ${f.attention ? 'on' : ''}" id="t-att" type="button">${raw(ICON.warn)} Com críticas <span class="n" id="att-n"></span></button>
+          ${flow === 'saida' ? html`<button class="toggle ${f.priority ? 'on' : ''}" id="t-prio" type="button">Urgentes</button>` : ''}
+          <button class="toggle" id="t-mine" type="button">Minhas reservas</button>
+          ${f.writeback ? html`<span class="filter-chip">Retorno ERP: ${WB_LABEL[f.writeback]} <button type="button" id="wb-x" aria-label="Remover filtro">×</button></span>` : ''}
         </div>
         <div id="list"></div>
-      </div>`.s;
+      </section>`.s;
+    bindGuide();
+
+    const drawTabs = (counts) => {
+      const n = (t) => (t.status ? t.status.split(',').reduce((s, x) => s + (counts?.byStatus?.[x] || 0), 0) : null);
+      $('#tabs').innerHTML = TABS.map((t) => html`<button class="tab ${t.cls || ''} ${t.key === f.tab ? 'active' : ''}" data-tab="${t.key}">
+        ${t.cls ? html`<i class="dot"></i>` : ''}${t.label}${n(t) !== null ? html`<span class="n">${n(t)}</span>` : ''}</button>`.s).join('');
+      $('#att-n').textContent = counts?.attention ? counts.attention : '';
+      $$('#tabs .tab').forEach((b) => b.addEventListener('click', () => {
+        f.tab = b.dataset.tab; store.set(k('tab'), f.tab);
+        $$('#tabs .tab').forEach((x) => x.classList.toggle('active', x === b));
+        load().catch((e) => toast(e.message, true));
+      }));
+    };
 
     const load = async (append = false) => {
-      f.offset = append ? items.length : 0;
-      const params = new URLSearchParams({ limit: '50', offset: String(f.offset), days: f.days });
-      if (f.status) params.set('status', f.status);
+      const tab = TABS.find((t) => t.key === f.tab);
+      const params = new URLSearchParams({ flow, limit: '50', offset: String(append ? items.length : 0), days: f.days });
+      if (tab.status) params.set('status', tab.status);
       if (f.q) params.set('q', f.q);
       if (f.writeback) params.set('writeback', f.writeback);
-      const r = await api('GET', `/v1/documents?${params}`);
+      if (f.attention) params.set('attention', '1');
+      if (f.priority) params.set('priority', '1');
+      if (f.mine) params.set('mine', '1');
+      const [r, counts] = await Promise.all([
+        api('GET', `/v1/documents?${params}`),
+        append ? null : api('GET', `/v1/documents/counts?flow=${flow}&days=${f.days}`),
+      ]);
       items = append ? items.concat(r.items) : r.items;
       hasMore = r.items.length === 50;
+      if (counts) drawTabs(counts);
       draw();
     };
 
     const draw = () => {
+      const empty = f.attention ? 'Nenhum documento com críticas neste filtro. 👌'
+        : flow === 'entrada' && f.tab === 'fila' ? html`Nenhuma nota na fila. ${isSup() ? 'Importe o XML ou bipe o DANFE da mercadoria que chegou.' : 'Peça ao supervisor para importar o XML da nota.'}`
+          : `Nenhum${flow === 'entrada' ? 'a nota' : ' pedido'} neste filtro.`;
       $('#list').innerHTML = items.length
-        ? ordersTable(items, { erpCol: isSup() }).s
-          + (hasMore ? '<div style="padding:14px;text-align:center"><button class="btn" id="more">Carregar mais</button></div>' : '')
-        : '<div class="empty">Nenhum pedido neste filtro.</div>';
+        ? docsTable(items, flow).s + (hasMore ? '<div class="more"><button class="btn" id="more">Carregar mais</button></div>' : '')
+        : html`<div class="empty">${raw(ICON[F.icon])}<div>${empty}</div></div>`.s;
       bindRows($('#list'));
       $('#more')?.addEventListener('click', () => load(true).catch((e) => toast(e.message, true)));
     };
 
-    $$('#chips .pill').forEach((c) => c.addEventListener('click', () => {
-      f.status = c.dataset.status;
-      f.writeback = null;
-      store.set('est.docs.status', f.status);
-      $$('#chips .pill').forEach((x) => x.classList.toggle('active', x === c));
-      load().catch((e) => toast(e.message, true));
-    }));
-    $('#q').addEventListener('input', debounce((e) => { f.q = e.target.value.trim(); load().catch((er) => toast(er.message, true)); }, 300));
-    $('#days').addEventListener('change', (e) => { f.days = e.target.value; store.set('est.docs.days', f.days); load().catch((er) => toast(er.message, true)); });
+    const reload = () => load().catch((er) => toast(er.message, true));
+    $('#q').addEventListener('input', debounce((e) => { f.q = e.target.value.trim(); reload(); }, 300));
+    $('#days').addEventListener('change', (e) => { f.days = e.target.value; store.set(k('days'), f.days); reload(); });
+    const toggle = (id, key, persist) => $(id)?.addEventListener('click', (e) => {
+      f[key] = !f[key]; e.currentTarget.classList.toggle('on', f[key]);
+      if (persist) store.set(k(persist), f[key] ? '1' : '0');
+      reload();
+    });
+    toggle('#t-att', 'attention', 'att');
+    toggle('#t-prio', 'priority');
+    toggle('#t-mine', 'mine');
+    $('#wb-x')?.addEventListener('click', (e) => { f.writeback = null; e.currentTarget.parentElement.remove(); reload(); });
+    $('#q-scan').addEventListener('click', () => openScanner());
+    $('#q-import')?.addEventListener('click', () => openImport());
+    const drop = $('#q-drop');
+    if (drop) {
+      drop.addEventListener('click', () => $('#q-file').click());
+      $('#q-file').addEventListener('change', (e) => { if (e.target.files.length) openImport({ files: [...e.target.files] }); e.target.value = ''; });
+      bindDrop(drop, (files) => openImport({ files }));
+    }
 
     await load();
-    state.view = { onEvent: debounce((ev) => { if (ev.type !== 'worker.heartbeat') load().catch(() => {}); }, 1200) };
+    state.view = { onEvent: debounce((ev) => { if (ev.type !== 'worker.heartbeat') { reload(); refreshNavCounts(); } }, 1200) };
   }
 
+  /** Arrastar e soltar arquivos XML. */
+  function bindDrop(el, onFiles) {
+    ['dragenter', 'dragover'].forEach((t) => el.addEventListener(t, (e) => { e.preventDefault(); el.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach((t) => el.addEventListener(t, (e) => { e.preventDefault(); el.classList.remove('over'); }));
+    el.addEventListener('drop', (e) => {
+      const files = [...(e.dataTransfer?.files || [])].filter((f) => /\.xml$/i.test(f.name) || /xml/.test(f.type));
+      if (files.length) onFiles(files); else toast('Solte arquivos .xml de NF-e', true);
+    });
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Importação de XML (entradas)
+  // ───────────────────────────────────────────────────────────────────────────
+  /**
+   * Modal de recebimento: bipa o DANFE (opcional) e escolhe/arrasta os XML.
+   * Com a chave do DANFE informada, o XML precisa ser da mesma nota (evita trocar notas).
+   */
+  function openImport({ files = [], expectedKey = '' } = {}) {
+    if (!isSup()) { toast('Somente supervisor ou administrador importa XML. Peça a ele para importar a nota.', true); return; }
+    const m = modal({
+      title: 'Receber nota fiscal (entrada)',
+      wide: true,
+      submitLabel: null,
+      cancelLabel: 'Fechar',
+      body: html`
+        <ol class="mini-steps"><li><span>1</span>Bipe o DANFE <em>(opcional)</em></li><li><span>2</span>Selecione o XML</li><li><span>3</span>Revise as críticas e confira</li></ol>
+        <div class="field"><label for="im-key">Chave de acesso do DANFE</label>
+          <input class="input mono scan-like" id="im-key" value="${fmtKey(expectedKey)}" placeholder="Bipe o código de barras do DANFE (44 dígitos)" autocomplete="off">
+          <div class="help" id="im-key-help">Garante que o XML importado é da mesma nota que chegou fisicamente.</div></div>
+        <div class="dropzone" id="im-drop">${raw(ICON.upload)}<strong>Arraste os arquivos XML aqui</strong><span class="muted">ou clique para escolher — pode selecionar vários</span>
+          <input type="file" id="im-file" accept=".xml,text/xml,application/xml" multiple hidden></div>
+        <div id="im-results" class="im-results"></div>`,
+    });
+    const el = m.el;
+    const keyInput = $('#im-key', el);
+    const keyDigits = () => keyInput.value.replace(/\D/g, '');
+    keyInput.addEventListener('input', () => {
+      const d = keyDigits();
+      $('#im-key-help', el).textContent = d.length === 44 ? `NF ${Number(d.slice(25, 34))} · série ${Number(d.slice(22, 25))} · emitente ${fmtCnpj(d.slice(6, 20))}`
+        : d.length ? `${d.length}/44 dígitos` : 'Garante que o XML importado é da mesma nota que chegou fisicamente.';
+    });
+    keyInput.dispatchEvent(new Event('input'));
+    // Leitor manda Enter no fim: não submete o modal, vai para a escolha do arquivo.
+    keyInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); if (keyDigits().length === 44) $('#im-file', el).click(); } });
+
+    const results = $('#im-results', el);
+    const row = (name) => {
+      const r = document.createElement('div');
+      r.className = 'im-row busy';
+      r.innerHTML = html`<div class="ic">${raw(ICON.file)}</div><div class="t"><strong>${name}</strong><div class="muted">Importando…</div></div><div class="act"></div>`.s;
+      results.prepend(r);
+      return r;
+    };
+    const send = async (file, r, force = false) => {
+      const xml = await file.text();
+      const key = keyDigits();
+      try {
+        const res = await api('POST', '/v1/entries/import', { xml, ...(key.length === 44 && files.length <= 1 ? { expectedKey: key } : {}), ...(force ? { force: true } : {}) });
+        const counts = { erro: 0, alerta: 0, info: 0 };
+        res.critiques.forEach((c) => { counts[c.level]++; });
+        r.className = `im-row ${counts.erro ? 'err' : counts.alerta ? 'warn' : 'ok'}`;
+        r.innerHTML = html`<div class="ic">${raw(ICON[counts.erro ? 'alert' : counts.alerta ? 'warn' : 'check'])}</div>
+          <div class="t"><strong>NF ${res.number} · ${res.supplier || ''}</strong>
+            <div class="muted">${res.items} itens${res.unlinked ? ` · ${res.unlinked} sem vínculo` : ''} · ${counts.erro ? `${counts.erro} crítica(s) grave(s)` : counts.alerta ? `${counts.alerta} crítica(s) para revisar` : 'sem críticas'}</div></div>
+          <div class="act"><a class="btn sm primary" href="#/documentos/${res.documentId}">Abrir</a></div>`.s;
+        beep(!counts.erro);
+        refreshNavCounts();
+        return true;
+      } catch (err) {
+        beep(false);
+        const dup = err.code === 'DUPLICATE';
+        r.className = `im-row ${dup ? 'warn' : 'err'}`;
+        r.innerHTML = html`<div class="ic">${raw(ICON[dup ? 'warn' : 'alert'])}</div><div class="t"><strong>${file.name}</strong><div>${err.message}</div></div>
+          <div class="act">${dup ? html`<a class="btn sm" href="#/documentos/${err.data.documentId}">Abrir existente</a>` : ''}
+          ${err.code === 'DEST_MISMATCH' ? html`<button type="button" class="btn sm danger">Importar mesmo assim</button>` : ''}</div>`.s;
+        $('button.danger', r)?.addEventListener('click', () => { r.className = 'im-row busy'; send(file, r, true); });
+        return false;
+      } finally {
+        $$('a', r).forEach((a) => a.addEventListener('click', () => m.close()));
+      }
+    };
+    const handle = async (list) => {
+      files = list;
+      let allOk = true;
+      for (const file of list) allOk = (await send(file, row(file.name))) && allOk;
+      // Chave do DANFE só é limpa quando deu certo — no erro o operador corrige e tenta de novo.
+      if (allOk) { keyInput.value = ''; keyInput.dispatchEvent(new Event('input')); }
+    };
+    const drop = $('#im-drop', el);
+    drop.addEventListener('click', () => $('#im-file', el).click());
+    $('#im-file', el).addEventListener('change', (e) => { if (e.target.files.length) handle([...e.target.files]); e.target.value = ''; });
+    bindDrop(drop, handle);
+    if (files.length) handle(files);
+    return m;
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Detalhe do documento
+  // ───────────────────────────────────────────────────────────────────────────
   async function viewDocument(id) {
     let tab = 'itens';
     const load = async () => {
       const d = await api('GET', `/v1/documents/${id}`);
+      const flow = flowOf(d);
+      const F = FLOW[flow];
+      markNav(location.hash, flow);
       const sup = isSup();
+      const entrada = flow === 'entrada';
       const canCount = ['AGUARDANDO', 'EM_CONFERENCIA', 'DIVERGENTE'].includes(d.status) && !d.erpCancelled;
       const lockedByOther = d.lock && !d.lock.mine;
+      const st = statusInfo(d);
+      const critErrors = (d.critiques || []).filter((c) => c.level === 'erro').length;
 
       const actions = [
-        canCount ? html`<button class="btn primary" id="a-count" ${lockedByOther && !sup ? 'disabled' : ''}>${d.lock?.mine ? 'Continuar conferência' : d.status === 'DIVERGENTE' ? 'Recontar' : 'Conferir'}</button>` : '',
+        canCount ? html`<button class="btn primary" id="a-count" ${lockedByOther && !sup ? 'disabled' : ''}>${raw(ICON.scan)} ${d.lock?.mine ? 'Continuar conferência' : d.status === 'DIVERGENTE' ? 'Recontar' : entrada ? 'Conferir nota' : 'Separar e conferir'}</button>` : '',
         sup && ['AGUARDANDO_APROVACAO', 'DIVERGENTE'].includes(d.status) ? html`<button class="btn ok" id="a-approve">Aprovar</button>` : '',
         sup && (['AGUARDANDO_APROVACAO', 'DIVERGENTE'].includes(d.status) || (d.status === 'CONCLUIDO' && d.writebackStatus !== 'GRAVADO')) ? html`<button class="btn" id="a-reopen">Reabrir recontagem</button>` : '',
         sup && d.lock ? html`<button class="btn" id="a-release">Liberar reserva</button>` : '',
         sup && d.status !== 'CANCELADO' && d.writebackStatus !== 'GRAVADO' && (d.startedAt || d.round > 0) ? html`<button class="btn danger" id="a-reset">Zerar conferência</button>` : '',
+        sup && entrada && d.status === 'AGUARDANDO' && !d.startedAt ? html`<button class="btn danger" id="a-delete">Excluir importação</button>` : '',
+        sup && d.status !== 'AGUARDANDO' ? html`<button class="btn ghost" id="a-print" title="Imprimir relatório da conferência">${raw(ICON.print)}</button>` : '',
       ];
 
       const diff = (i) => {
@@ -696,48 +991,89 @@
         const n = Number(i.countedQty) - Number(i.expectedQty);
         return n === 0 ? '0' : (n > 0 ? '+' : '') + fmtQty(n);
       };
+      const critBySeq = new Map();
+      for (const c of d.critiques || []) for (const s of c.seqs || []) critBySeq.set(s, [...(critBySeq.get(s) || []), c]);
+      const isPlaceholder = (pid) => String(pid).startsWith('NFE:');
+      const lotsCell = (i) => (i.meta?.lots?.length ? i.meta.lots.map((l) => html`<div class="lot">${l.lot || 's/ lote'}${l.expiresAt ? html` · <span class="${(critBySeq.get(i.seq) || []).some((c) => /LOT_/.test(c.code)) ? 'warn-t' : ''}">val. ${new Date(`${l.expiresAt}T12:00:00`).toLocaleDateString('pt-BR')}</span>` : ''}</div>`) : html`<span class="muted">—</span>`);
+
+      const stages = entrada ? ['Importada', 'Em conferência', 'Divergência', 'Recebida'] : ['Na fila', 'Em separação', 'Divergência', 'Liberado', 'Faturado'];
+      const stageIdx = st.stage;
 
       main().innerHTML = html`
-        ${pageHead(`${d.source === 'NFS' ? 'Nota' : 'Pedido'} ${d.number || d.erpKey}`, d.customerName || '', actions)}
-        ${d.erpCancelled ? html`<div class="alert-box danger">Documento cancelado no ERP${d.status === 'CONCLUIDO' ? ' depois de conferido' : ''}.</div>` : ''}
-        ${invoicedEarly(d) ? html`<div class="alert-box danger">Pedido faturado no ERP (NF ${d.invoiceNumber}) antes de terminar a conferência. Confira se a mercadoria já saiu.</div>` : ''}
-        ${d.source === 'PED' && d.status === 'CONCLUIDO' && !d.invoiceNumber ? html`<div class="alert-box ok">Conferido — pedido liberado para o faturamento emitir a nota.</div>` : ''}
-        ${d.erpChanged ? html`<div class="alert-box warn">O ERP alterou este documento depois que a conferência começou. Confira os itens e, se necessário, zere a conferência.</div>` : ''}
-        ${d.writebackStatus === 'ERRO' && sup ? html`<div class="alert-box danger">Erro ao gravar no ERP: ${d.writebackError || 'desconhecido'}. O Worker tenta novamente a cada 5 minutos.</div>` : ''}
-        ${lockedByOther ? html`<div class="alert-box info">Em conferência por <strong>${d.lock.userName}</strong> até ${fmtDateTime(d.lock.expiresAt)}.</div>` : ''}
-        <div class="card card-pad">
-          <div class="meta-grid">
-            <div><div class="k">Status</div><div class="v">${docStatus(d)}${d.round > 0 ? html` <span class="muted">rodada ${d.round + 1}</span>` : ''}</div></div>
-            <div><div class="k">Emissão</div><div class="v">${fmtDateTime(d.issuedAt)}</div></div>
-            <div><div class="k">Vendedor</div><div class="v">${d.sellerName || '—'}</div></div>
-            ${d.invoiceNumber ? html`<div><div class="k">Nota fiscal</div><div class="v">${d.invoiceNumber} <span class="muted">${fmtDateTime(d.invoicedAt)}</span></div></div>` : ''}
-            ${d.orderNumber ? html`<div><div class="k">Pedido</div><div class="v">${d.orderNumber}</div></div>` : ''}
-            <div><div class="k">Chave ERP</div><div class="v mono">${d.erpKey}</div></div>
-            <div><div class="k">Início</div><div class="v">${fmtDateTime(d.startedAt)} <span class="muted">${d.startedByName || ''}</span></div></div>
-            <div><div class="k">Fim</div><div class="v">${fmtDateTime(d.finishedAt)} <span class="muted">${d.finishedByName || ''}</span></div></div>
-            ${d.approvedAt ? html`<div><div class="k">Aprovação</div><div class="v">${fmtDateTime(d.approvedAt)} <span class="muted">${d.approvedByName || ''}</span></div></div>` : ''}
-            ${sup ? html`<div><div class="k">Retorno ERP</div><div class="v">${badge(d.writebackStatus === 'NAO_APLICAVEL' ? 'PENDENTE' : d.writebackStatus, WB_LABEL[d.writebackStatus])}</div></div>` : ''}
-            ${sup && !['CONCLUIDO', 'CANCELADO'].includes(d.status) ? html`<div><div class="k">Prioridade</div><div class="v"><select class="input" id="prio" style="height:30px;width:120px">
-              ${[[0, 'Normal'], [5, 'Alta'], [10, 'Urgente']].map(([v, l]) => html`<option value="${v}" ${Number(d.priority) === v ? 'selected' : ''}>${l}</option>`)}</select></div></div>` : ''}
+        ${pageHead(docTitle(d), d.customerName || '', actions, html`<a href="${F.href}" class="back">${raw(ICON.back)}${F.label}</a>`)}
+        ${d.erpCancelled ? html`<div class="alert-box danger">${raw(ICON.alert)}<div>Documento cancelado no ERP${d.status === 'CONCLUIDO' ? ' depois de conferido' : ''}.</div></div>` : ''}
+        ${d.source === 'PED' && d.status === 'CONCLUIDO' && !d.invoiceNumber ? html`<div class="alert-box ok">${raw(ICON.check)}<div>Conferido — pedido liberado para o faturamento emitir a nota.</div></div>` : ''}
+        ${entrada && d.status === 'CONCLUIDO' ? html`<div class="alert-box ok">${raw(ICON.check)}<div>Nota conferida${d.hasDivergence ? ' com divergência aprovada' : ''}. Dê entrada no ERP com as quantidades <strong>contadas</strong>${d.hasDivergence ? ' e acione o fornecedor sobre a diferença' : ''}.</div></div>` : ''}
+        ${entrada && critErrors && canCount ? html`<div class="alert-box danger">${raw(ICON.alert)}<div><strong>${critErrors} crítica(s) grave(s).</strong> Resolva antes de receber a mercadoria — veja abaixo.</div></div>` : ''}
+        ${d.writebackStatus === 'ERRO' && sup ? html`<div class="alert-box danger">${raw(ICON.alert)}<div>Erro ao gravar no ERP: ${d.writebackError || 'desconhecido'}. O Worker tenta novamente a cada 5 minutos.</div></div>` : ''}
+        ${lockedByOther ? html`<div class="alert-box info">${raw(ICON.info)}<div>Em conferência por <strong>${d.lock.userName}</strong> até ${fmtDateTime(d.lock.expiresAt)}.</div></div>` : ''}
+
+        <section class="card doc-hero f-${flow}">
+          <div class="hero-top">
+            ${flowTag(d)} ${docStatus(d)} ${d.round > 0 ? html`<span class="muted">rodada ${d.round + 1}</span>` : ''}
+            <div class="spacer"></div>
+            ${sup && !['CONCLUIDO', 'CANCELADO'].includes(d.status) ? html`<label class="prio">Prioridade <select class="input" id="prio">
+              ${[[0, 'Normal'], [5, 'Alta'], [10, 'Urgente']].map(([v, l]) => html`<option value="${v}" ${Number(d.priority) === v ? 'selected' : ''}>${l}</option>`)}</select></label>` : ''}
           </div>
-          ${d.justification ? html`<div style="margin-top:14px"><div class="k muted" style="font-size:12px;font-weight:600">JUSTIFICATIVA</div><div>${d.justification}</div></div>` : ''}
-        </div>
-        ${sup ? html`<div class="chips" style="margin:16px 0 10px">
-          ${[['itens', 'Itens'], ['leituras', 'Leituras'], ['historico', 'Histórico']].map(([k, l]) => html`<button class="chip ${tab === k ? 'active' : ''}" data-tab="${k}">${l}</button>`)}</div>` : html`<div style="height:16px"></div>`}
-        <div class="card" id="tab-body">
-          ${sup ? html`<div class="table-wrap"><table>
-            <thead><tr><th>Seq</th><th>Código</th><th>Descrição</th><th>Un</th><th class="num">Esperado</th><th class="num">Contado</th><th class="num">Dif.</th><th>Resultado</th></tr></thead>
-            <tbody>${d.items.map((i) => html`<tr>
-              <td class="muted">${i.isExtra ? 'extra' : i.seq}</td><td class="mono">${i.productErpId}</td><td>${i.description}</td><td>${i.unit || ''}</td>
-              <td class="num">${fmtQty(i.expectedQty)}</td><td class="num">${fmtQty(i.countedQty)}</td><td class="num">${diff(i)}</td>
-              <td>${badge(i.result, RESULT_LABEL[i.result])}</td></tr>`)}</tbody></table></div>`
+          ${stageIdx >= 0 ? html`<ol class="track">${stages.map((s, i) => html`<li class="${i < stageIdx ? 'done' : i === stageIdx ? `now ${st.cls}` : ''} ${i === 2 && !d.hasDivergence && stageIdx > 2 ? 'skipped' : ''}"><span class="dot">${i < stageIdx ? raw(ICON.check) : ''}</span>${s}</li>`)}</ol>` : ''}
+          <div class="meta-grid">
+            ${entrada ? html`
+              <div><div class="k">Fornecedor</div><div class="v">${d.entry?.supplier?.name || d.customerName || '—'}</div><div class="muted small">${fmtCnpj(d.customerCode)}${d.entry?.supplier?.uf ? ` · ${d.entry.supplier.uf}` : ''}</div></div>
+              <div><div class="k">Emissão</div><div class="v">${fmtDateTime(d.issuedAt)}</div></div>
+              <div><div class="k">Importada</div><div class="v">${fmtDateTime(d.importedAt)}</div></div>
+              ${sup ? html`<div><div class="k">Valor da nota</div><div class="v strong">${fmtMoney(d.entry?.totalValue)}</div></div>` : ''}
+              <div><div class="k">Pedido de compra</div><div class="v">${d.orderNumber || html`<span class="muted">não informado</span>`}</div></div>
+              ${sup ? html`<div><div class="k">Natureza</div><div class="v">${d.entry?.operation || '—'}</div></div>` : ''}
+              <div class="wide"><div class="k">Chave de acesso</div><div class="v mono key">${fmtKey(d.erpKey)}</div></div>
+              ${sup && d.entry?.protocol ? html`<div><div class="k">Protocolo SEFAZ</div><div class="v">${d.entry.protocol.number || '—'} <span class="muted small">${d.entry.protocol.status}</span></div></div>` : ''}`
+            : html`
+              <div><div class="k">Cliente</div><div class="v">${d.customerName || '—'}</div></div>
+              <div><div class="k">Emissão</div><div class="v">${fmtDateTime(d.issuedAt)}</div></div>
+              <div><div class="k">Vendedor</div><div class="v">${d.sellerName || '—'}</div></div>
+              ${d.invoiceNumber ? html`<div><div class="k">Nota fiscal</div><div class="v">${d.invoiceNumber} <span class="muted">${fmtDateTime(d.invoicedAt)}</span></div></div>` : ''}
+              ${d.orderNumber ? html`<div><div class="k">Pedido</div><div class="v">${d.orderNumber}</div></div>` : ''}
+              <div><div class="k">Chave ERP</div><div class="v mono">${d.erpKey}</div></div>
+              ${sup ? html`<div><div class="k">Retorno ERP</div><div class="v">${badge(d.writebackStatus === 'NAO_APLICAVEL' ? 'PENDENTE' : d.writebackStatus, WB_LABEL[d.writebackStatus])}</div></div>` : ''}`}
+            <div><div class="k">Início</div><div class="v">${fmtDateTime(d.startedAt)}</div><div class="muted small">${d.startedByName || ''}</div></div>
+            <div><div class="k">Fim</div><div class="v">${fmtDateTime(d.finishedAt)}</div><div class="muted small">${d.finishedByName || ''}</div></div>
+            ${d.approvedAt ? html`<div><div class="k">Aprovação</div><div class="v">${fmtDateTime(d.approvedAt)}</div><div class="muted small">${d.approvedByName || ''}</div></div>` : ''}
+          </div>
+          ${d.justification ? html`<div class="justif"><div class="k">Justificativa</div><div>${d.justification}</div></div>` : ''}
+        </section>
+
+        ${sup ? html`<section class="card card-pad crit-card">
+          <h2>${raw(ICON.warn)} Críticas ${entrada ? 'da nota e da operação' : 'da operação'}</h2>
+          ${critiqueList([...(d.critiques || []), ...(d.alerts || []).filter((a) => !/^ENTRY_/.test(a.code))])}
+        </section>` : ''}
+
+        ${sup ? html`<div class="tabs inline" style="margin:18px 0 10px">
+          ${[['itens', 'Itens'], ['leituras', 'Leituras'], ['historico', 'Histórico']].map(([kk, l]) => html`<button class="tab ${tab === kk ? 'active' : ''}" data-dtab="${kk}">${l}</button>`)}</div>` : html`<div style="height:16px"></div>`}
+        <section class="card" id="tab-body">
+          ${sup ? html`<div class="table-wrap"><table class="items">
+            <thead><tr><th>#</th><th>Produto</th>${entrada ? html`<th>Fornecedor / GTIN</th><th>Lote · validade</th>` : ''}<th>Un</th><th class="num">Esperado</th><th class="num">Contado</th><th class="num">Dif.</th><th>Resultado</th></tr></thead>
+            <tbody>${d.items.map((i) => {
+              const unlinked = entrada && isPlaceholder(i.productErpId);
+              const crit = critBySeq.get(i.seq) || [];
+              return html`<tr class="${i.result === 'FALTA' ? 'r-falta' : i.result === 'SOBRA' ? 'r-sobra' : ''}">
+              <td class="muted">${i.isExtra ? 'extra' : i.seq}</td>
+              <td><div class="pname">${i.description}</div>
+                <div class="sub">${unlinked ? html`<span class="badge b-FALTA">Sem vínculo</span>` : html`<span class="mono">${i.productErpId}</span>${i.meta?.catalogDescription && i.meta.catalogDescription !== i.description ? ` · ${i.meta.catalogDescription}` : ''}`}
+                ${entrada && !i.isExtra && canCount ? html` <button class="link-btn" data-link="${i.seq}">${raw(ICON.link)}${unlinked ? 'Vincular' : 'Trocar'}</button>` : ''}
+                ${crit.filter((c) => !/^LOT_/.test(c.code) && c.code !== 'UNLINKED').map((c) => html` <span class="crit ${LEVEL[c.level].cls}" title="${c.message}">${raw(ICON[LEVEL[c.level].icon])}</span>`)}</div></td>
+              ${entrada ? html`<td><div class="mono small">${i.meta?.supplierCode || '—'}</div><div class="mono small muted">${i.meta?.gtin || i.meta?.gtinTrib || 'sem GTIN'}${i.meta?.packFactor > 1 ? ` · cx ${i.meta.packFactor}` : ''}</div></td><td>${lotsCell(i)}</td>` : ''}
+              <td>${i.unit || ''}</td>
+              <td class="num">${fmtQty(i.expectedQty)}</td><td class="num strong">${fmtQty(i.countedQty)}</td><td class="num">${diff(i)}</td>
+              <td>${badge(i.result, RESULT_LABEL[i.result])}</td></tr>`;
+            })}</tbody></table></div>`
             : html`<div class="table-wrap"><table>
               <thead><tr><th>Código</th><th>Descrição</th><th>Un</th><th class="num">Contado (rodada)</th><th></th></tr></thead>
-              <tbody>${d.items.map((i) => html`<tr><td class="mono">${i.productErpId}</td><td>${i.description}</td><td>${i.unit || ''}</td>
+              <tbody>${d.items.map((i) => html`<tr><td class="mono">${String(i.productErpId).replace(/^NFE:/, '')}</td><td>${i.description}</td><td>${i.unit || ''}</td>
                 <td class="num">${fmtQty(d.counts[i.productErpId] ?? 0)}</td><td>${i.mustRecount ? badge('SOBRA', 'Recontar') : ''}</td></tr>`)}</tbody></table></div>`}
-        </div>`.s;
+        </section>
+        ${sup ? printReport(d) : ''}`.s;
 
       $('#a-count')?.addEventListener('click', () => { location.hash = `#/conferir/${id}`; });
+      $('#a-print')?.addEventListener('click', () => window.print());
       $('#a-release')?.addEventListener('click', async () => {
         try { await api('POST', `/v1/documents/${id}/release`); toast('Reserva liberada'); load(); } catch (e) { toast(e.message, true); }
       });
@@ -746,8 +1082,9 @@
       });
       $('#a-approve')?.addEventListener('click', () => modal({
         title: 'Aprovar conferência',
-        body: html`${d.hasDivergence ? html`<div class="alert-box warn">Este documento tem divergência. A aprovação grava no ERP as quantidades contadas.</div>` : ''}
-          <div class="field"><label for="just">Justificativa</label><textarea class="input" id="just" ${d.hasDivergence && state.settings.requireJustification ? 'required' : ''} placeholder="Ex.: falta confirmada no estoque; cliente avisado"></textarea></div>`,
+        body: html`${d.hasDivergence ? html`<div class="alert-box warn">${raw(ICON.warn)}<div>Este documento tem divergência. A aprovação ${entrada ? 'registra o recebimento com' : 'grava no ERP'} as quantidades <strong>contadas</strong>.</div></div>` : ''}
+          ${divergenceSummary(d)}
+          <div class="field"><label for="just">Justificativa</label><textarea class="input" id="just" ${d.hasDivergence && state.settings.requireJustification ? 'required' : ''} placeholder="${entrada ? 'Ex.: fornecedor enviou 2 cx a menos; comprador avisado, aguarda nota de devolução' : 'Ex.: falta confirmada no estoque; cliente avisado'}"></textarea></div>`,
         submitLabel: 'Aprovar',
         onSubmit: async (form) => { await api('POST', `/v1/documents/${id}/approve`, { justification: $('#just', form).value }); toast('Conferência aprovada'); load(); },
       }));
@@ -755,8 +1092,8 @@
         const products = [...new Map(d.items.map((i) => [i.productErpId, i])).values()];
         modal({
           title: 'Reabrir para recontagem',
-          body: html`<p class="muted" style="margin-top:0">Marque os produtos que o operador deve recontar. Os divergentes já vêm marcados.</p>
-            <div style="max-height:320px;overflow-y:auto">${products.map((i) => html`<label class="check"><input type="checkbox" name="p" value="${i.productErpId}" ${i.result !== 'OK' ? 'checked' : ''}> <span class="mono">${i.productErpId}</span> ${i.description}</label>`)}</div>`,
+          body: html`<p class="muted" style="margin-top:0">Marque os produtos que o conferente deve recontar. Os divergentes já vêm marcados.</p>
+            <div class="pick-scroll">${products.map((i) => html`<label class="check"><input type="checkbox" name="p" value="${i.productErpId}" ${i.result !== 'OK' ? 'checked' : ''}> <span class="mono">${String(i.productErpId).replace(/^NFE:/, '')}</span> ${i.description} ${i.result !== 'OK' ? badge(i.result, RESULT_LABEL[i.result]) : ''}</label>`)}</div>`,
           submitLabel: 'Reabrir',
           onSubmit: async (form) => {
             const sel = $$('input[name=p]:checked', form).map((c) => c.value);
@@ -771,9 +1108,16 @@
         submitLabel: 'Zerar', danger: true,
         onSubmit: async () => { await api('POST', `/v1/documents/${id}/reset`); toast('Conferência zerada'); load(); },
       }));
-      $$('[data-tab]').forEach((b) => b.addEventListener('click', async () => {
-        tab = b.dataset.tab;
-        $$('[data-tab]').forEach((x) => x.classList.toggle('active', x === b));
+      $('#a-delete')?.addEventListener('click', () => modal({
+        title: 'Excluir importação',
+        body: html`<p style="margin-top:0">A nota ${d.number} sai da fila de entradas. Use quando o XML foi importado por engano ou a mercadoria foi recusada. Você pode importar o XML de novo depois.</p>`,
+        submitLabel: 'Excluir', danger: true,
+        onSubmit: async () => { await api('DELETE', `/v1/entries/${id}`); toast('Importação excluída'); location.hash = '#/entradas'; },
+      }));
+      $$('[data-link]').forEach((b) => b.addEventListener('click', () => linkModal(d, Number(b.dataset.link), load)));
+      $$('[data-dtab]').forEach((b) => b.addEventListener('click', async () => {
+        tab = b.dataset.dtab;
+        $$('[data-dtab]').forEach((x) => x.classList.toggle('active', x === b));
         if (tab === 'itens') return load();
         await drawTab();
       }));
@@ -786,9 +1130,9 @@
         const r = await api('GET', `/v1/documents/${id}/scans`);
         body.innerHTML = r.items.length ? html`<div class="table-wrap"><table>
           <thead><tr><th>Quando</th><th>Rodada</th><th>Código lido</th><th>Produto</th><th class="num">Qtd</th><th>Origem</th><th>Operador</th></tr></thead>
-          <tbody>${r.items.map((s) => html`<tr style="${s.voided ? 'opacity:.45;text-decoration:line-through' : ''}">
+          <tbody>${r.items.map((s) => html`<tr class="${s.voided ? 'voided' : ''}">
             <td>${fmtDateTime(s.scanned_at)}</td><td>${s.round + 1}</td><td class="mono">${s.barcode || '—'}</td>
-            <td>${s.product_erp_id ? html`<span class="mono">${s.product_erp_id}</span> ${s.description || ''}` : badge('FALTA', 'Não reconhecido')}</td>
+            <td>${s.product_erp_id ? html`<span class="mono">${String(s.product_erp_id).replace(/^NFE:/, '')}</span> ${s.description || ''}` : badge('FALTA', 'Não reconhecido')}</td>
             <td class="num">${fmtQty(s.qty)}</td><td>${s.origin}</td><td>${s.user_name || '—'}</td></tr>`)}</tbody></table></div>`.s
           : '<div class="empty">Nenhuma leitura.</div>';
       } else if (tab === 'historico') {
@@ -799,6 +1143,68 @@
 
     await load();
     state.view = { onEvent: debounce((ev) => { if (ev.documentId === id && tab === 'itens') load().catch(() => {}); }, 800) };
+  }
+
+  /** Resumo falta/sobra para a decisão do supervisor. */
+  function divergenceSummary(d) {
+    const div = d.items.filter((i) => i.result === 'FALTA' || i.result === 'SOBRA');
+    if (!div.length) return '';
+    return html`<div class="div-sum">${div.map((i) => {
+      const n = Number(i.countedQty) - Number(i.expectedQty);
+      return html`<div class="${i.result === 'FALTA' ? 'falta' : 'sobra'}"><span>${i.description}</span><strong>${n > 0 ? '+' : ''}${fmtQty(n)} ${i.unit || ''}</strong></div>`;
+    })}</div>`;
+  }
+
+  /** Relatório só para impressão (fica oculto na tela). */
+  function printReport(d) {
+    const entrada = flowOf(d) === 'entrada';
+    const div = d.items.filter((i) => i.result === 'FALTA' || i.result === 'SOBRA');
+    return html`<div class="print-only report">
+      <h1>Relatório de conferência — ${docTitle(d)}</h1>
+      <p>${entrada ? 'Fornecedor' : 'Cliente'}: <strong>${d.customerName || '—'}</strong> ${entrada ? fmtCnpj(d.customerCode) : ''}<br>
+        ${entrada ? html`Chave: ${fmtKey(d.erpKey)}<br>` : ''}Status: ${statusInfo(d).label} · Conferido por ${d.finishedByName || d.startedByName || '—'} em ${fmtDateTime(d.finishedAt)}
+        ${d.approvedByName ? html`<br>Aprovado por ${d.approvedByName} em ${fmtDateTime(d.approvedAt)}` : ''}</p>
+      ${d.justification ? html`<p>Justificativa: ${d.justification}</p>` : ''}
+      <h2>${div.length ? `Divergências (${div.length})` : 'Sem divergências'}</h2>
+      <table><thead><tr><th>Item</th><th>Produto</th><th>Un</th><th>Esperado</th><th>Contado</th><th>Diferença</th></tr></thead>
+        <tbody>${(div.length ? div : d.items).map((i) => html`<tr><td>${i.isExtra ? 'extra' : i.seq}</td><td>${i.description}</td><td>${i.unit || ''}</td><td>${fmtQty(i.expectedQty)}</td><td>${fmtQty(i.countedQty)}</td><td>${fmtQty(Number(i.countedQty || 0) - Number(i.expectedQty))}</td></tr>`)}</tbody></table>
+      <p class="sign">_______________________________<br>Conferente &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; _______________________________<br>${entrada ? 'Transportador / fornecedor' : 'Supervisor'}</p>
+    </div>`;
+  }
+
+  /** Vincula um item da nota a um produto do cadastro (aprende o de-para do fornecedor). */
+  function linkModal(d, seq, onDone) {
+    const item = d.items.find((i) => i.seq === seq);
+    const m = modal({
+      title: `Vincular item ${seq}`,
+      wide: true,
+      submitLabel: null,
+      cancelLabel: 'Fechar',
+      body: html`<div class="link-src"><div class="k">Na nota do fornecedor</div><strong>${item.description}</strong>
+          <div class="muted small mono">cód. ${item.meta?.supplierCode || '—'} · GTIN ${item.meta?.gtin || item.meta?.gtinTrib || 'sem GTIN'} · ${fmtQty(item.expectedQty)} ${item.unit || ''}</div></div>
+        <label class="search big">${raw(ICON.search)}<input class="input" id="ls-q" placeholder="Buscar no cadastro: descrição, código ou EAN" value="${item.description.split(/\s+/).slice(0, 2).join(' ')}"></label>
+        <div id="ls-res" class="pick-list"></div>
+        <div class="help">O vínculo fica salvo: as próximas notas deste fornecedor já chegam com o item vinculado.</div>`,
+    });
+    const res = $('#ls-res', m.el);
+    const search = async () => {
+      const q = $('#ls-q', m.el).value.trim();
+      if (!q) { res.innerHTML = ''; return; }
+      const r = await api('GET', `/v1/products?q=${encodeURIComponent(q)}&limit=20`);
+      res.innerHTML = r.items.length ? r.items.map((p) => html`<button type="button" class="pick" data-pid="${p.erpId}">
+          <div><strong>${p.description}</strong><div class="muted small"><span class="mono">${p.erpId}</span>${p.brand ? ` · ${p.brand}` : ''} · ${p.unit || ''}</div></div>
+          <span class="muted small">saldo ${fmtQty(p.stock)}</span></button>`.s).join('')
+        : '<div class="empty small">Nenhum produto encontrado. Tente outra palavra ou o EAN.</div>';
+      $$('[data-pid]', res).forEach((b) => b.addEventListener('click', async () => {
+        try {
+          await api('POST', `/v1/entries/${d.id}/items/${seq}/link`, { productErpId: b.dataset.pid });
+          toast('Item vinculado'); m.close(); onDone();
+        } catch (err) { toast(err.message, true); }
+      }));
+    };
+    $('#ls-q', m.el).addEventListener('input', debounce(() => search().catch(() => {}), 300));
+    $('#ls-q', m.el).addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+    search().catch(() => {});
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -821,8 +1227,12 @@
       location.hash = `#/documentos/${id}`;
       return;
     }
+    const flow = flowOf(d);
+    const entrada = flow === 'entrada';
+    markNav(location.hash, flow);
 
     const products = new Map(d.items.map((i) => [i.productErpId, i]));
+    const docProducts = new Set(d.items.filter((i) => !i.isExtra).map((i) => i.productErpId));
     const barcodes = new Map(d.barcodes.map((b) => [b.barcode, b]));
     const session = []; // leituras feitas nesta tela (para estorno rápido)
     let counts = d.counts;
@@ -831,20 +1241,28 @@
 
     const describe = async (code) => {
       const b = barcodes.get(code);
-      if (b) return { productErpId: b.productErpId, description: products.get(b.productErpId)?.description || '', factor: Number(b.factor) };
+      if (b) return { productErpId: b.productErpId, description: products.get(b.productErpId)?.description || '', factor: Number(b.factor), extra: docProducts.size > 0 && !docProducts.has(b.productErpId) };
       if (products.has(code)) return { productErpId: code, description: products.get(code).description, factor: 1 };
       try {
         const p = await api('GET', `/v1/products/barcode/${encodeURIComponent(code)}`);
         barcodes.set(code, { barcode: code, productErpId: p.erpId, factor: p.factor });
         if (!products.has(p.erpId)) products.set(p.erpId, { productErpId: p.erpId, description: p.description, unit: p.unit });
-        return { productErpId: p.erpId, description: p.description, factor: Number(p.factor), extra: !d.items.some((i) => i.productErpId === p.erpId) };
+        return { productErpId: p.erpId, description: p.description, factor: Number(p.factor), extra: docProducts.size > 0 && !docProducts.has(p.erpId) };
       } catch { return null; }
     };
 
     main().innerHTML = html`
-      ${pageHead(`Conferindo ${d.number || d.erpKey}`, `${d.customerName || ''}${d.round > 0 ? ` · Recontagem (rodada ${d.round + 1})` : ''}`,
-        html`<button class="btn" id="leave">Sair e manter reserva</button><button class="btn" id="release">Liberar documento</button>`)}
-      ${d.round > 0 ? html`<div class="alert-box warn">Reconte somente os produtos destacados. As quantidades da rodada anterior foram descartadas para estes itens.</div>` : ''}
+      ${pageHead(`${entrada ? 'Conferindo' : 'Separando'} ${docTitle(d)}`, `${d.customerName || ''}${d.round > 0 ? ` · Recontagem (rodada ${d.round + 1})` : ''}`,
+        html`<button class="btn" id="leave">Sair e manter reserva</button><button class="btn" id="release">Liberar documento</button>`,
+        html`<a href="${FLOW[flow].href}" class="back">${raw(ICON.back)}${FLOW[flow].label}</a>`)}
+      <div class="conf-banner f-${flow}">
+        <span class="fic">${raw(ICON[entrada ? 'inbox' : 'truck'])}</span>
+        <div><strong>${entrada ? 'Recebimento — conferência cega da nota' : 'Expedição — separação e conferência cega'}</strong>
+          <div>${d.round > 0 ? 'Reconte somente os produtos destacados em amarelo. O que já bateu está travado.'
+            : entrada ? 'Bipe cada volume/unidade recebida. Caixa fechada com código próprio soma a caixa inteira. Sem código? Digite o código do fornecedor.'
+              : 'Pegue cada item do pedido e bipe. Você não vê a quantidade pedida: conte o que separou.'}</div></div>
+        <div class="conf-progress" id="cprog"></div>
+      </div>
       <div class="conf">
         <div>
           <div class="card scan-box">
@@ -853,22 +1271,23 @@
                 <input class="input scan-input mono" id="code" placeholder="Bipe ou digite o código" inputmode="numeric" autofocus>
                 ${d.settings.allowManualQty ? html`<input class="input qty-input" id="qty" type="number" min="1" step="1" value="1" title="Quantidade de embalagens">` : ''}
               </div>
+              <button type="submit" hidden aria-hidden="true" tabindex="-1"></button>
+              ${d.settings.allowManualQty ? html`<div class="help" style="margin-top:6px">Quantidade = embalagens lidas de uma vez (ex.: 10 caixas iguais → digite 10 e bipe uma).</div>` : ''}
             </form>
             <div class="last-scan" id="last"><div class="muted">Aguardando leitura…</div></div>
           </div>
           <div class="card" style="margin-top:16px">
-            <div class="card-pad" style="padding-bottom:6px;display:flex;justify-content:space-between;align-items:center">
-              <h2 style="margin:0">Últimas leituras</h2><span class="muted" id="session-count"></span></div>
+            <div class="card-head"><h2>Últimas leituras</h2><span class="muted small" id="session-count"></span></div>
             <div id="session"></div>
           </div>
         </div>
         <div>
           <div class="card">
-            <div class="card-pad" style="padding-bottom:6px"><h2 style="margin:0">Contado nesta rodada</h2></div>
+            <div class="card-head"><h2>${docProducts.size ? (entrada ? 'Itens da nota' : 'Lista de separação') : 'Contado nesta rodada'}</h2><span class="muted small">quantidade que você contou</span></div>
             <div class="count-list" id="counts"></div>
           </div>
           <div id="unknown"></div>
-          <button class="btn primary lg" id="finish" style="width:100%;margin-top:16px">Finalizar conferência</button>
+          <button class="btn primary lg" id="finish" style="width:100%;margin-top:16px">${raw(ICON.check)} Finalizar ${entrada ? 'conferência' : 'separação'}</button>
         </div>
       </div>`.s;
 
@@ -878,25 +1297,35 @@
 
     const drawCounts = () => {
       const recount = new Set(d.recount);
-      const ids = new Set([...Object.keys(counts), ...(d.round > 0 ? recount : [])]);
-      const rows = [...ids].map((pid) => ({ pid, q: counts[pid] ?? 0, p: products.get(pid) }))
-        .sort((a, b) => (a.p?.description || a.pid).localeCompare(b.p?.description || b.pid));
-      $('#counts').innerHTML = rows.length ? rows.map((r) => html`<div class="count-item ${recount.has(r.pid) ? 'recount' : ''}">
-          <div><div>${r.p?.description || 'Produto'}</div><div class="muted mono">${r.pid}</div></div><div class="q">${fmtQty(r.q)}</div></div>`.s).join('')
+      const ids = new Set([...docProducts, ...Object.keys(counts), ...(d.round > 0 ? recount : [])]);
+      const rows = [...ids].map((pid) => ({ pid, q: counts[pid] ?? 0, p: products.get(pid), inDoc: docProducts.has(pid) }))
+        .sort((a, b) => (recount.has(b.pid) - recount.has(a.pid)) || (a.q > 0) - (b.q > 0) || (a.p?.description || a.pid).localeCompare(b.p?.description || b.pid));
+      $('#counts').innerHTML = rows.length ? rows.map((r) => html`<div class="count-item ${recount.has(r.pid) ? 'recount' : ''} ${Number(r.q) > 0 ? 'has' : ''} ${!r.inDoc && docProducts.size ? 'extra' : ''}">
+          <span class="ck">${Number(r.q) > 0 ? raw(ICON.check) : ''}</span>
+          <div class="grow"><div>${r.p?.description || 'Produto'}</div><div class="muted mono small">${String(r.pid).replace(/^NFE:/, '')}${!r.inDoc && docProducts.size ? ' · fora do documento' : ''}${recount.has(r.pid) ? ' · recontar' : ''}</div></div>
+          <div class="q">${Number(r.q) > 0 ? fmtQty(r.q) : '—'}</div></div>`.s).join('')
         : '<div class="empty">Nada contado ainda.</div>';
 
-      $('#unknown').innerHTML = unknown.length ? html`<div class="card" style="margin-top:16px">
-        <div class="card-pad" style="padding-bottom:6px"><h2 style="margin:0;color:var(--danger)">Códigos não reconhecidos</h2>
-        <div class="muted">Estorne antes de finalizar.</div></div>
-        ${unknown.map((u) => html`<div class="count-item"><div class="mono">${u.barcode}</div><button class="btn sm danger" data-void="${u.eventId}">Estornar</button></div>`)}
+      // Progresso: produtos do documento já bipados (nunca revela a quantidade esperada).
+      const scope = d.round > 0 ? recount : docProducts;
+      if (scope.size) {
+        const n = [...scope].filter((pid) => Number(counts[pid] || 0) > 0).length;
+        $('#cprog').innerHTML = html`<div class="big">${n}<small>/${scope.size}</small></div><div class="muted small">${d.round > 0 ? 'recontados' : 'produtos bipados'}</div>
+          <div class="meter"><i style="width:${Math.round((n / scope.size) * 100)}%"></i></div>`.s;
+      }
+
+      $('#unknown').innerHTML = unknown.length ? html`<div class="card unknown-card" style="margin-top:16px">
+        <div class="card-head"><h2>${raw(ICON.alert)} Códigos não reconhecidos</h2></div>
+        <div class="muted small" style="padding:0 18px 8px">Estorne antes de finalizar ou peça ao supervisor para cadastrar o código.</div>
+        ${unknown.map((u) => html`<div class="count-item"><div class="mono grow">${u.barcode}</div><button class="btn sm danger" data-void="${u.eventId}">Estornar</button></div>`)}
       </div>`.s : '';
       $$('[data-void]', $('#unknown')).forEach((b) => b.addEventListener('click', () => voidScan(b.dataset.void)));
     };
 
     const drawSession = () => {
       $('#session-count').textContent = session.length ? `${session.length} nesta sessão` : '';
-      $('#session').innerHTML = session.length ? session.slice(0, 15).map((s) => html`<div class="count-item" style="${s.voided ? 'opacity:.45;text-decoration:line-through' : ''}">
-          <div><div>${s.description || s.code}</div><div class="muted mono">${s.code} · ${new Date(s.at).toLocaleTimeString('pt-BR')}</div></div>
+      $('#session').innerHTML = session.length ? session.slice(0, 15).map((s) => html`<div class="count-item ${s.voided ? 'voided' : ''}">
+          <div class="grow"><div>${s.description || s.code}</div><div class="muted mono small">${s.code} · ${new Date(s.at).toLocaleTimeString('pt-BR')}</div></div>
           <div style="display:flex;gap:10px;align-items:center"><span class="q">${s.qty > 0 ? '+' : ''}${fmtQty(s.qty)}</span>
           ${!s.voided && s.ok ? html`<button class="btn sm" data-undo="${s.id}">Estornar</button>` : ''}</div></div>`.s).join('')
         : '<div class="empty">Nenhuma leitura nesta sessão.</div>';
@@ -945,13 +1374,13 @@
         session.unshift({ id: ev.id, code, description: info?.description, qty: units, at: Date.now(), ok: true });
         if (info) {
           const recounting = d.round > 0 && !d.recount.includes(info.productErpId);
-          beep(!recounting);
-          showLast(recounting ? 'err' : 'ok', info.description,
+          beep(!recounting && !info.extra);
+          showLast(recounting || info.extra ? 'warn' : 'ok', info.description || 'Produto',
             recounting ? 'Este produto não está na recontagem — a leitura será ignorada.'
-              : `+${fmtQty(units)} ${info.extra ? '· produto fora do documento' : ''}${info.factor > 1 ? ` (embalagem com ${fmtQty(info.factor)})` : ''} · total contado ${fmtQty(counts[info.productErpId] ?? 0)}`);
+              : `+${fmtQty(units)}${info.extra ? ` · fora ${entrada ? 'da nota' : 'do pedido'} — vai como SOBRA` : ''}${info.factor > 1 ? ` (embalagem com ${fmtQty(info.factor)})` : ''} · total contado ${fmtQty(counts[info.productErpId] ?? 0)}`);
         } else {
           beep(false);
-          showLast('err', 'Código não cadastrado no ERP', `${code} — estorne ou verifique a etiqueta`);
+          showLast('err', 'Código não cadastrado', `${code} — estorne ou verifique a etiqueta`);
         }
         if ($('#qty')) $('#qty').value = '1';
         drawCounts(); drawSession();
@@ -966,43 +1395,50 @@
       }
     });
 
-    $('#leave').addEventListener('click', () => { location.hash = '#/documentos'; });
+    $('#leave').addEventListener('click', () => { location.hash = FLOW[flow].href; });
     $('#release').addEventListener('click', async () => {
-      try { await api('POST', `/v1/documents/${id}/release`); location.hash = '#/documentos'; } catch (e) { toast(e.message, true); }
+      try { await api('POST', `/v1/documents/${id}/release`); location.hash = FLOW[flow].href; } catch (e) { toast(e.message, true); }
     });
-    $('#finish').addEventListener('click', () => modal({
-      title: 'Finalizar conferência',
-      body: html`<p style="margin-top:0">Confirma que terminou de contar ${d.round > 0 ? 'os itens da recontagem' : 'todos os itens'}? O sistema vai comparar com o documento.</p>`,
-      submitLabel: 'Finalizar',
-      onSubmit: async () => {
-        let r;
-        try {
-          r = await api('POST', `/v1/documents/${id}/finalize`);
-        } catch (err) {
-          if (err.code === 'UNKNOWN_BARCODES') { unknown = err.data.unknownScans; drawCounts(); }
-          throw err;
-        }
-        resultModal(r);
-      },
-    }));
+    $('#finish').addEventListener('click', () => {
+      const missing = (d.round > 0 ? d.recount : [...docProducts]).filter((pid) => !(Number(counts[pid] || 0) > 0));
+      modal({
+        title: `Finalizar ${entrada ? 'conferência' : 'separação'}`,
+        body: html`<p style="margin-top:0">Confirma que terminou de contar ${d.round > 0 ? 'os itens da recontagem' : 'todos os itens'}? O sistema vai comparar com ${entrada ? 'a nota' : 'o pedido'}.</p>
+          ${missing.length ? html`<div class="alert-box warn">${raw(ICON.warn)}<div><strong>${missing.length} produto(s) sem nenhuma leitura</strong> — serão considerados como <strong>falta</strong>:
+            <ul class="tight">${missing.slice(0, 8).map((pid) => html`<li>${products.get(pid)?.description || pid}</li>`)}${missing.length > 8 ? html`<li>e mais ${missing.length - 8}…</li>` : ''}</ul></div></div>` : ''}`,
+        submitLabel: 'Finalizar',
+        onSubmit: async () => {
+          let r;
+          try {
+            r = await api('POST', `/v1/documents/${id}/finalize`);
+          } catch (err) {
+            if (err.code === 'UNKNOWN_BARCODES') { unknown = err.data.unknownScans; drawCounts(); }
+            throw err;
+          }
+          resultModal(r);
+        },
+      });
+    });
 
     function resultModal(r) {
+      const next = () => { location.hash = FLOW[flow].href; };
       if (r.status === 'CONCLUIDO') {
         beep(true);
-        modal({ title: 'Conferência concluída', body: html`<div class="alert-box ok">Tudo confere. O resultado será gravado no ERP.</div>`,
-          submitLabel: 'Próximo documento', cancelLabel: null, onSubmit: () => { location.hash = '#/documentos'; } });
+        modal({ title: entrada ? 'Nota conferida' : 'Separação concluída',
+          body: html`<div class="result-ok">${raw(ICON.check)}<div><strong>Tudo confere.</strong><div>${entrada ? 'Mercadoria recebida conforme a nota.' : 'Pedido liberado para o faturamento.'}</div></div></div>`,
+          submitLabel: 'Próximo documento', cancelLabel: null, onSubmit: next });
       } else if (r.status === 'DIVERGENTE') {
         beep(false);
         modal({
           title: 'Recontagem necessária',
-          body: html`<div class="alert-box warn">Há divergência. Reconte os produtos abaixo:</div>
-            ${r.recount.map((p) => html`<div class="count-item recount"><div>${p.description || 'Produto'}</div><div class="mono muted">${p.productErpId}</div></div>`)}`,
+          body: html`<div class="alert-box warn">${raw(ICON.warn)}<div>A contagem não bateu. Reconte <strong>somente</strong> os produtos abaixo:</div></div>
+            ${r.recount.map((p) => html`<div class="count-item recount"><div class="grow">${p.description || 'Produto'}</div><div class="mono muted">${String(p.productErpId).replace(/^NFE:/, '')}</div></div>`)}`,
           submitLabel: 'Começar recontagem', cancelLabel: null,
           onSubmit: () => { render(); },
         });
       } else {
-        modal({ title: 'Enviado ao supervisor', body: html`<div class="alert-box info">A divergência persiste após a recontagem e foi enviada para aprovação do supervisor.</div>`,
-          submitLabel: 'Próximo documento', cancelLabel: null, onSubmit: () => { location.hash = '#/documentos'; } });
+        modal({ title: 'Enviado ao supervisor', body: html`<div class="alert-box info">${raw(ICON.info)}<div>A divergência persiste após a recontagem e foi enviada para aprovação do supervisor.</div></div>`,
+          submitLabel: 'Próximo documento', cancelLabel: null, onSubmit: next });
       }
     }
 
@@ -1036,18 +1472,18 @@
     const persist = () => store.set('est.prod.filters', JSON.stringify({ brand: f.brand, group: f.group, inStock: f.inStock }));
 
     main().innerHTML = html`
-      ${pageHead('Produtos', 'Catálogo sincronizado do ERP')}
-      <div class="card">
+      ${pageHead('Produtos', 'Catálogo sincronizado do ERP', '', 'Cadastros')}
+      <section class="card">
         <div class="toolbar">
-          <input class="input" id="q" placeholder="Buscar por descrição, código ou EAN" style="max-width:320px">
-          <select class="input" id="brand" style="width:200px"><option value="">Todas as marcas</option></select>
-          <select class="input" id="group" style="width:200px"><option value="">Todos os grupos</option></select>
-          <button class="pill tone-ok ${f.inStock ? 'active' : ''}" id="instock" type="button" aria-pressed="${f.inStock}">Somente com estoque</button>
-          <button class="btn sm" id="clear" type="button" style="margin-left:auto">Limpar filtros</button>
+          <label class="search">${raw(ICON.search)}<input class="input" id="q" placeholder="Buscar por descrição, código ou EAN"></label>
+          <select class="input" id="brand"><option value="">Todas as marcas</option></select>
+          <select class="input" id="group"><option value="">Todos os grupos</option></select>
+          <button class="toggle tone-ok ${f.inStock ? 'on' : ''}" id="instock" type="button" aria-pressed="${f.inStock}">Somente com estoque</button>
+          <button class="btn sm ghost" id="clear" type="button" style="margin-left:auto">Limpar filtros</button>
         </div>
-        <div class="toolbar muted" id="summary" style="padding-top:10px;padding-bottom:10px;font-size:13px"></div>
+        <div class="toolbar sub-bar muted" id="summary"></div>
         <div id="list"></div>
-      </div>`.s;
+      </section>`.s;
 
     const fillFacets = async () => {
       const r = await api('GET', `/v1/products/facets${f.inStock ? '?inStock=1' : ''}`);
@@ -1075,8 +1511,8 @@
 
     const stockCell = (s) => {
       const n = Number(s);
-      return n > 0 ? html`<strong style="color:var(--ok)">${fmtQty(s)}</strong>`
-        : n < 0 ? html`<strong style="color:var(--danger)">${fmtQty(s)}</strong>`
+      return n > 0 ? html`<strong class="good-t">${fmtQty(s)}</strong>`
+        : n < 0 ? html`<strong class="bad-t" title="Saldo negativo no ERP">${fmtQty(s)}</strong>`
           : html`<span class="muted">0</span>`;
     };
 
@@ -1085,11 +1521,11 @@
       $('#list').innerHTML = items.length ? html`<div class="table-wrap"><table>
         <thead><tr><th>Código</th><th>Descrição</th><th>Un</th><th>Marca</th><th>Grupo</th><th>Códigos de barras</th><th class="num">Saldo</th></tr></thead>
         <tbody>${items.map((p) => html`<tr>
-          <td class="mono">${p.erpId}</td><td><strong style="font-weight:600">${p.description}</strong></td><td>${p.unit || ''}</td>
+          <td class="mono">${p.erpId}</td><td><strong style="font-weight:600">${p.description}</strong>${!(p.barcodes || []).length ? html` <span class="crit lv-alerta" title="Sem código de barras: a conferência depende de digitar o código">${raw(ICON.warn)}</span>` : ''}</td><td>${p.unit || ''}</td>
           <td>${p.brand ? html`<a href="#" data-brand="${p.brand}">${p.brand}</a>` : ''}</td>
           <td>${p.group ? html`<a href="#" data-group="${p.group}">${p.group}</a>` : ''}</td>
           <td class="mono muted">${(p.barcodes || []).join(', ')}</td><td class="num">${stockCell(p.stock)}</td></tr>`)}</tbody></table></div>
-        <div class="toolbar muted" style="justify-content:space-between;border-top:1px solid var(--border);border-bottom:none">
+        <div class="toolbar sub-bar muted foot">
           <span>${items.length} produto(s)${hasMore ? ' — há mais' : ''}${active.length ? ` · filtro: ${active.join(' · ')}` : ''}</span>
           ${hasMore ? html`<button class="btn sm" id="more">Carregar mais</button>` : ''}</div>`.s
         : html`<div class="empty">Nenhum produto encontrado${active.length ? ` para ${active.join(' · ')}` : ''}.</div>`.s;
@@ -1105,7 +1541,7 @@
     $('#group').addEventListener('change', (e) => { f.group = e.target.value; persist(); reload(); });
     $('#instock').addEventListener('click', async (e) => {
       f.inStock = !f.inStock;
-      e.currentTarget.classList.toggle('active', f.inStock);
+      e.currentTarget.classList.toggle('on', f.inStock);
       e.currentTarget.setAttribute('aria-pressed', String(f.inStock));
       persist();
       await fillFacets().catch(() => {});
@@ -1114,7 +1550,7 @@
     $('#clear').addEventListener('click', async () => {
       Object.assign(f, { q: '', brand: '', group: '', inStock: false });
       $('#q').value = '';
-      $('#instock').classList.remove('active');
+      $('#instock').classList.remove('on');
       persist();
       await fillFacets().catch(() => {});
       reload();
@@ -1132,15 +1568,15 @@
     const load = async () => {
       const r = await api('GET', '/v1/users');
       main().innerHTML = html`
-        ${pageHead('Usuários', 'Operadores entram no app com usuário + PIN; supervisores no painel com senha', html`<button class="btn primary" id="new">Novo usuário</button>`)}
-        <div class="card"><div class="table-wrap"><table>
+        ${pageHead('Usuários', 'Operadores entram no app com usuário + PIN; supervisores no painel com senha', html`<button class="btn primary" id="new">Novo usuário</button>`, 'Cadastros')}
+        <section class="card"><div class="table-wrap"><table>
           <thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Acesso</th><th>Último acesso</th><th></th></tr></thead>
           <tbody>${r.items.map((u) => html`<tr style="${u.active ? '' : 'opacity:.5'}">
-            <td><strong>${u.name}</strong></td><td class="mono">${u.login}</td><td>${ROLE_LABEL[u.role]}</td>
+            <td><div class="user-cell"><span class="avatar sm">${(u.name || '?').charAt(0).toUpperCase()}</span><strong>${u.name}</strong></div></td><td class="mono">${u.login}</td><td>${ROLE_LABEL[u.role]}</td>
             <td>${u.has_pin ? badge('OK', 'App') : ''} ${u.has_password ? badge('EM_CONFERENCIA', 'Painel') : ''} ${u.active ? '' : badge('CANCELADO', 'Inativo')}</td>
             <td>${ago(u.last_login_at)}</td>
             <td class="num">${isAdmin() || u.role === 'operador' ? html`<button class="btn sm" data-edit="${u.id}">Editar</button>` : ''}</td></tr>`)}</tbody>
-        </table></div></div>`.s;
+        </table></div></section>`.s;
       $('#new').addEventListener('click', () => editUser(null));
       $$('[data-edit]').forEach((b) => b.addEventListener('click', () => editUser(r.items.find((u) => u.id === b.dataset.edit))));
     };
@@ -1154,7 +1590,8 @@
         <div class="field"><label>Nome</label><input class="input" name="name" required value="${u?.name || ''}"></div>
         ${u ? '' : html`<div class="field"><label>Usuário (login)</label><input class="input" name="login" required pattern="[A-Za-z0-9._@-]+">
           <div class="help">No app o operador digita este usuário e o PIN.</div></div>`}
-        <div class="field"><label>Perfil</label><select class="input" name="role">${roleOptions(u?.role || 'operador')}</select></div>
+        <div class="field"><label>Perfil</label><select class="input" name="role">${roleOptions(u?.role || 'operador')}</select>
+          <div class="help">Operador: confere às cegas. Supervisor: importa XML, aprova divergências, vê esperado × contado. Administrador: tudo + configurações.</div></div>
         <div class="field"><label>PIN do app ${u?.has_pin ? '(deixe vazio para manter)' : ''}</label><input class="input mono" name="pin" inputmode="numeric" pattern="\\d{4,8}" placeholder="4 a 8 dígitos"></div>
         <div class="field"><label>Senha do painel ${u?.has_password ? '(deixe vazio para manter)' : '(opcional para operador)'}</label><input class="input" name="password" type="password" minlength="8" autocomplete="new-password"></div>
         ${u ? html`<label class="check"><input type="checkbox" name="active" ${u.active ? 'checked' : ''}> Ativo</label>` : ''}`,
@@ -1189,13 +1626,15 @@
     'document.approved': 'Aprovou', 'document.reopened': 'Reabriu para recontagem', 'document.reset': 'Zerou conferência',
     'document.priority': 'Alterou prioridade', 'erp.cancelled': 'ERP cancelou o documento', 'erp.items_replaced': 'ERP alterou os itens',
     'erp.changed_during_conference': 'ERP alterou durante a conferência', 'writeback.failed': 'Falha ao gravar no ERP',
+    'erp.invoiced': 'ERP faturou o pedido', 'erp.invoiced_before_conference': 'ERP faturou antes da conferência',
+    'entry.imported': 'Importou XML de entrada', 'entry.item_linked': 'Vinculou item da nota', 'entry.deleted': 'Excluiu importação',
     'user.created': 'Criou usuário', 'user.updated': 'Alterou usuário', 'settings.updated': 'Alterou configurações',
   };
   const auditTable = (items) => (items.length ? html`<div class="table-wrap"><table>
     <thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Documento</th><th>Detalhes</th></tr></thead>
     <tbody>${items.map((a) => html`<tr><td>${fmtDateTime(a.at)}</td><td>${a.user_name || 'Sistema/ERP'}</td><td>${AUDIT_LABEL[a.action] || a.action}</td>
       <td>${a.document_id ? html`<a href="#/documentos/${a.document_id}">${a.document_number || 'abrir'}</a>` : ''}</td>
-      <td class="muted mono" style="font-size:12px;max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Object.keys(a.details || {}).length ? JSON.stringify(a.details) : ''}</td></tr>`)}</tbody></table></div>`
+      <td class="muted mono details">${Object.keys(a.details || {}).length ? JSON.stringify(a.details) : ''}</td></tr>`)}</tbody></table></div>`
     : html`<div class="empty">Sem registros.</div>`);
 
   async function viewAudit() {
@@ -1204,10 +1643,10 @@
       const before = more && items.length ? `&before=${items[items.length - 1].id}` : '';
       const r = await api('GET', `/v1/audit?limit=100${before}`);
       items = more ? items.concat(r.items) : r.items;
-      $('#list').innerHTML = auditTable(items).s + (r.items.length === 100 ? '<div style="padding:14px;text-align:center"><button class="btn" id="more">Carregar mais</button></div>' : '');
+      $('#list').innerHTML = auditTable(items).s + (r.items.length === 100 ? '<div class="more"><button class="btn" id="more">Carregar mais</button></div>' : '');
       $('#more')?.addEventListener('click', () => load(true));
     };
-    main().innerHTML = html`${pageHead('Auditoria', 'Tudo que foi feito, por quem e quando')}<div class="card" id="list"></div>`.s;
+    main().innerHTML = html`${pageHead('Auditoria', 'Tudo que foi feito, por quem e quando', '', 'Controle')}<section class="card" id="list"></section>`.s;
     await load(false);
   }
 
@@ -1217,21 +1656,44 @@
   async function viewSettings() {
     const s = await api('GET', '/v1/settings');
     const ro = !isAdmin();
+    const dis = ro ? 'disabled' : '';
     main().innerHTML = html`
-      ${pageHead('Configurações', ro ? 'Somente administradores podem alterar' : 'Regras da conferência desta empresa')}
-      <form class="card card-pad" id="f" style="max-width:640px">
-        <div class="field"><label>Recontagens antes de ir para o supervisor</label>
-          <input class="input" name="maxRecounts" type="number" min="0" max="5" value="${s.maxRecounts}" ${ro ? 'disabled' : ''}>
-          <div class="help">0 = qualquer divergência vai direto para aprovação.</div></div>
-        <div class="field"><label>Reserva do documento (minutos)</label>
-          <input class="input" name="lockMinutes" type="number" min="5" max="1440" value="${s.lockMinutes}" ${ro ? 'disabled' : ''}>
-          <div class="help">Renovada a cada leitura. Depois disso, outro operador pode assumir.</div></div>
-        <div class="field"><label>Dias exibidos na fila</label>
-          <input class="input" name="queueDays" type="number" min="1" max="90" value="${s.queueDays}" ${ro ? 'disabled' : ''}></div>
-        <label class="check"><input type="checkbox" name="allowManualQty" ${s.allowManualQty ? 'checked' : ''} ${ro ? 'disabled' : ''}> Permitir digitar quantidade (em vez de bipar unidade por unidade)</label>
-        <label class="check"><input type="checkbox" name="showItemList" ${s.showItemList ? 'checked' : ''} ${ro ? 'disabled' : ''}> Mostrar ao operador a lista de produtos do documento (nunca as quantidades)</label>
-        <label class="check"><input type="checkbox" name="requireJustification" ${s.requireJustification ? 'checked' : ''} ${ro ? 'disabled' : ''}> Exigir justificativa para aprovar com divergência</label>
-        ${ro ? '' : html`<button class="btn primary" style="margin-top:8px">Salvar</button>`}
+      ${pageHead('Configurações', ro ? 'Somente administradores podem alterar' : 'Regras da conferência desta empresa', '', 'Controle')}
+      <form id="f" class="settings">
+        <section class="card card-pad">
+          <h2>Conferência cega</h2>
+          <div class="field"><label>Recontagens antes de ir para o supervisor</label>
+            <input class="input" name="maxRecounts" type="number" min="0" max="5" value="${s.maxRecounts}" ${dis}>
+            <div class="help">0 = qualquer divergência vai direto para aprovação. Recomendado: 1.</div></div>
+          <div class="field"><label>Reserva do documento (minutos)</label>
+            <input class="input" name="lockMinutes" type="number" min="5" max="1440" value="${s.lockMinutes}" ${dis}>
+            <div class="help">Renovada a cada leitura. Depois disso, outro operador pode assumir.</div></div>
+          <label class="check"><input type="checkbox" name="allowManualQty" ${s.allowManualQty ? 'checked' : ''} ${dis}> Permitir digitar quantidade (em vez de bipar unidade por unidade)</label>
+          <label class="check"><input type="checkbox" name="showItemList" ${s.showItemList ? 'checked' : ''} ${dis}> Mostrar ao operador a lista de produtos do documento (nunca as quantidades)</label>
+          <label class="check"><input type="checkbox" name="requireJustification" ${s.requireJustification ? 'checked' : ''} ${dis}> Exigir justificativa para aprovar com divergência</label>
+        </section>
+        <section class="card card-pad">
+          <h2>${raw(ICON.inbox)} Recebimento (entradas)</h2>
+          <div class="field"><label>CNPJ da empresa</label>
+            <input class="input mono" name="companyCnpj" value="${fmtCnpj(s.companyCnpj) === '—' ? '' : fmtCnpj(s.companyCnpj)}" placeholder="00.000.000/0000-00" ${dis}>
+            <div class="help">Critica nota destinada a outro CNPJ e separa o DANFE do fornecedor do DANFE próprio no leitor.</div></div>
+          <div class="field"><label>Alerta de validade curta (dias)</label>
+            <input class="input" name="expiryAlertDays" type="number" min="0" max="730" value="${s.expiryAlertDays}" ${dis}>
+            <div class="help">Lote da nota que vence em menos que isso gera crítica. Lote vencido é sempre crítica grave.</div></div>
+          <div class="field"><label>Nota antiga (dias desde a emissão)</label>
+            <input class="input" name="entryOldDays" type="number" min="1" max="365" value="${s.entryOldDays}" ${dis}>
+            <div class="help">Ajuda a pegar nota já recebida sendo importada de novo.</div></div>
+        </section>
+        <section class="card card-pad">
+          <h2>${raw(ICON.truck)} Fila e SLA</h2>
+          <div class="field"><label>Meta de atendimento (horas)</label>
+            <input class="input" name="outboundSlaHours" type="number" min="1" max="720" value="${s.outboundSlaHours}" ${dis}>
+            <div class="help">Documento aguardando há mais tempo que isso aparece em Críticas.</div></div>
+          <div class="field"><label>Dias exibidos na fila</label>
+            <input class="input" name="queueDays" type="number" min="1" max="90" value="${s.queueDays}" ${dis}>
+            <div class="help">Pendentes aparecem sempre; isso limita só os já concluídos no app.</div></div>
+        </section>
+        ${ro ? '' : html`<div class="save-bar"><button class="btn primary lg">Salvar configurações</button></div>`}
       </form>`.s;
     if (ro) return;
     $('#f').addEventListener('submit', async (e) => {
@@ -1241,9 +1703,11 @@
         state.settings = await api('PATCH', '/v1/settings', {
           maxRecounts: Number(f.maxRecounts.value), lockMinutes: Number(f.lockMinutes.value), queueDays: Number(f.queueDays.value),
           allowManualQty: f.allowManualQty.checked, showItemList: f.showItemList.checked, requireJustification: f.requireJustification.checked,
+          companyCnpj: f.companyCnpj.value, outboundSlaHours: Number(f.outboundSlaHours.value),
+          expiryAlertDays: Number(f.expiryAlertDays.value), entryOldDays: Number(f.entryOldDays.value),
         });
         toast('Configurações salvas');
-      } catch (err) { toast(err.message, true); }
+      } catch (err) { toast(err.data?.fields?.[0]?.message || err.message, true); }
     });
   }
 
@@ -1274,8 +1738,8 @@
   document.addEventListener('keydown', (e) => {
     if (!state.user || !shellBuilt) return;
     if (e.key === 'F2') { e.preventDefault(); openScanner(); return; }
-    // A conferência e o próprio modal têm campo dedicado ao leitor.
-    if (scannerModal || location.hash.startsWith('#/conferir/') || isTypingTarget(e.target)) return;
+    // A conferência, os modais e os campos têm tratamento próprio do leitor.
+    if (scannerModal || document.querySelector('.modal-bg') || location.hash.startsWith('#/conferir/') || isTypingTarget(e.target)) return;
 
     const now = performance.now();
     if (e.key === 'Enter' || e.key === 'Tab') {
@@ -1302,7 +1766,7 @@
       body: html`<div class="scanner-panel">
           <div class="scanner-visual" aria-hidden="true"></div>
           <div class="scanner-state" id="sc-state">Aponte o leitor para a etiqueta e dispare</div>
-          <div class="muted" style="margin-top:4px">Código do pedido, número da NF ou código de barras do DANFE</div>
+          <div class="scan-kinds"><span>${raw(ICON.arrowIn)} DANFE do fornecedor → <strong>entrada</strong></span><span>${raw(ICON.arrowOut)} Pedido, NF ou DANFE próprio → <strong>saída</strong></span></div>
           <input class="input scan-input mono" id="sc-input" autocomplete="off" placeholder="ou digite o código e tecle Enter" style="margin-top:16px;height:54px;font-size:20px">
           <div class="scanner-results" id="sc-results"></div>
           <div class="reader-tip"><strong>Leitor sem fio?</strong> Use no modo teclado (HID) com sufixo Enter — Bluetooth ou receptor USB.
@@ -1324,7 +1788,7 @@
     input.addEventListener('keydown', (e) => {
       const now = performance.now();
       if (e.key.length === 1) { if (lastKey && now - lastKey < 120) gaps.push(now - lastKey); lastKey = now; }
-      if (e.key === 'Tab') { e.preventDefault(); input.form.requestSubmit(); }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); input.form.requestSubmit(); }
     });
     // Fechar o modal (botão, clique fora) libera o leitor global de novo.
     const observer = new MutationObserver(() => {
@@ -1347,27 +1811,45 @@
       const open = (d) => {
         scannerModal?.close(); scannerModal = null;
         const countable = ['AGUARDANDO', 'EM_CONFERENCIA', 'DIVERGENTE'].includes(d.status) && !d.erpCancelled;
-        location.hash = countable ? `#/conferir/${d.id}` : `#/documentos/${d.id}`;
+        // Entrada com crítica grave passa antes pelo detalhe (supervisor revisa).
+        const grave = (d.alerts || []).some((a) => a.level === 'erro');
+        location.hash = countable && !(isSup() && grave) ? `#/conferir/${d.id}` : `#/documentos/${d.id}`;
       };
       if (!r.items.length) {
         beep(false);
         stateEl.className = 'scanner-state err';
-        stateEl.textContent = r.parsed.kind === 'nfe'
-          ? `Nenhum pedido encontrado para a NF ${r.parsed.number}`
-          : `Nenhum pedido com o código ${code}`;
+        if (r.parsed.kind === 'nfe') {
+          if (!r.parsed.valid) { stateEl.textContent = 'Chave do DANFE com dígito verificador inválido — leia de novo.'; return; }
+          const incoming = r.parsed.incoming !== false;
+          stateEl.textContent = incoming
+            ? `NF ${r.parsed.number} (CNPJ ${fmtCnpj(r.parsed.cnpj)}) ainda não foi importada`
+            : `Nenhum pedido encontrado para a NF ${r.parsed.number}`;
+          if (incoming) {
+            results.innerHTML = isSup()
+              ? html`<div class="scan-cta"><div>Para conferir esta entrada, importe o XML da nota. O sistema confere se o XML é do mesmo DANFE.</div>
+                  <button type="button" class="btn primary" id="sc-import">${raw(ICON.upload)} Importar XML desta nota</button></div>`.s
+              : html`<div class="scan-cta"><div>Peça ao supervisor para importar o XML desta nota.</div></div>`.s;
+            $('#sc-import')?.addEventListener('click', () => {
+              scannerModal?.close(); scannerModal = null;
+              openImport({ expectedKey: r.parsed.key });
+            });
+          }
+        } else {
+          stateEl.textContent = `Nenhum documento com o código ${code}`;
+        }
         return;
       }
       beep(true);
       if (r.items.length === 1) {
         stateEl.className = 'scanner-state ok';
-        stateEl.textContent = `${r.items[0].source === 'PED' ? 'Pedido' : 'Nota'} ${r.items[0].number || r.items[0].erpKey} — abrindo…`;
+        stateEl.textContent = `${docTitle(r.items[0])} — abrindo…`;
         setTimeout(() => open(r.items[0]), 250);
         return;
       }
       stateEl.className = 'scanner-state ok';
       stateEl.textContent = `${r.items.length} documentos encontrados — escolha:`;
       results.innerHTML = r.items.map((d) => html`<div class="row" data-pick="${d.id}">
-          <div><strong>${d.source === 'PED' ? 'Pedido' : 'Nota'} ${d.number || d.erpKey}</strong><div class="muted">${d.customerName || ''}</div></div>
+          <div>${flowTag(d)} <strong>${docTitle(d)}</strong><div class="muted">${d.customerName || ''}</div></div>
           ${docStatus(d)}</div>`.s).join('');
       $$('[data-pick]', results).forEach((row) => row.addEventListener('click', () => open(r.items.find((d) => d.id === row.dataset.pick))));
     } catch (err) {
@@ -1383,7 +1865,7 @@
   let pendingWritebackFilter = null;
   document.addEventListener('click', (e) => {
     const a = e.target.closest('[data-wb]');
-    if (a) { pendingWritebackFilter = a.dataset.wb; store.set('est.docs.status', 'CONCLUIDO'); }
+    if (a) { pendingWritebackFilter = a.dataset.wb; store.set('est.q.saida.tab', 'ok'); }
   });
 
   render();
